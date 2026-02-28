@@ -15,6 +15,7 @@ import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -27,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private PowerManager.WakeLock wakeLock;
     private Vibrator vibrator;
+    private PermissionRequest pendingPermissionRequest;
     private static final int MIC_PERMISSION_CODE = 100;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -43,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-        requestMicPermission();
 
         webView = new WebView(this);
         setContentView(webView);
@@ -55,20 +56,36 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccess(true);
         settings.setDatabaseEnabled(true);
 
+        webView.setWebViewClient(new WebViewClient());
+
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
-            public void onPermissionRequest(PermissionRequest request) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        request.grant(request.getResources());
-                    }
-                });
+            public void onPermissionRequest(final PermissionRequest request) {
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    request.grant(request.getResources());
+                } else {
+                    pendingPermissionRequest = request;
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
+                }
+            }
+
+            @Override
+            public void onPermissionRequestCanceled(PermissionRequest request) {
+                pendingPermissionRequest = null;
             }
         });
 
         webView.addJavascriptInterface(new JapaBridge(), "NativeApp");
-        webView.loadUrl("file:///android_asset/index.html");
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
+        } else {
+            webView.loadUrl("file:///android_asset/index.html");
+        }
     }
 
     @Override
@@ -135,17 +152,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void requestMicPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
-        }
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == MIC_PERMISSION_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (webView != null) webView.reload();
+        if (requestCode == MIC_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (pendingPermissionRequest != null) {
+                    pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
+                    pendingPermissionRequest = null;
+                }
+                if (webView.getUrl() == null) {
+                    webView.loadUrl("file:///android_asset/index.html");
+                }
+            } else {
+                Toast.makeText(this, "Microphone needed for voice counting", Toast.LENGTH_LONG).show();
+                webView.loadUrl("file:///android_asset/index.html");
+            }
         }
     }
 
