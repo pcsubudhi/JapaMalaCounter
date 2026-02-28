@@ -17,7 +17,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
 
-import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -35,30 +34,20 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Full screen, keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(0xFF1A0F0A);
-        }
+        getWindow().setStatusBarColor(0xFF1A0F0A);
 
-        // Wake lock
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null) {
-            wakeLock = pm.newWakeLock(
-                    PowerManager.PARTIAL_WAKE_LOCK, "JapaCounter::Chanting");
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JapaCounter::Chanting");
         }
 
-        // Vibrator
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-
-        // Request mic permission upfront
         requestMicPermission();
 
-        // Create WebView
         webView = new WebView(this);
         setContentView(webView);
 
-        // Configure WebView
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -66,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccess(true);
         settings.setDatabaseEnabled(true);
 
-        // Allow mic access in WebView
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(PermissionRequest request) {
@@ -79,27 +67,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Add JavaScript interface for volume button + vibration
         webView.addJavascriptInterface(new JapaBridge(), "NativeApp");
-
-        // Load the app
         webView.loadUrl("file:///android_asset/index.html");
-
-        // Handle back button (replaces deprecated onBackPressed)
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                if (webView != null && webView.canGoBack()) {
-                    webView.goBack();
-                } else {
-                    setEnabled(false);
-                    getOnBackPressedDispatcher().onBackPressed();
-                }
-            }
-        });
     }
 
-    // ========= VOLUME BUTTON CAPTURE =========
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
@@ -125,9 +96,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyUp(keyCode, event);
     }
 
-    // ========= JS BRIDGE =========
     public class JapaBridge {
-
         @JavascriptInterface
         public void vibrate(int ms) {
             if (vibrator != null && vibrator.hasVibrator()) {
@@ -146,14 +115,10 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     if (on) {
                         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                        if (wakeLock != null && !wakeLock.isHeld()) {
-                            wakeLock.acquire(4 * 60 * 60 * 1000L);
-                        }
+                        if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire(4 * 60 * 60 * 1000L);
                     } else {
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                        if (wakeLock != null && wakeLock.isHeld()) {
-                            wakeLock.release();
-                        }
+                        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
                     }
                 }
             });
@@ -170,29 +135,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ========= PERMISSIONS =========
     private void requestMicPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
         }
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == MIC_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (webView != null) webView.reload();
-            } else {
-                Toast.makeText(this, "Microphone permission needed for voice counting", Toast.LENGTH_LONG).show();
-            }
+        if (requestCode == MIC_PERMISSION_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (webView != null) webView.reload();
         }
     }
 
-    // ========= LIFECYCLE =========
     @Override
     protected void onResume() {
         super.onResume();
