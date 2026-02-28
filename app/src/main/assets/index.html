@@ -769,6 +769,12 @@ function playSound(type){
 }
 function speak(text){
   try{
+    // Use native Android TTS via JS bridge (Web Speech API doesn't work in WebView)
+    if(window.NativeApp && typeof NativeApp.speak==='function'){
+      NativeApp.speak(text);
+      return;
+    }
+    // Fallback for browser testing
     if('speechSynthesis' in window){
       speechSynthesis.cancel();
       var u=new SpeechSynthesisUtterance(text);

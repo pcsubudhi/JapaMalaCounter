@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.speech.tts.TextToSpeech;
 import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
@@ -30,12 +31,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
     private WebView webView;
     private PowerManager.WakeLock wakeLock;
     private Vibrator vibrator;
+    private TextToSpeech tts;
+    private boolean ttsReady = false;
     private PermissionRequest pendingPermissionRequest;
     private LocalServer localServer;
     private static final int MIC_PERMISSION_CODE = 100;
@@ -55,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+
+        // Initialize native Text-to-Speech
+        tts = new TextToSpeech(this, this);
 
         // Start local HTTP server (required for getUserMedia)
         try {
@@ -113,10 +120,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ========= TTS INIT CALLBACK =========
+    @Override
+    public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            int result = tts.setLanguage(new Locale("en", "IN"));
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                tts.setLanguage(Locale.ENGLISH);
+            }
+            tts.setSpeechRate(0.9f);
+            tts.setPitch(1.0f);
+            ttsReady = true;
+        }
+    }
+
     private void loadPage() {
         webView.loadUrl("http://localhost:" + SERVER_PORT + "/index.html");
     }
 
+    // ========= VOLUME BUTTON CAPTURE =========
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
@@ -142,6 +164,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyUp(keyCode, event);
     }
 
+    // ========= JS BRIDGE =========
     public class JapaBridge {
         @JavascriptInterface
         public void vibrate(int ms) {
@@ -179,8 +202,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+
+        // NATIVE TEXT-TO-SPEECH - called from JavaScript
+        @JavascriptInterface
+        public void speak(final String text) {
+            if (tts != null && ttsReady) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "japa_tts");
+                } else {
+                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+                }
+            }
+        }
     }
 
+    // ========= PERMISSIONS =========
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -200,6 +236,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ========= LIFECYCLE =========
     @Override
     protected void onResume() {
         super.onResume();
@@ -209,11 +246,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (tts != null) { tts.stop(); tts.shutdown(); }
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (localServer != null) localServer.stopServer();
         if (webView != null) webView.destroy();
     }
 
+    // ========= LOCAL HTTP SERVER =========
     private static class LocalServer extends Thread {
         private final int port;
         private final AssetManager assets;
