@@ -10,8 +10,14 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.KeyEvent;
 import android.view.WindowManager;
-import android.webkit.*;
+import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.Toast;
+
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -31,12 +37,16 @@ public class MainActivity extends AppCompatActivity {
 
         // Full screen, keep screen on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().setStatusBarColor(0xFF1A0F0A);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(0xFF1A0F0A);
+        }
 
         // Wake lock
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-        wakeLock = pm.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK, "JapaCounter::Chanting");
+        if (pm != null) {
+            wakeLock = pm.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK, "JapaCounter::Chanting");
+        }
 
         // Vibrator
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
@@ -60,7 +70,12 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(PermissionRequest request) {
-                runOnUiThread(() -> request.grant(request.getResources()));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        request.grant(request.getResources());
+                    }
+                });
             }
         });
 
@@ -69,18 +84,35 @@ public class MainActivity extends AppCompatActivity {
 
         // Load the app
         webView.loadUrl("file:///android_asset/index.html");
+
+        // Handle back button (replaces deprecated onBackPressed)
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
     }
 
     // ========= VOLUME BUTTON CAPTURE =========
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            // Send to WebView JS
-            runOnUiThread(() -> {
-                webView.evaluateJavascript(
-                    "if(typeof tapCount==='function'&&document.getElementById('counterScreen')&&document.getElementById('counterScreen').classList.contains('active')){tapCount()}", null);
-            });
-            return true; // CONSUME the event - don't change system volume
+            if (webView != null) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        webView.evaluateJavascript(
+                            "if(typeof tapCount==='function'&&document.getElementById('counterScreen')&&document.getElementById('counterScreen').classList.contains('active')){tapCount()}", null);
+                    }
+                });
+            }
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -88,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            return true; // consume up event too
+            return true;
         }
         return super.onKeyUp(keyCode, event);
     }
@@ -108,32 +140,33 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void vibratePattern(long[] pattern) {
-            if (vibrator != null && vibrator.hasVibrator()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1));
-                } else {
-                    vibrator.vibrate(pattern, -1);
-                }
-            }
-        }
-
-        @JavascriptInterface
-        public void keepScreenOn(boolean on) {
-            runOnUiThread(() -> {
-                if (on) {
-                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                    if (!wakeLock.isHeld()) wakeLock.acquire(4 * 60 * 60 * 1000L);
-                } else {
-                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                    if (wakeLock.isHeld()) wakeLock.release();
+        public void keepScreenOn(final boolean on) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (on) {
+                        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                        if (wakeLock != null && !wakeLock.isHeld()) {
+                            wakeLock.acquire(4 * 60 * 60 * 1000L);
+                        }
+                    } else {
+                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                        if (wakeLock != null && wakeLock.isHeld()) {
+                            wakeLock.release();
+                        }
+                    }
                 }
             });
         }
 
         @JavascriptInterface
-        public void showToast(String msg) {
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show());
+        public void showToast(final String msg) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 
@@ -152,8 +185,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Reload to let the web app access mic
-                webView.reload();
+                if (webView != null) webView.reload();
             } else {
                 Toast.makeText(this, "Microphone permission needed for voice counting", Toast.LENGTH_LONG).show();
             }
@@ -172,14 +204,5 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (webView != null) webView.destroy();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
     }
 }
