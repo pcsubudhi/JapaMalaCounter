@@ -12,7 +12,7 @@
   :root{--bg:#1A0F0A;--bg2:#0D0705;--card:#2A1F15;--card-border:#3D2E1F;--accent:#F59E0B;--accent-dim:rgba(245,158,11,0.15);--text:#FEF3C7;--text-dim:#A89070;--success:#10B981;--danger:#EF4444}
   body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);min-height:100vh;overflow-x:hidden}
   .app{max-width:480px;margin:0 auto;min-height:100vh}
-  .screen{padding:20px;display:none}.screen.active{display:block}
+  .screen{padding:12px 20px 80px 20px;display:none}.screen.active{display:block}
   .card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:16px 20px;margin-bottom:12px}
   .label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:500}
   button{font-family:'Crimson Pro','Georgia',serif;cursor:pointer;border:none;outline:none}
@@ -51,10 +51,10 @@
   .slider-row input[type=range]{flex:1;accent-color:var(--accent)}
   .slider-row .val{font-size:13px;color:var(--accent);min-width:36px;text-align:right}
 
-  .mala-container{position:relative;margin-bottom:6px;display:flex;justify-content:center}
-  .mala-svg{width:100%;max-width:240px}
+  .mala-container{position:relative;margin-bottom:4px;display:flex;justify-content:center}
+  .mala-svg{width:100%;max-width:210px}
   .mala-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-  .mala-count{font-family:'Playfair Display',serif;font-size:60px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(245,158,11,0.4);transition:transform 0.15s}
+  .mala-count{font-family:'Playfair Display',serif;font-size:52px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(245,158,11,0.4);transition:transform 0.15s}
   .mala-count.pop{transform:scale(1.2)}
   .mala-target{font-size:14px;color:var(--text-dim);margin-top:4px}
   .progress-bar{background:var(--card-border);border-radius:10px;height:7px;margin:6px 0 10px;overflow:hidden}
@@ -74,7 +74,7 @@
   .tap-area{width:100%;padding:30px 20px;border-radius:20px;background:var(--card);border:2px solid var(--card-border);color:var(--text);margin-top:8px;text-align:center;transition:all 0.15s}
   .tap-area:active{background:linear-gradient(135deg,#D97706,#B45309);border-color:var(--accent)}
 
-  .mode-tabs{display:flex;border:1px solid var(--card-border);border-radius:12px;overflow:hidden;margin-bottom:10px}
+  .mode-tabs{display:flex;border:1px solid var(--card-border);border-radius:12px;overflow:hidden;margin-bottom:6px}
   .mtab{flex:1;padding:11px;background:transparent;color:var(--text-dim);font-size:14px;font-weight:500;border-right:1px solid var(--card-border);transition:all 0.2s}
   .mtab:last-child{border-right:none}
   .mtab.act{background:var(--accent-dim);color:var(--accent);font-weight:600}
@@ -90,13 +90,13 @@
   .alarm-btns{display:flex;gap:12px;margin-top:20px}
   .alarm-btns button{flex:1;padding:14px;border-radius:12px;font-size:16px;font-weight:600}
 
-  .mala-top{text-align:center;padding:6px 0}
-  .mala-top-num{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--success)}
+  .mala-top{text-align:center;padding:4px 0}
+  .mala-top-num{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--success)}
   .mala-top-label{font-size:11px;color:var(--text-dim)}
   .pbar-mala{background:var(--card-border);border-radius:8px;height:6px;margin:4px 0 8px;overflow:hidden}
   .pfill-mala{height:100%;border-radius:8px;background:linear-gradient(90deg,#059669,var(--success));transition:width 0.4s;width:0%}
 
-  .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:6px}
   .sbox{background:rgba(0,0,0,0.2);border-radius:8px;padding:6px;text-align:center}
   .sbox .sv{font-size:17px;font-weight:700;color:var(--accent)}
   .sbox .sl{font-size:9px;color:var(--text-dim);margin-top:1px}
@@ -558,6 +558,8 @@ function goSetup(){stopListen();document.getElementById('counterScreen').classLi
 function resetCounter(){G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;document.getElementById('dChant').textContent='0';document.getElementById('dWord').textContent='0';document.getElementById('dTotalW').textContent='0';document.getElementById('dTotalC').textContent='0';document.getElementById('dMala').textContent='0';document.getElementById('dMala2').textContent='0';document.getElementById('dProgress').style.width='0%';document.getElementById('pMala').style.width='0%';drawMala();D('Reset','warn')}
 
 // ========= COUNTER =========
+var ttsPauseUntil=0; // pause voice detection while TTS is speaking
+
 function ADD(n){
   if(n<=0)return;
   for(var i=0;i<n;i++){
@@ -570,17 +572,24 @@ function ADD(n){
       if(G_chant>0 && G_chant<CFG.cpm && CFG.cpm>=54){
         var quarter=Math.floor(CFG.cpm/4);
         if(quarter>0 && G_chant%quarter===0){
+          pauseDetectionForTTS(3000);
           speak(G_chant+' of '+CFG.cpm);
         }
       }
       // MALA COMPLETE?
       if(G_chant>=CFG.cpm){
+        // Update UI to show full count BEFORE resetting
+        document.getElementById('dChant').textContent=G_chant;
+        document.getElementById('dProgress').style.width='100%';
+        drawMala();
+
         G_chant=0;G_mala++;
         if(G_mala>=CFG.malas){
           // ALL MALAS DONE
           setTimeout(function(){
             playSound('alldone');
             if(navigator.vibrate)navigator.vibrate([400,150,400,150,400,150,600]);
+            pauseDetectionForTTS(8000);
             speak('Target '+CFG.malas+' Malas complete! Hare Krishna! Hare Krishna!');
             document.getElementById('doneCount').textContent=G_mala;
             document.getElementById('doneTotalC').textContent=G_totalC;
@@ -591,6 +600,7 @@ function ADD(n){
           setTimeout(function(){
             playSound('mala');
             if(navigator.vibrate)navigator.vibrate([250,100,250,100,250]);
+            pauseDetectionForTTS(6000);
             speak('Mala '+G_mala+' of '+CFG.malas+' complete. Continue chanting.');
             document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
             document.getElementById('malaOvDone').textContent=G_mala;
@@ -690,6 +700,14 @@ async function startListen(){
           return;
         }
 
+        // TTS pause check - skip detection while voice announcement is playing
+        if(now<ttsPauseUntil){
+          D('TTS speaking, skip','warn');
+          dWordBuf=[];
+          detectAF=requestAnimationFrame(tick);
+          return;
+        }
+
         // Cooldown check
         if(now<cooldownUntil){
           D('Cooldown skip','info');
@@ -782,6 +800,12 @@ function speak(text){
       speechSynthesis.speak(u);
     }
   }catch(e){D('TTS err: '+e.message,'err')}
+}
+
+// Pause voice detection to prevent TTS audio from being picked up as chant
+function pauseDetectionForTTS(ms){
+  ttsPauseUntil=performance.now()+ms;
+  D('TTS pause '+ms+'ms','warn');
 }
 
 // ========= AUTO-CLOSE MALA OVERLAY =========
