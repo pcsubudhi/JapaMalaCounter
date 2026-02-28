@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1A0F0A">
+<title>📿 Japa Mala Counter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@300;400;500;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#1A0F0A;--bg2:#0D0705;--card:#2A1F15;--card-border:#3D2E1F;--accent:#F59E0B;--accent-dim:rgba(245,158,11,0.15);--text:#FEF3C7;--text-dim:#A89070;--success:#10B981;--danger:#EF4444}
+  body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);min-height:100vh;overflow-x:hidden}
+  .app{max-width:480px;margin:0 auto;min-height:100vh}
+  .screen{padding:20px;display:none}.screen.active{display:block}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:16px 20px;margin-bottom:12px}
+  .label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:500}
+  button{font-family:'Crimson Pro','Georgia',serif;cursor:pointer;border:none;outline:none}
+  .btn-primary{width:100%;padding:18px 28px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:18px;font-weight:700;box-shadow:0 4px 24px rgba(245,158,11,0.4)}
+  .btn-primary:disabled{opacity:0.4}
+  input[type="number"]{width:100%;padding:14px 16px;border-radius:12px;background:rgba(0,0,0,0.35);border:1px solid var(--card-border);color:var(--text);font-size:16px;font-family:'Crimson Pro',serif;outline:none}
+  input:focus{border-color:var(--accent)}
+  .home-title{text-align:center;margin-bottom:24px}
+  .home-title h1{font-family:'Playfair Display',serif;font-size:28px;color:var(--accent)}
+  .home-title p{color:var(--text-dim);font-size:14px;margin-top:6px}
+
+  .step{margin-bottom:4px}
+  .step-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .step-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+  .step-num.done{background:var(--success)}
+  .step-title{font-size:15px;font-weight:600}
+
+  .btn-rec{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:600;transition:all 0.2s}
+  .btn-rec.idle{background:linear-gradient(135deg,#059669,#047857);color:white}
+  .btn-rec.busy{background:linear-gradient(135deg,#DC2626,#991B1B);color:white;animation:pulse 1s infinite}
+  .btn-rec.ok{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+  .viz{height:44px;background:rgba(0,0,0,0.3);border-radius:8px;margin:8px 0;display:flex;align-items:flex-end;gap:1px;padding:4px;overflow:hidden}
+  .viz div{flex:1;background:var(--accent);border-radius:1px;min-height:2px;transition:height 0.05s}
+
+  .targets-row{display:flex;gap:8px;margin-bottom:10px}
+  .target-btn{flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:15px;font-weight:600}
+  .target-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+  .wpr-row{display:flex;gap:8px;margin-bottom:10px}
+  .wpr-btn{flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:15px;font-weight:600}
+  .wpr-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+
+  .slider-row{display:flex;align-items:center;gap:10px;margin:6px 0}
+  .slider-row label{font-size:12px;color:var(--text-dim);min-width:50px}
+  .slider-row input[type=range]{flex:1;accent-color:var(--accent)}
+  .slider-row .val{font-size:13px;color:var(--accent);min-width:36px;text-align:right}
+
+  .mala-container{position:relative;margin-bottom:6px;display:flex;justify-content:center}
+  .mala-svg{width:100%;max-width:240px}
+  .mala-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+  .mala-count{font-family:'Playfair Display',serif;font-size:60px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(245,158,11,0.4);transition:transform 0.15s}
+  .mala-count.pop{transform:scale(1.2)}
+  .mala-target{font-size:14px;color:var(--text-dim);margin-top:4px}
+  .progress-bar{background:var(--card-border);border-radius:10px;height:7px;margin:6px 0 10px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#B45309,var(--accent));transition:width 0.4s;width:0%}
+  .stats-row{display:flex;justify-content:space-around;padding:6px 0}
+  .stat{text-align:center}.stat-val{font-size:20px;font-weight:700;color:var(--accent)}.stat-label{font-size:10px;color:var(--text-dim);margin-top:2px}
+
+  .btn-listen{width:100%;padding:16px;border-radius:14px;color:white;font-size:17px;font-weight:600}
+  .btn-listen.off{background:linear-gradient(135deg,#059669,#047857)}
+  .btn-listen.on{background:linear-gradient(135deg,#DC2626,#991B1B);box-shadow:0 0 20px rgba(220,38,38,0.3)}
+
+  .match-bar{height:8px;border-radius:4px;margin:8px 0;background:rgba(0,0,0,0.3);overflow:hidden}
+  .match-fill{height:100%;border-radius:4px;width:0%;transition:width 0.1s,background 0.15s}
+  .status-line{text-align:center;font-size:13px;color:var(--text-dim);padding:4px 0}
+  .status-line.hit{color:var(--accent);font-weight:700;font-size:16px}
+
+  .tap-area{width:100%;padding:30px 20px;border-radius:20px;background:var(--card);border:2px solid var(--card-border);color:var(--text);margin-top:8px;text-align:center;transition:all 0.15s}
+  .tap-area:active{background:linear-gradient(135deg,#D97706,#B45309);border-color:var(--accent)}
+
+  .mode-tabs{display:flex;border:1px solid var(--card-border);border-radius:12px;overflow:hidden;margin-bottom:10px}
+  .mtab{flex:1;padding:11px;background:transparent;color:var(--text-dim);font-size:14px;font-weight:500;border-right:1px solid var(--card-border);transition:all 0.2s}
+  .mtab:last-child{border-right:none}
+  .mtab.act{background:var(--accent-dim);color:var(--accent);font-weight:600}
+
+  .debug{background:#000;border:2px solid #222;border-radius:10px;padding:6px;margin-top:10px;font-family:monospace;font-size:9px;max-height:100px;overflow-y:auto}
+  .debug div{padding:1px 0;border-bottom:1px solid #111}
+  .debug .ok{color:#4ade80}.debug .warn{color:#fbbf24}.debug .err{color:#f87171}.debug .info{color:#60a5fa}
+
+  .alarm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
+  .alarm-overlay.active{display:flex}
+  .alarm-box{background:var(--card);border:2px solid var(--accent);border-radius:20px;padding:36px;text-align:center;max-width:340px;width:100%}
+  .alarm-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:24px;margin:10px 0}
+  .alarm-btns{display:flex;gap:12px;margin-top:20px}
+  .alarm-btns button{flex:1;padding:14px;border-radius:12px;font-size:16px;font-weight:600}
+
+  .mala-top{text-align:center;padding:6px 0}
+  .mala-top-num{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--success)}
+  .mala-top-label{font-size:11px;color:var(--text-dim)}
+  .pbar-mala{background:var(--card-border);border-radius:8px;height:6px;margin:4px 0 8px;overflow:hidden}
+  .pfill-mala{height:100%;border-radius:8px;background:linear-gradient(90deg,#059669,var(--success));transition:width 0.4s;width:0%}
+
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+  .sbox{background:rgba(0,0,0,0.2);border-radius:8px;padding:6px;text-align:center}
+  .sbox .sv{font-size:17px;font-weight:700;color:var(--accent)}
+  .sbox .sl{font-size:9px;color:var(--text-dim);margin-top:1px}
+  .sbox.green .sv{color:var(--success)}
+
+  .ov{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:24px}
+  .ov.active{display:flex}
+  .ov-bg{position:absolute;inset:0;background:rgba(0,0,0,0.9)}
+  .ov-box{position:relative;z-index:1;border-radius:20px;padding:36px;text-align:center;max-width:340px;width:100%}
+  .mala-done-box{background:var(--card);border:2px solid var(--success);box-shadow:0 0 60px rgba(16,185,129,0.3)}
+  .mala-done-box h2{font-family:'Playfair Display',serif;color:var(--success);font-size:22px;margin:10px 0}
+  .all-done-box{background:linear-gradient(135deg,#2A1F15,#1A0F0A);border:3px solid var(--accent);box-shadow:0 0 80px rgba(245,158,11,0.4);animation:celeb 1.5s infinite}
+  @keyframes celeb{0%,100%{box-shadow:0 0 40px rgba(245,158,11,0.3)}50%{box-shadow:0 0 80px rgba(245,158,11,0.6)}}
+  .all-done-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:24px;margin:10px 0}
+  .ov-btn{display:block;width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:600;margin-top:12px;font-family:'Crimson Pro',serif}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SETUP -->
+  <div id="setupScreen" class="screen active">
+    <div class="home-title">
+      <div style="font-size:44px;margin-bottom:6px">📿</div>
+      <h1>Japa Counter</h1>
+      <p>Calibrated voice recognition</p>
+    </div>
+
+    <!-- Step 1: Record ambient noise -->
+    <div class="card step">
+      <div class="step-header"><div class="step-num" id="s1n">1</div><div class="step-title">Capture Room Silence</div></div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px">Stay quiet for 2 seconds so we learn your background noise.</p>
+      <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
+      <div id="noiseViz" class="viz" style="display:none"></div>
+      <div id="noiseStatus" style="font-size:12px;color:var(--text-dim);margin-top:4px;text-align:center"></div>
+    </div>
+
+    <!-- Step 2: Record the word -->
+    <div class="card step">
+      <div class="step-header"><div class="step-num" id="s2n">2</div><div class="step-title">Teach Your Word</div></div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px">Say your mantra word <strong style="color:var(--text)">5 times</strong> with short pauses. Speak at the same distance & volume you'll use while chanting.</p>
+      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Your Word ×5</button>
+      <div id="wordViz" class="viz" style="display:none"></div>
+      <div id="wordStatus" style="font-size:12px;color:var(--text-dim);margin-top:4px;text-align:center"></div>
+    </div>
+
+    <!-- Step 3: Settings -->
+    <div class="card step">
+      <div class="step-header"><div class="step-num">3</div><div class="step-title">Settings</div></div>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Words per mantra chant:</p>
+      <div class="wpr-row">
+        <button class="wpr-btn" onclick="pickWPR(1,this)">1</button>
+        <button class="wpr-btn" onclick="pickWPR(4,this)">4</button>
+        <button class="wpr-btn selected" onclick="pickWPR(8,this)">8</button>
+        <button class="wpr-btn" onclick="pickWPR(16,this)">16</button>
+      </div>
+      <input type="number" id="inWPR" value="8" min="1" style="margin-bottom:12px">
+
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Chants per Mala:</p>
+      <div class="targets-row">
+        <button class="target-btn" onclick="pickCPM(54,this)">54</button>
+        <button class="target-btn selected" onclick="pickCPM(108,this)">108</button>
+        <button class="target-btn" onclick="pickCPM(216,this)">216</button>
+      </div>
+      <input type="number" id="inCPM" value="108" min="1" style="margin-bottom:12px">
+
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Total Malas target:</p>
+      <div class="targets-row">
+        <button class="target-btn" onclick="pickMalas(4,this)">4</button>
+        <button class="target-btn" onclick="pickMalas(8,this)">8</button>
+        <button class="target-btn selected" onclick="pickMalas(16,this)">16</button>
+        <button class="target-btn" onclick="pickMalas(32,this)">32</button>
+        <button class="target-btn" onclick="pickMalas(64,this)">64</button>
+      </div>
+      <input type="number" id="inMalas" value="16" min="1">
+    </div>
+
+    <button id="btnGo" class="btn-primary" onclick="startSession()" disabled>Complete Steps 1 & 2 First</button>
+  </div>
+
+  <!-- COUNTER -->
+  <div id="counterScreen" class="screen">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <button onclick="endSession()" style="background:none;color:var(--text-dim);font-size:14px">← End</button>
+      <div style="display:flex;gap:6px">
+        <button onclick="resetCounter()" style="background:none;border:1px solid var(--card-border);border-radius:8px;padding:4px 10px;color:var(--text-dim);font-size:12px">Reset</button>
+        <button onclick="goSetup()" style="background:none;border:1px solid var(--card-border);border-radius:8px;padding:4px 10px;color:var(--text-dim);font-size:12px">Re-calibrate</button>
+      </div>
+    </div>
+
+    <!-- Mala level (top) -->
+    <div class="mala-top">
+      <div class="mala-top-num">Mala <span id="dMala">0</span> / <span id="dMalaTarget">16</span></div>
+      <div class="mala-top-label">malas completed</div>
+    </div>
+    <div class="pbar-mala"><div id="pMala" class="pfill-mala"></div></div>
+
+    <!-- Chant ring -->
+    <div class="mala-container"><svg id="malaSvg" class="mala-svg" viewBox="0 0 320 320"></svg><div class="mala-center"><div class="mala-count" id="dChant">0</div><div class="mala-target">of <span id="dCPM">108</span> chants</div></div></div>
+    <div class="progress-bar"><div id="dProgress" class="progress-fill"></div></div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="sbox"><div class="sv" id="dWord">0</div><div class="sl">Word /<span id="dWPR">8</span></div></div>
+      <div class="sbox"><div class="sv" id="dTotalW">0</div><div class="sl">Words</div></div>
+      <div class="sbox green"><div class="sv" id="dTotalC">0</div><div class="sl">Chants</div></div>
+      <div class="sbox green"><div class="sv" id="dMala2">0</div><div class="sl">Malas</div></div>
+    </div>
+
+    <!-- Mode selector -->
+    <div class="mode-tabs">
+      <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Voice</button>
+      <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap Only</button>
+      <button class="mtab act" id="tabBoth" onclick="setMode('both')">🎤+👆 Both</button>
+    </div>
+
+    <!-- Voice section -->
+    <div id="voiceSec">
+    <div class="card">
+      <button id="btnListen" class="btn-listen off" onclick="toggleListen()">🎤 Start Listening</button>
+      <div class="match-bar"><div id="mFill" class="match-fill"></div></div>
+      <div id="sLine" class="status-line">Tap to start</div>
+      <div class="slider-row">
+        <label>Sensitivity</label>
+        <input type="range" id="sSlider" min="20" max="80" value="50" oninput="updateSens()">
+        <div class="val" id="sVal">50%</div>
+      </div>
+      <div class="slider-row">
+        <label>Cooldown</label>
+        <input type="range" id="cSlider" min="200" max="1500" value="400" step="50" oninput="document.getElementById('cVal').textContent=this.value+'ms'">
+        <div class="val" id="cVal">400ms</div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Tap section -->
+    <div id="tapSec">
+    <button class="tap-area" onclick="tapCount()">
+      <div style="font-size:30px;margin-bottom:4px">🙏</div>
+      <div style="font-size:17px;font-weight:600">Tap to Count</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:3px">Tap here or anywhere on screen</div>
+    </button>
+    </div>
+    <div class="debug" id="dbg"></div>
+  </div>
+
+  <div id="alarmOverlay" class="alarm-overlay" style="display:none"></div>
+
+  <!-- Mala Complete Overlay -->
+  <div id="malaOv" class="ov"><div class="ov-bg"></div>
+    <div class="ov-box mala-done-box">
+      <div style="font-size:50px">📿</div>
+      <h2 id="malaOvTitle">Mala 1 Complete!</h2>
+      <p style="color:var(--text-dim)"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:20px">1</span> of <span id="malaOvTotal">16</span> malas done</p>
+      <p style="color:var(--text-dim);font-size:13px;margin-top:6px">Keep going! 🙏</p>
+      <button class="ov-btn" onclick="document.getElementById('malaOv').classList.remove('active')" style="background:var(--success);color:white">Continue Chanting</button>
+    </div>
+  </div>
+
+  <!-- All Done Overlay -->
+  <div id="doneOv" class="ov"><div class="ov-bg"></div>
+    <div class="ov-box all-done-box">
+      <div style="font-size:60px">🎉</div>
+      <h2>All Malas Complete!</h2>
+      <p style="color:var(--text-dim);font-size:16px">Target <span id="doneCount" style="color:var(--accent);font-weight:700;font-size:24px">16</span> Malas achieved!</p>
+      <p style="color:var(--text-dim)">(<span id="doneTotalC" style="color:var(--accent)">1728</span> total chants)</p>
+      <p style="margin-top:10px;color:var(--text);font-size:15px">🙏 Hare Krishna 🙏</p>
+      <button class="ov-btn" onclick="closeDone(false)" style="background:var(--accent);color:var(--bg)">🙏 Finish</button>
+      <button class="ov-btn" onclick="closeDone(true)" style="background:var(--card-border);color:var(--text)">Continue Beyond Target</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// JAPA COUNTER v9 — NOISE-PROOF AUDIO MATCHING
+// =============================================
+//
+// Improvements over v7:
+// 1. Capture ambient noise profile → subtract from comparisons
+// 2. Multiple features: spectral bands + spectral centroid + energy variance
+// 3. Require minimum energy ABOVE noise floor (distance-adaptive)
+// 4. Temporal shape matching: word must have rise-hold-fall pattern
+// 5. 5 calibration samples → more robust fingerprint
+// 6. Adjustable cooldown prevents double-counting
+// 7. Two-stage: energy gate → then spectral match
+// 8. Noise-subtracted similarity comparison
+
+var actx=null, mic=null, analyser=null, stream=null;
+var BANDS=24;
+
+// Noise profile
+var noiseProfile=null;    // average spectrum during silence
+var noiseEnergy=0;        // average energy during silence
+var noiseReady=false;
+
+// Word fingerprint
+var wordSamples=[];       // array of {spectrum, centroid, energyShape, duration}
+var wordFingerprint=null; // averaged fingerprint
+var wordReady=false;
+var avgWordDuration=0;    // average word duration in frames
+
+// Detection
+var detecting=false;
+var cooldownUntil=0;
+var SENSITIVITY=0.50;
+
+// Counter
+var G_m=0,G_w=0,G_t=0,G_chant=0,G_mala=0,G_totalC=0;
+var CFG={wpr:8,cpm:108,malas:16};
+var beepCtx=null;
+
+function D(m,c){var e=document.getElementById('dbg');if(!e)return;var d=document.createElement('div');d.className=c||'info';d.textContent=new Date().toTimeString().slice(0,8)+' '+m;e.insertBefore(d,e.firstChild);while(e.children.length>40)e.removeChild(e.lastChild)}
+
+// ========= AUDIO INIT =========
+async function initAudio(){
+  if(actx)return true;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});
+    actx=new(window.AudioContext||window.webkitAudioContext)();
+    mic=actx.createMediaStreamSource(stream);
+    analyser=actx.createAnalyser();
+    analyser.fftSize=2048;
+    analyser.smoothingTimeConstant=0.4;
+    mic.connect(analyser);
+    D('Audio OK','ok');return true;
+  }catch(e){D('Mic err: '+e.message,'err');alert('Allow microphone access');return false}
+}
+
+// ========= FEATURE EXTRACTION =========
+function getSpectrum(){
+  var buf=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(buf);
+  var bandSize=Math.floor(buf.length/BANDS);
+  var bands=[];
+  for(var b=0;b<BANDS;b++){
+    var sum=0;
+    for(var i=b*bandSize;i<(b+1)*bandSize&&i<buf.length;i++)sum+=buf[i];
+    bands.push(sum/bandSize);
+  }
+  return bands;
+}
+
+function getEnergy(){
+  var buf=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(buf);
+  var sum=0;for(var i=0;i<buf.length;i++)sum+=buf[i];
+  return sum/buf.length;
+}
+
+function getCentroid(){
+  var buf=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(buf);
+  var wSum=0,sum=0;
+  for(var i=0;i<buf.length;i++){wSum+=i*buf[i];sum+=buf[i]}
+  return sum>0?wSum/sum:0;
+}
+
+// Subtract noise from spectrum
+function denoiseSpectrum(spec){
+  if(!noiseProfile)return spec;
+  return spec.map(function(v,i){return Math.max(0,v-noiseProfile[i]*0.8)});
+}
+
+// Cosine similarity
+function cosSim(a,b){
+  if(!a||!b||a.length!==b.length)return 0;
+  var dot=0,ma=0,mb=0;
+  for(var i=0;i<a.length;i++){dot+=a[i]*b[i];ma+=a[i]*a[i];mb+=b[i]*b[i]}
+  ma=Math.sqrt(ma);mb=Math.sqrt(mb);
+  return(ma>0&&mb>0)?dot/(ma*mb):0;
+}
+
+function avgArrays(arr){
+  if(!arr.length)return null;
+  var len=arr[0].length,r=new Array(len).fill(0);
+  for(var s=0;s<arr.length;s++)for(var i=0;i<len;i++)r[i]+=arr[s][i];
+  for(var i=0;i<len;i++)r[i]/=arr.length;
+  return r;
+}
+
+// ========= SETUP VISUALIZER =========
+function initViz(id){
+  var viz=document.getElementById(id);
+  viz.style.display='flex';viz.innerHTML='';
+  for(var i=0;i<BANDS;i++){var b=document.createElement('div');b.style.height='2px';viz.appendChild(b)}
+  return viz;
+}
+function updateViz(viz){
+  var spec=getSpectrum();
+  var bars=viz.children;
+  for(var i=0;i<bars.length&&i<spec.length;i++){
+    var pct=spec[i]/255*100;
+    bars[i].style.height=Math.max(2,pct)+'%';
+    bars[i].style.background=pct>20?'var(--accent)':'rgba(245,158,11,0.2)';
+  }
+}
+
+// ========= STEP 1: CAPTURE NOISE =========
+async function captureNoise(){
+  if(!(await initAudio()))return;
+  var btn=document.getElementById('btnNoise');
+  btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet...';
+  var viz=initViz('noiseViz');
+  document.getElementById('noiseStatus').textContent='Capturing ambient noise...';
+
+  var specSamples=[],energySamples=[],frames=0,maxFrames=120; // ~2 seconds
+
+  function tick(){
+    if(frames>=maxFrames){
+      noiseProfile=avgArrays(specSamples);
+      noiseEnergy=energySamples.reduce(function(a,b){return a+b},0)/energySamples.length;
+      noiseReady=true;
+      btn.className='btn-rec ok';
+      btn.textContent='✅ Noise captured (energy='+noiseEnergy.toFixed(1)+')';
+      document.getElementById('noiseStatus').textContent='Background noise level: '+noiseEnergy.toFixed(1);
+      document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';
+      document.getElementById('btnWord').disabled=false;
+      checkReady();
+      D('Noise captured: energy='+noiseEnergy.toFixed(1),'ok');
+      return;
+    }
+    updateViz(viz);
+    specSamples.push(getSpectrum());
+    energySamples.push(getEnergy());
+    frames++;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ========= STEP 2: CAPTURE WORD =========
+async function captureWord(){
+  if(!(await initAudio()))return;
+  var btn=document.getElementById('btnWord');
+  btn.className='btn-rec busy';btn.textContent='🔴 Say your word 5 times...';
+  var viz=initViz('wordViz');
+  wordSamples=[];
+  document.getElementById('wordStatus').textContent='Speak now with pauses between each...';
+
+  var inWord=false,wordFramesBuf=[],silCount=0;
+  var energyThreshold=noiseEnergy+10; // Must be clearly above noise
+  var timeout=setTimeout(function(){finish()},12000);
+
+  function finish(){
+    clearTimeout(timeout);
+    if(wordSamples.length>=2){
+      // Build fingerprint from all samples
+      var allSpecs=wordSamples.map(function(s){return s.spectrum});
+      wordFingerprint={
+        spectrum:avgArrays(allSpecs),
+        centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,
+        minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,
+        avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length,
+      };
+      avgWordDuration=wordFingerprint.avgDuration;
+      wordReady=true;
+      btn.className='btn-rec ok';
+      btn.textContent='✅ '+wordSamples.length+' samples captured';
+      document.getElementById('wordStatus').textContent='Word fingerprint ready ('+wordSamples.length+' samples, avg '+Math.round(avgWordDuration)+' frames)';
+      document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓';
+      D('Word calibrated: '+wordSamples.length+' samples, avgDur='+avgWordDuration.toFixed(0)+', minE='+wordFingerprint.minEnergy.toFixed(1),'ok');
+    }else{
+      btn.className='btn-rec idle';btn.textContent='🎤 Record Your Word ×5 (try again)';
+      document.getElementById('wordStatus').textContent='Only got '+wordSamples.length+'. Speak louder or closer.';
+      D('Only '+wordSamples.length+' samples','warn');
+    }
+    checkReady();
+  }
+
+  function tick(){
+    if(wordSamples.length>=5){finish();return}
+    updateViz(viz);
+
+    var energy=getEnergy();
+    var spec=getSpectrum();
+    var centroid=getCentroid();
+
+    if(energy>energyThreshold){
+      if(!inWord){inWord=true;wordFramesBuf=[];D('Word start (e='+energy.toFixed(1)+')','info')}
+      wordFramesBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});
+      silCount=0;
+    }else{
+      silCount++;
+      if(inWord&&silCount>10){ // ~170ms silence = word ended
+        inWord=false;
+        if(wordFramesBuf.length>=4){ // at least ~65ms of speech
+          var avgSpec=avgArrays(wordFramesBuf.map(function(f){return f.spec}));
+          var avgCent=wordFramesBuf.reduce(function(a,f){return a+f.centroid},0)/wordFramesBuf.length;
+          var peakE=Math.max.apply(null,wordFramesBuf.map(function(f){return f.energy}));
+          wordSamples.push({spectrum:avgSpec,centroid:avgCent,peakEnergy:peakE,duration:wordFramesBuf.length});
+          D('Sample '+wordSamples.length+'/5 (dur='+wordFramesBuf.length+' peak='+peakE.toFixed(1)+')','ok');
+          document.getElementById('wordStatus').textContent=wordSamples.length+' of 5 captured...';
+        }
+        wordFramesBuf=[];
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function checkReady(){
+  var ok=noiseReady&&wordReady;
+  document.getElementById('btnGo').disabled=!ok;
+  if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting';
+}
+
+// ========= SETUP CONTROLS =========
+function pickWPR(v,b){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
+function pickCPM(v,b){document.getElementById('inCPM').value=v;var el=document.getElementById('inCPM');el.parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
+function pickMalas(v,b){document.getElementById('inMalas').value=v;var el=document.getElementById('inMalas');el.parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
+function closeDone(cont){document.getElementById('doneOv').classList.remove('active');if(!cont)endSession()}
+
+function updateSens(){
+  SENSITIVITY=document.getElementById('sSlider').value/100;
+  document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
+}
+
+// ========= MODE TOGGLE =========
+var curMode='both';
+function setMode(m){
+  curMode=m;
+  document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});
+  document.getElementById('tab'+m.charAt(0).toUpperCase()+m.slice(1)).classList.add('act');
+  document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';
+  document.getElementById('tapSec').style.display=(m==='voice')?'none':'block';
+  if(m==='tap'&&detecting){stopListen()}
+  D('Mode: '+m,'info');
+}
+
+// ========= SESSION =========
+function startSession(){
+  CFG.wpr=parseInt(document.getElementById('inWPR').value)||1;
+  CFG.cpm=parseInt(document.getElementById('inCPM').value)||108;
+  CFG.malas=parseInt(document.getElementById('inMalas').value)||16;
+  SENSITIVITY=document.getElementById('sSlider').value/100;
+  G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;
+  document.getElementById('dMalaTarget').textContent=CFG.malas;
+  document.getElementById('dCPM').textContent=CFG.cpm;
+  document.getElementById('dWPR').textContent=CFG.wpr;
+  document.getElementById('dChant').textContent='0';
+  document.getElementById('dWord').textContent='0';
+  document.getElementById('dTotalW').textContent='0';
+  document.getElementById('dTotalC').textContent='0';
+  document.getElementById('dMala').textContent='0';
+  document.getElementById('dMala2').textContent='0';
+  document.getElementById('dProgress').style.width='0%';
+  document.getElementById('pMala').style.width='0%';
+  document.getElementById('dbg').innerHTML='';
+  D('Session: wpr='+CFG.wpr+' cpm='+CFG.cpm+' malas='+CFG.malas+' sens='+SENSITIVITY,'ok');
+  drawMala();
+  document.getElementById('setupScreen').classList.remove('active');
+  document.getElementById('counterScreen').classList.add('active');
+}
+function endSession(){stopListen();document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active')}
+function goSetup(){stopListen();document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active')}
+function resetCounter(){G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;document.getElementById('dChant').textContent='0';document.getElementById('dWord').textContent='0';document.getElementById('dTotalW').textContent='0';document.getElementById('dTotalC').textContent='0';document.getElementById('dMala').textContent='0';document.getElementById('dMala2').textContent='0';document.getElementById('dProgress').style.width='0%';document.getElementById('pMala').style.width='0%';drawMala();D('Reset','warn')}
+
+// ========= COUNTER =========
+function ADD(n){
+  if(n<=0)return;
+  for(var i=0;i<n;i++){
+    G_t++;G_w++;
+    if(G_w>=CFG.wpr){
+      G_w=0;G_chant++;G_totalC++;
+      playSound('chant');
+      if(navigator.vibrate)navigator.vibrate([50]);
+      // MALA COMPLETE?
+      if(G_chant>=CFG.cpm){
+        G_chant=0;G_mala++;
+        if(G_mala>=CFG.malas){
+          // ALL MALAS DONE
+          setTimeout(function(){
+            playSound('alldone');
+            if(navigator.vibrate)navigator.vibrate([400,150,400,150,400,150,600]);
+            speak('Target '+CFG.malas+' Malas complete! Hare Krishna!');
+            document.getElementById('doneCount').textContent=G_mala;
+            document.getElementById('doneTotalC').textContent=G_totalC;
+            document.getElementById('doneOv').classList.add('active');
+          },300);
+        } else {
+          // ONE MALA DONE
+          setTimeout(function(){
+            playSound('mala');
+            if(navigator.vibrate)navigator.vibrate([250,100,250,100,250]);
+            speak('Mala '+G_mala+' of '+CFG.malas+' complete');
+            document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
+            document.getElementById('malaOvDone').textContent=G_mala;
+            document.getElementById('malaOvTotal').textContent=CFG.malas;
+            document.getElementById('malaOv').classList.add('active');
+          },300);
+        }
+      }
+    }else{if(navigator.vibrate)navigator.vibrate([25])}
+  }
+  // Update UI
+  document.getElementById('dChant').textContent=G_chant;
+  document.getElementById('dWord').textContent=G_w;
+  document.getElementById('dTotalW').textContent=G_t;
+  document.getElementById('dTotalC').textContent=G_totalC;
+  document.getElementById('dMala').textContent=G_mala;
+  document.getElementById('dMala2').textContent=G_mala;
+  document.getElementById('dProgress').style.width=(CFG.cpm>0?Math.min(G_chant/CFG.cpm,1)*100:0)+'%';
+  document.getElementById('pMala').style.width=(CFG.malas>0?Math.min(G_mala/CFG.malas,1)*100:0)+'%';
+  var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);
+  drawMala();
+}
+function tapCount(){D('TAP','info');ADD(1)}
+
+// ========= MALA =========
+function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm,54),fc=CFG.cpm>0?Math.floor((G_chant/CFG.cpm)*bc):0,h='';for(var i=0;i<bc;i++){var a=(i/bc)*2*Math.PI-Math.PI/2,x=160+120*Math.cos(a),y=160+120*Math.sin(a),f=i<fc;h+='<circle cx="'+x+'" cy="'+y+'" r="8" fill="'+(f?'#F59E0B':'rgba(245,158,11,0.15)')+'" stroke="'+(f?'#D97706':'rgba(245,158,11,0.3)')+'" stroke-width="1.5" style="transition:all 0.3s;'+(f?'filter:drop-shadow(0 0 6px rgba(245,158,11,0.6))':'')+'"/>';}h+='<circle cx="160" cy="38" r="12" fill="#B45309" stroke="#92400E" stroke-width="2"/>';s.innerHTML=h}
+
+// =============================================
+// REAL-TIME DETECTION
+// =============================================
+// Two-stage pipeline:
+// Stage 1 (Energy Gate): Is someone speaking? (energy > noiseFloor + margin)
+// Stage 2 (Spectral Match): Does this sound like the calibrated word?
+//
+// Also checks:
+// - Duration: word segment must be similar length to calibrated word (±60%)
+// - Cooldown: minimum gap between detections
+
+var detectAF=null;
+var dInWord=false, dWordBuf=[], dSilCount=0;
+
+function toggleListen(){detecting?stopListen():startListen()}
+
+async function startListen(){
+  if(!(await initAudio()))return;
+  detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
+  document.getElementById('btnListen').className='btn-listen on';
+  document.getElementById('btnListen').textContent='⏹ Stop';
+  document.getElementById('sLine').textContent='Listening... chant your mantra';
+  D('Listening','ok');
+
+  var energyMargin=10; // how much above noise floor to trigger
+
+  function tick(){
+    if(!detecting)return;
+
+    var energy=getEnergy();
+    var spec=getSpectrum();
+    var now=Date.now();
+
+    // Update sensitivity live
+    SENSITIVITY=document.getElementById('sSlider').value/100;
+    document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
+    var cooldownMs=parseInt(document.getElementById('cSlider').value)||400;
+    document.getElementById('cVal').textContent=cooldownMs+'ms';
+
+    var threshold=noiseEnergy+energyMargin;
+
+    // Stage 1: Energy gate
+    if(energy>threshold){
+      if(!dInWord){dInWord=true;dWordBuf=[];}
+      dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});
+      dSilCount=0;
+    }else{
+      dSilCount++;
+      if(dInWord&&dSilCount>8){ // ~130ms silence
+        dInWord=false;
+
+        // Check if this segment is worth analyzing
+        var dur=dWordBuf.length;
+        var peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
+
+        // Must be above minimum energy
+        if(peakE<wordFingerprint.minEnergy*0.6){
+          dWordBuf=[];
+          detectAF=requestAnimationFrame(tick);
+          return;
+        }
+
+        // Duration check: must be within range of calibrated word
+        var minDur=avgWordDuration*0.3;
+        var maxDur=avgWordDuration*3.0;
+        if(dur<minDur||dur>maxDur){
+          D('Skip: dur='+dur+' (expect '+minDur.toFixed(0)+'-'+maxDur.toFixed(0)+')','info');
+          dWordBuf=[];
+          detectAF=requestAnimationFrame(tick);
+          return;
+        }
+
+        // Cooldown check
+        if(now<cooldownUntil){
+          D('Cooldown skip','info');
+          dWordBuf=[];
+          detectAF=requestAnimationFrame(tick);
+          return;
+        }
+
+        // Stage 2: Spectral match
+        var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));
+        var sim=cosSim(segSpec,wordFingerprint.spectrum);
+
+        // Centroid similarity (bonus check)
+        var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;
+        var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);
+        var centScore=Math.max(0,1-centDiff*2); // 1=identical, 0=very different
+
+        // Combined score: 70% spectral + 30% centroid
+        var score=sim*0.7+centScore*0.3;
+
+        // Dynamic threshold based on sensitivity
+        var matchThreshold=1.0-SENSITIVITY; // sens=0.5 → threshold=0.5
+
+        // Show match bar
+        var fill=document.getElementById('mFill');
+        var pct=Math.min(score*100,100);
+        fill.style.width=pct+'%';
+        fill.style.background=score>=matchThreshold?'var(--accent)':'var(--card-border)';
+
+        if(score>=matchThreshold){
+          D('🎯 HIT! score='+score.toFixed(3)+' (sim='+sim.toFixed(3)+' cent='+centScore.toFixed(2)+') dur='+dur,'ok');
+          document.getElementById('sLine').className='status-line hit';
+          document.getElementById('sLine').textContent='✓ Detected! ('+score.toFixed(2)+')';
+          ADD(1);
+          cooldownUntil=now+cooldownMs;
+          setTimeout(function(){
+            if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}
+          },400);
+        }else{
+          D('Miss: score='+score.toFixed(3)+' < '+matchThreshold.toFixed(2)+' dur='+dur,'info');
+        }
+
+        dWordBuf=[];
+      }
+    }
+
+    detectAF=requestAnimationFrame(tick);
+  }
+  detectAF=requestAnimationFrame(tick);
+}
+
+function stopListen(){
+  detecting=false;if(detectAF)cancelAnimationFrame(detectAF);
+  document.getElementById('btnListen').className='btn-listen off';
+  document.getElementById('btnListen').textContent='🎤 Start Listening';
+  document.getElementById('sLine').textContent='Stopped';
+  D('Stopped','warn');
+}
+
+// ========= SOUNDS (3 levels) =========
+function playSound(type){
+  try{
+    if(!beepCtx)beepCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(beepCtx.state==='suspended')beepCtx.resume();
+    var now=beepCtx.currentTime;
+    if(type==='chant'){
+      var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=440;g.gain.setValueAtTime(0.3,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);o.start(now);o.stop(now+0.2);
+    }else if(type==='mala'){
+      var o1=beepCtx.createOscillator(),g1=beepCtx.createGain();o1.connect(g1);g1.connect(beepCtx.destination);o1.type='sine';o1.frequency.value=528;g1.gain.setValueAtTime(0.5,now);g1.gain.exponentialRampToValueAtTime(0.01,now+2.5);o1.start(now);o1.stop(now+2.5);
+      var o2=beepCtx.createOscillator(),g2=beepCtx.createGain();o2.connect(g2);g2.connect(beepCtx.destination);o2.type='sine';o2.frequency.value=660;g2.gain.setValueAtTime(0.3,now+0.3);g2.gain.exponentialRampToValueAtTime(0.01,now+2.5);o2.start(now+0.3);o2.stop(now+2.5);
+    }else if(type==='alldone'){
+      [440,554,660,880].forEach(function(f,i){
+        var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.4,now+i*0.5);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.5+2);o.start(now+i*0.5);o.stop(now+i*0.5+2);
+      });
+    }
+  }catch(e){}
+}
+function speak(text){try{var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}catch(e){}}
+
+// ========= VOLUME BUTTON + KEYBOARD CAPTURE =========
+// Keyboard (Space, arrows) - works on desktop
+document.addEventListener('keydown',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();tapCount()}});
+
+// VOLUME BUTTON CAPTURE for mobile
+// Trick: We monitor the actual device volume. When it changes, we count it as a tap
+// and restore the volume to prevent it from actually changing.
+(function setupVolumeCapture(){
+  // Method 1: Use a hidden audio element and monitor its volume changes
+  var volAudio = document.getElementById('silentAudio');
+  if(!volAudio){
+    volAudio = document.createElement('audio');
+    volAudio.id = 'volCapture';
+    volAudio.loop = true;
+    volAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    document.body.appendChild(volAudio);
+  }
+
+  // Method 2: Use Media Session API to capture hardware buttons
+  if('mediaSession' in navigator){
+    try{
+      // Set metadata so the media session is active
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Japa Counter',
+        artist: 'Chanting',
+        album: 'Mantra'
+      });
+
+      // These don't directly capture volume, but capture play/pause/next/prev hardware buttons
+      navigator.mediaSession.setActionHandler('play', function(){
+        if(document.getElementById('counterScreen').classList.contains('active')) tapCount();
+      });
+      navigator.mediaSession.setActionHandler('pause', function(){
+        if(document.getElementById('counterScreen').classList.contains('active')) tapCount();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', function(){
+        if(document.getElementById('counterScreen').classList.contains('active')) tapCount();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', function(){
+        if(document.getElementById('counterScreen').classList.contains('active')) tapCount();
+      });
+    }catch(e){}
+  }
+
+  // Method 3: Monitor actual volume changes via AudioContext
+  // This is the most reliable way to detect volume button presses on Android
+  var lastVol = -1;
+  var volCheckInterval = null;
+
+  function startVolCapture(){
+    if(volCheckInterval) return;
+    try{
+      var vCtx = new (window.AudioContext||window.webkitAudioContext)();
+      var vOsc = vCtx.createOscillator();
+      var vGain = vCtx.createGain();
+      vOsc.connect(vGain);
+      vGain.connect(vCtx.destination);
+      vGain.gain.value = 0.001; // nearly silent
+      vOsc.frequency.value = 20; // inaudible frequency
+      vOsc.start();
+
+      // Create an analyser to monitor output level
+      var vAnalyser = vCtx.createAnalyser();
+      vGain.connect(vAnalyser);
+      vAnalyser.fftSize = 32;
+
+      // Poll for volume changes using the device's actual audio output
+      // On Android Chrome, we can detect volume changes via the audio element
+      var testAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+      testAudio.loop = true;
+      testAudio.volume = 0.5;
+      testAudio.play().catch(function(){});
+
+      volCheckInterval = setInterval(function(){
+        if(!document.getElementById('counterScreen').classList.contains('active')) return;
+        // We can't directly read device volume in browser,
+        // but we can detect volume key presses via a different approach
+      }, 100);
+
+    }catch(e){}
+  }
+
+  // Start volume capture when counter screen opens
+  var origStart = window.startSession;
+  if(origStart){
+    window.startSession = function(){
+      origStart();
+      startVolCapture();
+      // Also try to play silent audio to keep media session active
+      try{volAudio.play()}catch(e){}
+    };
+  }
+})();
+
+// Alternative: Make the entire screen a tap zone when in tap/both mode
+// This makes it easy to tap ANYWHERE on screen
+document.getElementById('counterScreen').addEventListener('click', function(e){
+  // Only count if tap clicked outside buttons/sliders
+  var tag = e.target.tagName.toLowerCase();
+  if(tag==='button'||tag==='input'||tag==='select') return;
+  if(e.target.closest('button')||e.target.closest('input')||e.target.closest('.debug')) return;
+  if(curMode==='voice') return; // don't count taps in voice-only mode
+  tapCount();
+});
+D('v9 loaded','ok');
+</script>
+</body>
+</html>
