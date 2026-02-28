@@ -245,14 +245,15 @@
 
   <div id="alarmOverlay" class="alarm-overlay" style="display:none"></div>
 
-  <!-- Mala Complete Overlay -->
-  <div id="malaOv" class="ov"><div class="ov-bg"></div>
+  <!-- Mala Complete Overlay (auto-dismiss after 4 seconds) -->
+  <div id="malaOv" class="ov"><div class="ov-bg" onclick="dismissMalaOv()"></div>
     <div class="ov-box mala-done-box">
       <div style="font-size:50px">📿</div>
       <h2 id="malaOvTitle">Mala 1 Complete!</h2>
       <p style="color:var(--text-dim)"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:20px">1</span> of <span id="malaOvTotal">16</span> malas done</p>
       <p style="color:var(--text-dim);font-size:13px;margin-top:6px">Keep going! 🙏</p>
-      <button class="ov-btn" onclick="document.getElementById('malaOv').classList.remove('active')" style="background:var(--success);color:white">Continue Chanting</button>
+      <p id="malaAutoMsg" style="color:var(--success);font-size:14px;margin-top:10px">Auto-continuing in <span id="malaCountdown">4</span>s...</p>
+      <button class="ov-btn" onclick="dismissMalaOv()" style="background:var(--success);color:white">Continue Now</button>
     </div>
   </div>
 
@@ -565,6 +566,13 @@ function ADD(n){
       G_w=0;G_chant++;G_totalC++;
       playSound('chant');
       if(navigator.vibrate)navigator.vibrate([50]);
+      // Voice progress at quarter-mala milestones
+      if(G_chant>0 && G_chant<CFG.cpm && CFG.cpm>=54){
+        var quarter=Math.floor(CFG.cpm/4);
+        if(quarter>0 && G_chant%quarter===0){
+          speak(G_chant+' of '+CFG.cpm);
+        }
+      }
       // MALA COMPLETE?
       if(G_chant>=CFG.cpm){
         G_chant=0;G_mala++;
@@ -573,7 +581,7 @@ function ADD(n){
           setTimeout(function(){
             playSound('alldone');
             if(navigator.vibrate)navigator.vibrate([400,150,400,150,400,150,600]);
-            speak('Target '+CFG.malas+' Malas complete! Hare Krishna!');
+            speak('Target '+CFG.malas+' Malas complete! Hare Krishna! Hare Krishna!');
             document.getElementById('doneCount').textContent=G_mala;
             document.getElementById('doneTotalC').textContent=G_totalC;
             document.getElementById('doneOv').classList.add('active');
@@ -583,11 +591,11 @@ function ADD(n){
           setTimeout(function(){
             playSound('mala');
             if(navigator.vibrate)navigator.vibrate([250,100,250,100,250]);
-            speak('Mala '+G_mala+' of '+CFG.malas+' complete');
+            speak('Mala '+G_mala+' of '+CFG.malas+' complete. Continue chanting.');
             document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
             document.getElementById('malaOvDone').textContent=G_mala;
             document.getElementById('malaOvTotal').textContent=CFG.malas;
-            document.getElementById('malaOv').classList.add('active');
+            showMalaOvAutoClose();
           },300);
         }
       }
@@ -759,7 +767,42 @@ function playSound(type){
     }
   }catch(e){}
 }
-function speak(text){try{var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}catch(e){}}
+function speak(text){
+  try{
+    if('speechSynthesis' in window){
+      speechSynthesis.cancel();
+      var u=new SpeechSynthesisUtterance(text);
+      u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';
+      speechSynthesis.speak(u);
+    }
+  }catch(e){D('TTS err: '+e.message,'err')}
+}
+
+// ========= AUTO-CLOSE MALA OVERLAY =========
+var malaOvTimer=null;
+var malaCountdownTimer=null;
+function showMalaOvAutoClose(){
+  var ov=document.getElementById('malaOv');
+  ov.classList.add('active');
+  var sec=4;
+  var cdEl=document.getElementById('malaCountdown');
+  if(cdEl)cdEl.textContent=sec;
+  if(malaCountdownTimer)clearInterval(malaCountdownTimer);
+  malaCountdownTimer=setInterval(function(){
+    sec--;
+    if(cdEl)cdEl.textContent=sec;
+    if(sec<=0){clearInterval(malaCountdownTimer);malaCountdownTimer=null;}
+  },1000);
+  if(malaOvTimer)clearTimeout(malaOvTimer);
+  malaOvTimer=setTimeout(function(){
+    dismissMalaOv();
+  },4000);
+}
+function dismissMalaOv(){
+  if(malaOvTimer){clearTimeout(malaOvTimer);malaOvTimer=null;}
+  if(malaCountdownTimer){clearInterval(malaCountdownTimer);malaCountdownTimer=null;}
+  document.getElementById('malaOv').classList.remove('active');
+}
 
 // ========= VOLUME BUTTON + KEYBOARD CAPTURE =========
 // Keyboard (Space, arrows) - works on desktop
