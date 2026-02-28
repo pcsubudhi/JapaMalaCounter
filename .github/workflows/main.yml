@@ -8,11 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./JapaMalaCounter
     steps:
       - uses: actions/checkout@v4
+
+      - name: Find project root
+        run: |
+          echo "=== Full tree ==="
+          find . -name "build.gradle" -o -name "settings.gradle" | head -20
+          echo "=== Top level ==="
+          ls -la
+          echo "=== One level deep ==="
+          ls -la */ 2>/dev/null || true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -24,10 +30,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: |
+          PROJECT_DIR=$(dirname $(find . -name "settings.gradle" | head -1))
+          echo "Building in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: JapaMalaCounter-APK
-          path: JapaMalaCounter/app/build/outputs/apk/debug/app-debug.apk
+          path: ./**/app/build/outputs/apk/debug/app-debug.apk
