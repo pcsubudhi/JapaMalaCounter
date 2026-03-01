@@ -7,152 +7,145 @@
 <meta name="theme-color" content="#1A0F0A">
 <title>📿 Japa Mala Counter</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  :root{--bg:#1A0F0A;--bg2:#0D0705;--card:#2A1F15;--card-border:#3D2E1F;--accent:#F59E0B;--accent-dim:rgba(245,158,11,0.15);--text:#FEF3C7;--text-dim:#A89070;--success:#10B981;--danger:#EF4444}
-  body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);height:100vh;overflow:hidden;padding-top:env(safe-area-inset-top,0px)}
-  body.dim-mode{filter:brightness(0.4)}
+  :root{--bg:#140B07;--bg2:#0A0503;--card:#231812;--card-border:#3A2A1E;--accent:#FBBF24;--accent-dim:rgba(251,191,36,0.12);--text:#FFF8E7;--text-mid:#D4B896;--text-dim:#B89B78;--success:#34D399;--danger:#F87171}
+  body{font-family:'Nunito Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;padding-top:env(safe-area-inset-top,0px);letter-spacing:0.01em}
+  body.dim-mode{filter:brightness(0.35)}
   .app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;padding-top:28px}
-  .screen{padding:6px 14px;display:none;flex:1;overflow-y:auto}.screen.active{display:flex;flex-direction:column}
+  .screen{padding:6px 16px;display:none;flex:1;overflow-y:auto}.screen.active{display:flex;flex-direction:column}
   .counter-screen{overflow:hidden!important}
-  .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
-  button{font-family:'Crimson Pro','Georgia',serif;cursor:pointer;border:none;outline:none}
-  .btn-primary{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:17px;font-weight:700;box-shadow:0 4px 24px rgba(245,158,11,0.4)}
-  .btn-primary:disabled{opacity:0.4}
-  input[type="number"]{width:100%;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid var(--card-border);color:var(--text);font-size:15px;font-family:'Crimson Pro',serif;outline:none}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px 16px;margin-bottom:6px}
+  button{font-family:'Nunito Sans','Segoe UI',sans-serif;cursor:pointer;border:none;outline:none}
+  .btn-primary{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:17px;font-weight:700;box-shadow:0 4px 20px rgba(251,191,36,0.35);letter-spacing:0.02em}
+  .btn-primary:disabled{opacity:0.35}
+  input[type="number"]{width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;font-family:'Nunito Sans',sans-serif;outline:none}
   input:focus{border-color:var(--accent)}
-  .home-title{text-align:center;margin-bottom:8px}
-  .home-title h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--accent)}
-  .home-title p{color:var(--text-dim);font-size:12px;margin-top:2px}
-  /* Streak badge */
-  .streak-badge{display:inline-block;background:linear-gradient(135deg,#EF4444,#F59E0B);border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;color:white;margin-top:4px}
-  /* Quote */
-  .quote-box{text-align:center;padding:8px 12px;font-style:italic;font-size:12px;color:var(--text-dim);line-height:1.4;margin-bottom:8px}
-  .quote-box .author{font-style:normal;color:var(--accent);font-size:11px;margin-top:2px}
-  .step{margin-bottom:2px}
-  .step-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-  .step-num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .home-title{text-align:center;margin-bottom:6px}
+  .home-title h1{font-family:'Playfair Display',serif;font-size:26px;color:var(--accent);letter-spacing:0.02em}
+  .home-title p{color:var(--text-mid);font-size:13px;margin-top:2px}
+  .streak-badge{display:inline-block;background:linear-gradient(135deg,#EF4444,#FBBF24);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:700;color:white;margin-top:5px}
+  .quote-box{text-align:center;padding:6px 14px;font-style:italic;font-size:13px;color:var(--text-mid);line-height:1.5;margin-bottom:6px}
+  .quote-box .author{font-style:normal;color:var(--accent);font-size:12px;margin-top:3px;font-weight:600}
+  .step{margin-bottom:1px}
+  .step-header{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
   .step-num.done{background:var(--success)}
-  .step-title{font-size:14px;font-weight:600}
-  .btn-rec{width:100%;padding:10px;border-radius:10px;font-size:14px;font-weight:600;transition:all 0.2s}
+  .step-title{font-size:15px;font-weight:700;color:var(--text)}
+  .btn-rec{width:100%;padding:12px;border-radius:12px;font-size:15px;font-weight:700;transition:all 0.2s}
   .btn-rec.idle{background:linear-gradient(135deg,#059669,#047857);color:white}
   .btn-rec.busy{background:linear-gradient(135deg,#DC2626,#991B1B);color:white;animation:pulse 1s infinite}
-  .btn-rec.ok{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+  .btn-rec.ok{background:var(--accent-dim);color:var(--accent);border:1.5px solid var(--accent)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
-  .viz{height:36px;background:rgba(0,0,0,0.3);border-radius:8px;margin:4px 0;display:flex;align-items:flex-end;gap:1px;padding:3px;overflow:hidden}
+  .viz{height:36px;background:rgba(0,0,0,0.35);border-radius:8px;margin:4px 0;display:flex;align-items:flex-end;gap:1px;padding:3px;overflow:hidden}
   .viz div{flex:1;background:var(--accent);border-radius:1px;min-height:2px;transition:height 0.05s}
   .targets-row{display:flex;gap:5px;margin-bottom:6px}
-  .target-btn{flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:13px;font-weight:600}
+  .target-btn{flex:1;padding:9px;border-radius:8px;background:transparent;border:1.5px solid var(--card-border);color:var(--text-mid);font-size:14px;font-weight:600}
   .target-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
   .wpr-row{display:flex;gap:5px;margin-bottom:6px}
-  .wpr-btn{flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:13px;font-weight:600}
+  .wpr-btn{flex:1;padding:9px;border-radius:8px;background:transparent;border:1.5px solid var(--card-border);color:var(--text-mid);font-size:14px;font-weight:600}
   .wpr-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
-  .tip{display:inline-block;width:16px;height:16px;border-radius:50%;background:rgba(245,158,11,0.15);color:var(--accent);font-size:10px;text-align:center;line-height:16px;cursor:pointer;margin-left:3px;vertical-align:middle;border:1px solid rgba(245,158,11,0.3)}
-  .tip-box{display:none;background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);margin-top:4px;line-height:1.4}
+  .tip{display:inline-flex;width:18px;height:18px;border-radius:50%;background:rgba(251,191,36,0.15);color:var(--accent);font-size:13px;align-items:center;justify-content:center;cursor:pointer;margin-left:4px;vertical-align:middle;border:1px solid rgba(251,191,36,0.35)}
+  .tip-box{display:none;background:#1C130D;border:1px solid var(--accent);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);margin-top:5px;line-height:1.5}
   .tip-box.show{display:block}
-  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px;border-bottom:1px solid var(--card-border);margin-bottom:4px}
+  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px;border-bottom:1px solid var(--card-border);margin-bottom:3px}
   .top-bar-right{display:flex;align-items:center;gap:5px}
-  .tb-btn{background:var(--card);border:1.5px solid var(--accent);border-radius:8px;padding:5px 10px;color:var(--accent);font-size:11px;font-weight:700}
+  .tb-btn{background:var(--card);border:1.5px solid var(--accent);border-radius:8px;padding:6px 11px;color:var(--accent);font-size:12px;font-weight:700}
   .tb-btn:active{background:var(--accent);color:var(--bg)}
-  .tb-back{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px}
+  .tb-back{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);font-size:12px;font-weight:700;padding:6px 11px;border-radius:8px}
   .tb-back:active{background:var(--danger);color:white}
-  .pause-banner{display:none;background:rgba(220,38,38,0.2);border:2px solid var(--danger);border-radius:10px;padding:8px;text-align:center;margin-bottom:4px}
+  .pause-banner{display:none;background:rgba(248,113,113,0.15);border:2px solid var(--danger);border-radius:10px;padding:8px;text-align:center;margin-bottom:3px}
   .pause-banner.show{display:block}
-  .pause-banner span{color:var(--danger);font-weight:700;font-size:14px}
-  .info-row{display:flex;justify-content:space-between;align-items:center;padding:2px 4px}
-  .timer{font-family:'Playfair Display',serif;font-size:13px;color:var(--accent)}
-  .mala-info{font-family:'Playfair Display',serif;font-size:13px;color:var(--success);font-weight:700}
-  .pbar-mala{background:var(--card-border);border-radius:6px;height:4px;margin:2px 0 4px;overflow:hidden}
+  .pause-banner span{color:var(--danger);font-weight:700;font-size:15px}
+  .info-row{display:flex;justify-content:space-between;align-items:center;padding:2px 2px}
+  .timer{font-family:'Playfair Display',serif;font-size:15px;color:var(--accent);font-weight:600}
+  .mala-info{font-family:'Playfair Display',serif;font-size:15px;color:var(--success);font-weight:700}
+  .pbar-mala{background:var(--card-border);border-radius:6px;height:5px;margin:2px 0 3px;overflow:hidden}
   .pfill-mala{height:100%;border-radius:6px;background:linear-gradient(90deg,#059669,var(--success));transition:width 0.4s;width:0%}
-  .mala-container{position:relative;display:flex;justify-content:center;margin:2px 0}
-  .mala-svg{width:100%;max-width:160px;max-height:160px}
+  .mala-container{position:relative;display:flex;justify-content:center;margin:1px 0}
+  .mala-svg{width:100%;max-width:155px;max-height:155px}
   .mala-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-  .mala-count{font-family:'Playfair Display',serif;font-size:40px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 20px rgba(245,158,11,0.4);transition:transform 0.15s}
+  .mala-count{font-family:'Playfair Display',serif;font-size:42px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 24px rgba(251,191,36,0.5);transition:transform 0.15s}
   .mala-count.pop{transform:scale(1.15)}
-  .mala-target{font-size:11px;color:var(--text-dim);margin-top:1px}
-  .progress-bar{background:var(--card-border);border-radius:6px;height:4px;margin:2px 0 4px;overflow:hidden}
+  .mala-target{font-size:13px;color:var(--text-mid)}
+  .progress-bar{background:var(--card-border);border-radius:6px;height:5px;margin:2px 0 3px;overflow:hidden}
   .progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#B45309,var(--accent));transition:width 0.4s;width:0%}
-  .stats-line{display:flex;justify-content:space-around;padding:3px 0;font-size:11px;color:var(--text-dim)}
-  .stats-line b{color:var(--accent);font-size:13px}
+  .stats-line{display:flex;justify-content:space-around;padding:3px 0;font-size:13px;color:var(--text-mid);font-weight:500}
+  .stats-line b{color:var(--accent);font-size:15px;font-weight:700}
   .stats-line .gr b{color:var(--success)}
-  .mode-tabs{display:flex;border:1px solid var(--card-border);border-radius:10px;overflow:hidden;margin:4px 0}
-  .mtab{flex:1;padding:7px;background:transparent;color:var(--text-dim);font-size:12px;font-weight:500;border-right:1px solid var(--card-border)}
+  .mode-tabs{display:flex;border:1.5px solid var(--card-border);border-radius:10px;overflow:hidden;margin:3px 0}
+  .mtab{flex:1;padding:8px;background:transparent;color:var(--text-mid);font-size:13px;font-weight:600;border-right:1px solid var(--card-border)}
   .mtab:last-child{border-right:none}
-  .mtab.act{background:var(--accent-dim);color:var(--accent);font-weight:600}
-  .btn-listen{width:100%;padding:10px;border-radius:12px;color:white;font-size:14px;font-weight:600}
+  .mtab.act{background:var(--accent-dim);color:var(--accent);font-weight:700}
+  .btn-listen{width:100%;padding:11px;border-radius:12px;color:white;font-size:15px;font-weight:700}
   .btn-listen.off{background:linear-gradient(135deg,#059669,#047857)}
   .btn-listen.on{background:linear-gradient(135deg,#DC2626,#991B1B)}
-  .match-bar{height:5px;border-radius:3px;margin:4px 0;background:rgba(0,0,0,0.3);overflow:hidden}
+  .match-bar{height:6px;border-radius:3px;margin:4px 0;background:rgba(0,0,0,0.35);overflow:hidden}
   .match-fill{height:100%;border-radius:3px;width:0%;transition:width 0.1s,background 0.15s}
-  .status-line{text-align:center;font-size:11px;color:var(--text-dim);padding:2px 0}
-  .status-line.hit{color:var(--accent);font-weight:700;font-size:13px}
+  .status-line{text-align:center;font-size:13px;color:var(--text-mid);padding:2px 0;font-weight:500}
+  .status-line.hit{color:var(--accent);font-weight:700;font-size:15px}
   .slider-row{display:flex;align-items:center;gap:6px;margin:3px 0}
-  .slider-row label{font-size:10px;color:var(--text-dim);min-width:40px}
-  .slider-row input[type=range]{flex:1;accent-color:var(--accent);height:16px}
-  .slider-row .val{font-size:10px;color:var(--accent);min-width:32px;text-align:right}
-  .tap-area{width:100%;padding:16px 12px;border-radius:16px;background:var(--card);border:2px solid var(--card-border);color:var(--text);text-align:center;transition:all 0.15s;margin:4px 0}
+  .slider-row label{font-size:12px;color:var(--text-mid);min-width:40px;font-weight:500}
+  .slider-row input[type=range]{flex:1;accent-color:var(--accent);height:18px}
+  .slider-row .val{font-size:12px;color:var(--accent);min-width:34px;text-align:right;font-weight:600}
+  .tap-area{width:100%;padding:14px 12px;border-radius:16px;background:var(--card);border:2px solid var(--card-border);color:var(--text);text-align:center;transition:all 0.15s;margin:3px 0}
   .tap-area:active{background:linear-gradient(135deg,#D97706,#B45309);border-color:var(--accent)}
-  .vol-hint{text-align:center;font-size:10px;color:var(--text-dim);padding:2px 0;opacity:0.7}
-  .snd-panel{display:none;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:10px 12px;margin-bottom:4px;max-height:60vh;overflow-y:auto}
+  .vol-hint{text-align:center;font-size:13px;color:var(--text-mid);padding:2px 0}
+  .snd-panel{display:none;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:3px;max-height:60vh;overflow-y:auto}
   .snd-panel.show{display:block}
-  .snd-hint{text-align:center;font-size:10px;color:var(--accent);padding:2px 0;opacity:0.8}
-  .snd-section{margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.05)}
+  .snd-hint{text-align:center;font-size:12px;color:var(--accent);padding:3px 0;font-weight:600}
+  .snd-section{margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.06)}
   .snd-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
-  .snd-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px}
+  .snd-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
   .snd-ctrl{display:flex;align-items:center;gap:6px;margin:2px 0}
-  .snd-ctrl label{font-size:10px;color:var(--text-dim);min-width:32px}
-  .snd-ctrl input[type=range]{flex:1;accent-color:var(--accent);height:14px}
-  .snd-ctrl .sval{font-size:10px;color:var(--accent);min-width:24px;text-align:right}
-  .vib-select{background:var(--bg);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 6px;font-family:'Crimson Pro',serif}
+  .snd-ctrl label{font-size:12px;color:var(--text-mid);min-width:34px;font-weight:500}
+  .snd-ctrl input[type=range]{flex:1;accent-color:var(--accent);height:16px}
+  .snd-ctrl .sval{font-size:12px;color:var(--accent);min-width:28px;text-align:right;font-weight:600}
+  .vib-select{background:var(--bg);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-size:13px;padding:5px 8px;font-family:'Nunito Sans',sans-serif}
   .ov{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
   .ov.active{display:flex}
-  .ov-bg{position:absolute;inset:0;background:rgba(0,0,0,0.9)}
+  .ov-bg{position:absolute;inset:0;background:rgba(0,0,0,0.92)}
   .ov-box{position:relative;z-index:1;border-radius:18px;padding:24px;text-align:center;max-width:320px;width:100%}
-  .mala-done-box{background:var(--card);border:2px solid var(--success);box-shadow:0 0 40px rgba(16,185,129,0.3)}
-  .mala-done-box h2{font-family:'Playfair Display',serif;color:var(--success);font-size:18px;margin:6px 0}
-  .all-done-box{background:linear-gradient(135deg,#2A1F15,#1A0F0A);border:3px solid var(--accent);box-shadow:0 0 60px rgba(245,158,11,0.4);animation:celeb 1.5s infinite}
-  @keyframes celeb{0%,100%{box-shadow:0 0 30px rgba(245,158,11,0.3)}50%{box-shadow:0 0 60px rgba(245,158,11,0.6)}}
-  .all-done-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:20px;margin:6px 0}
-  .ov-btn{display:block;width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:600;margin-top:8px;font-family:'Crimson Pro',serif}
-  .confirm-ov{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.85)}
+  .mala-done-box{background:var(--card);border:2px solid var(--success);box-shadow:0 0 40px rgba(52,211,153,0.25)}
+  .mala-done-box h2{font-family:'Playfair Display',serif;color:var(--success);font-size:20px;margin:6px 0}
+  .all-done-box{background:linear-gradient(135deg,#231812,#140B07);border:3px solid var(--accent);box-shadow:0 0 60px rgba(251,191,36,0.35);animation:celeb 1.5s infinite}
+  @keyframes celeb{0%,100%{box-shadow:0 0 30px rgba(251,191,36,0.25)}50%{box-shadow:0 0 60px rgba(251,191,36,0.5)}}
+  .all-done-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:22px;margin:6px 0}
+  .ov-btn{display:block;width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;margin-top:8px;font-family:'Nunito Sans',sans-serif}
+  .confirm-ov{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.88)}
   .confirm-ov.show{display:flex}
-  .confirm-box{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:20px;text-align:center;max-width:280px;width:100%}
-  .confirm-box h3{color:var(--text);font-size:16px;margin-bottom:6px}
-  .confirm-box p{color:var(--text-dim);font-size:12px;margin-bottom:12px}
+  .confirm-box{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:22px;text-align:center;max-width:280px;width:100%}
+  .confirm-box h3{color:var(--text);font-size:17px;margin-bottom:6px;font-weight:700}
+  .confirm-box p{color:var(--text-mid);font-size:14px;margin-bottom:14px}
   .confirm-btns{display:flex;gap:8px}
-  .confirm-btns button{flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:600}
-  .dbg-toggle{text-align:center;font-size:9px;color:var(--text-dim);padding:2px;cursor:pointer;opacity:0.5}
-  .debug{display:none;background:#000;border:1px solid #222;border-radius:8px;padding:3px;font-family:monospace;font-size:7px;max-height:60px;overflow-y:auto}
+  .confirm-btns button{flex:1;padding:11px;border-radius:8px;font-size:14px;font-weight:700}
+  .dbg-toggle{text-align:center;font-size:12px;color:var(--text-mid);padding:2px;cursor:pointer;opacity:0.4}
+  .debug{display:none;background:#000;border:1px solid #222;border-radius:8px;padding:3px;font-family:monospace;font-size:8px;max-height:60px;overflow-y:auto}
   .debug.show{display:block}
   .debug div{padding:0;border-bottom:1px solid #111}
   .debug .ok{color:#4ade80}.debug .warn{color:#fbbf24}.debug .err{color:#f87171}.debug .info{color:#60a5fa}
-  .ad-banner{background:rgba(0,0,0,0.3);border:1px dashed var(--card-border);border-radius:8px;padding:12px;text-align:center;margin-top:auto;margin-bottom:8px;min-height:50px;display:flex;align-items:center;justify-content:center}
-  .ad-banner span{font-size:10px;color:var(--text-dim);opacity:0.5}
-  .resume-banner{display:none;text-align:center;border-color:var(--success)!important;margin-bottom:8px}
+  .ad-banner{background:rgba(0,0,0,0.3);border:1px dashed var(--card-border);border-radius:8px;padding:14px;text-align:center;margin-top:auto;margin-bottom:8px;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .ad-banner span{font-size:13px;color:var(--text-mid)}
+  .resume-banner{display:none;text-align:center;border-color:var(--success)!important;margin-bottom:6px}
   .resume-banner.show{display:block}
-  /* Welcome overlay */
-  .welcome-ov{position:fixed;inset:0;z-index:1003;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.95)}
+  .welcome-ov{position:fixed;inset:0;z-index:1003;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.96)}
   .welcome-ov.show{display:flex}
   .welcome-box{background:var(--card);border:2px solid var(--accent);border-radius:18px;padding:28px 24px;text-align:center;max-width:320px;width:100%}
-  .welcome-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:20px;margin:8px 0}
-  .welcome-step{color:var(--text-dim);font-size:13px;margin:12px 0;line-height:1.5}
+  .welcome-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:22px;margin:8px 0}
+  .welcome-step{color:var(--text-mid);font-size:14px;margin:10px 0;line-height:1.6}
   .welcome-step b{color:var(--text)}
   .welcome-dots{display:flex;justify-content:center;gap:8px;margin:12px 0}
   .welcome-dots span{width:8px;height:8px;border-radius:50%;background:var(--card-border)}
   .welcome-dots span.active{background:var(--accent)}
-  /* Battery warning */
-  .battery-warn{display:none;background:rgba(239,68,68,0.15);border:1px solid var(--danger);border-radius:8px;padding:4px 8px;text-align:center;font-size:10px;color:var(--danger);margin-bottom:3px}
+  .battery-warn{display:none;background:rgba(248,113,113,0.12);border:1px solid var(--danger);border-radius:8px;padding:5px 8px;text-align:center;font-size:12px;color:var(--danger);margin-bottom:3px;font-weight:600}
   .battery-warn.show{display:block}
-  /* Particles canvas */
   #particles{position:fixed;inset:0;pointer-events:none;z-index:1000;display:none}
-  /* Undo toast */
-  .undo-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--accent);border-radius:10px;padding:8px 16px;font-size:13px;color:var(--accent);display:none;z-index:999;font-weight:600}
+  .undo-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--card);border:1.5px solid var(--accent);border-radius:10px;padding:10px 20px;font-size:14px;color:var(--accent);display:none;z-index:999;font-weight:700}
   .undo-toast.show{display:block;animation:fadeout 2s ease-in forwards}
   @keyframes fadeout{0%,70%{opacity:1}100%{opacity:0}}
-  /* Checkbox styling */
-  .chk-row{display:flex;align-items:center;gap:8px;margin:4px 0}
-  .chk-row label{font-size:12px;color:var(--text)}
-  .chk-row input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+  .chk-row{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .chk-row label{font-size:14px;color:var(--text);font-weight:500}
+  .chk-row input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
 </style>
 </head>
 <body>
@@ -189,7 +182,7 @@
     <!-- Resume banner -->
     <div id="resumeBanner" class="card resume-banner">
       <p style="color:var(--success);font-weight:600;margin-bottom:6px">Paused Session</p>
-      <p style="color:var(--text-dim);font-size:12px;margin-bottom:8px">Mala <span id="rMala">0</span>/<span id="rMalaT">16</span> | Chant <span id="rChant">0</span>/<span id="rCPM">108</span></p>
+      <p style="color:var(--text-mid);font-size:12px;margin-bottom:8px">Mala <span id="rMala">0</span>/<span id="rMalaT">16</span> | Chant <span id="rChant">0</span>/<span id="rCPM">108</span></p>
       <button onclick="resumeSession()" style="width:100%;padding:10px;border-radius:10px;background:var(--success);color:white;font-size:14px;font-weight:600">Resume Chanting</button>
     </div>
 
@@ -198,16 +191,16 @@
       <div class="step-header"><div class="step-num" id="s1n">1</div><div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div></div>
       <div id="tip1" class="tip-box">Stay completely quiet for 10 seconds. This learns background noise (fan, AC, traffic) for filtering.</div>
       <div style="margin-bottom:6px">
-        <label style="font-size:11px;color:var(--text-dim)">Microphone: <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
+        <label style="font-size:13px;color:var(--text-mid)">Microphone: <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
         <div id="tipMic" class="tip-box">Select which mic to use. Bluetooth earbuds should appear here. Tap Refresh after connecting.</div>
         <div style="display:flex;gap:6px;margin-top:4px">
           <select id="micSelect" class="vib-select" style="flex:1;padding:8px;font-size:13px" onchange="selectedMicId=this.value"><option value="">Default Microphone</option></select>
-          <button onclick="refreshMicList()" style="background:var(--card);border:1px solid var(--card-border);border-radius:6px;padding:6px 10px;color:var(--accent);font-size:11px;font-weight:600">Refresh</button>
+          <button onclick="refreshMicList()" style="background:var(--card);border:1px solid var(--card-border);border-radius:6px;padding:6px 10px;color:var(--accent);font-size:13px;font-weight:600">Refresh</button>
         </div>
       </div>
       <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
       <div id="noiseViz" class="viz" style="display:none"></div>
-      <div id="noiseStatus" style="font-size:10px;color:var(--text-dim);margin-top:2px;text-align:center"></div>
+      <div id="noiseStatus" style="font-size:12px;color:var(--text-mid);margin-top:2px;text-align:center"></div>
     </div>
 
     <!-- Step 2 -->
@@ -216,13 +209,13 @@
       <div id="tip2" class="tip-box">Say one word from your mantra 5 times with pauses. Same volume/distance as actual chanting.</div>
       <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Word ×5</button>
       <div id="wordViz" class="viz" style="display:none"></div>
-      <div id="wordStatus" style="font-size:10px;color:var(--text-dim);margin-top:2px;text-align:center"></div>
+      <div id="wordStatus" style="font-size:12px;color:var(--text-mid);margin-top:2px;text-align:center"></div>
     </div>
 
     <!-- Step 3 -->
     <div class="card step">
       <div class="step-header"><div class="step-num">3</div><div class="step-title">Settings</div></div>
-      <p style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Words per chant: <span class="tip" onclick="toggleTip('tip3')">?</span></p>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Words per chant: <span class="tip" onclick="toggleTip('tip3')">?</span></p>
       <div id="tip3" class="tip-box">"Hare Krishna Hare Krishna Krishna Krishna Hare Hare" = 8 words. "Om Namah Shivaya" = 3.</div>
       <div class="wpr-row">
         <button class="wpr-btn" onclick="pickWPR(1)">1</button>
@@ -231,7 +224,7 @@
         <button class="wpr-btn" onclick="pickWPR(16)">16</button>
       </div>
       <input type="number" id="inWPR" value="8" min="1" style="margin-bottom:8px">
-      <p style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Chants per Mala: <span class="tip" onclick="toggleTip('tip4')">?</span></p>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Chants per Mala: <span class="tip" onclick="toggleTip('tip4')">?</span></p>
       <div id="tip4" class="tip-box">Traditional = 108 beads. Some use 54 (half) or 216 (double).</div>
       <div class="targets-row">
         <button class="target-btn" onclick="pickCPM(54)">54</button>
@@ -239,7 +232,7 @@
         <button class="target-btn" onclick="pickCPM(216)">216</button>
       </div>
       <input type="number" id="inCPM" value="108" min="1" style="margin-bottom:8px">
-      <p style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Total Malas: <span class="tip" onclick="toggleTip('tip5')">?</span></p>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Total Malas: <span class="tip" onclick="toggleTip('tip5')">?</span></p>
       <div id="tip5" class="tip-box">ISKCON recommends 16 rounds daily.</div>
       <div class="targets-row">
         <button class="target-btn" onclick="pickMalas(4)">4</button>
@@ -288,9 +281,9 @@
         <div class="snd-ctrl"><label>Vol</label><input type="range" id="volMile" min="0" max="100" value="50" oninput="SND.mileVol=this.value/100;document.getElementById('vvMile').textContent=this.value+'%'"><span class="sval" id="vvMile">50%</span></div>
         <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibMile" onchange="SND.mileVib=this.value"><option value="off">Off</option><option value="short" selected>Short</option><option value="medium">Medium</option></select></div>
         <div class="snd-ctrl"><label>At</label>
-          <label style="min-width:auto;font-size:11px;color:var(--text)"><input type="checkbox" id="mile25" checked onchange="updateMilestones()"> 25%</label>
-          <label style="min-width:auto;font-size:11px;color:var(--text)"><input type="checkbox" id="mile50" checked onchange="updateMilestones()"> 50%</label>
-          <label style="min-width:auto;font-size:11px;color:var(--text)"><input type="checkbox" id="mile75" checked onchange="updateMilestones()"> 75%</label>
+          <label style="min-width:auto;font-size:13px;color:var(--text)"><input type="checkbox" id="mile25" checked onchange="updateMilestones()"> 25%</label>
+          <label style="min-width:auto;font-size:13px;color:var(--text)"><input type="checkbox" id="mile50" checked onchange="updateMilestones()"> 50%</label>
+          <label style="min-width:auto;font-size:13px;color:var(--text)"><input type="checkbox" id="mile75" checked onchange="updateMilestones()"> 75%</label>
         </div>
       </div>
       <div class="snd-section">
@@ -311,7 +304,7 @@
 
     <div class="info-row">
       <div class="timer" id="timerDisplay">00:00:00</div>
-      <div style="font-size:10px;color:var(--text-dim)" id="speedDisplay"></div>
+      <div style="font-size:12px;color:var(--text-mid)" id="speedDisplay"></div>
       <div class="mala-info">Mala <span id="dMala">0</span>/<span id="dMalaTarget">16</span></div>
     </div>
     <div class="pbar-mala"><div id="pMala" class="pfill-mala"></div></div>
@@ -352,14 +345,14 @@
 
   <!-- OVERLAYS -->
   <div id="malaOv" class="ov"><div class="ov-bg" onclick="dismissMalaOv()"></div>
-    <div class="ov-box mala-done-box"><div style="font-size:40px">📿</div><h2 id="malaOvTitle">Mala 1 Complete!</h2><p style="color:var(--text-dim);font-size:14px"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:18px">1</span> of <span id="malaOvTotal">16</span></p><p style="color:var(--success);font-size:12px;margin-top:6px">Auto-continuing in <span id="malaCountdown">4</span>s...</p><button class="ov-btn" onclick="dismissMalaOv()" style="background:var(--success);color:white">Continue Now</button></div>
+    <div class="ov-box mala-done-box"><div style="font-size:40px">📿</div><h2 id="malaOvTitle">Mala 1 Complete!</h2><p style="color:var(--text-mid);font-size:14px"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:18px">1</span> of <span id="malaOvTotal">16</span></p><p style="color:var(--success);font-size:12px;margin-top:6px">Auto-continuing in <span id="malaCountdown">4</span>s...</p><button class="ov-btn" onclick="dismissMalaOv()" style="background:var(--success);color:white">Continue Now</button></div>
   </div>
 
   <div id="doneOv" class="ov"><div class="ov-bg"></div>
     <div class="ov-box all-done-box"><div style="font-size:46px">🎉</div><h2>All Malas Complete!</h2>
-      <p style="color:var(--text-dim);font-size:14px"><span id="doneCount" style="color:var(--accent);font-weight:700;font-size:20px">16</span> Malas | <span id="doneTotalC" style="color:var(--accent)">1728</span> chants</p>
-      <p id="doneTime" style="color:var(--text-dim);font-size:12px"></p>
-      <p id="doneSpeed" style="color:var(--text-dim);font-size:11px"></p>
+      <p style="color:var(--text-mid);font-size:14px"><span id="doneCount" style="color:var(--accent);font-weight:700;font-size:20px">16</span> Malas | <span id="doneTotalC" style="color:var(--accent)">1728</span> chants</p>
+      <p id="doneTime" style="color:var(--text-mid);font-size:12px"></p>
+      <p id="doneSpeed" style="color:var(--text-mid);font-size:13px"></p>
       <p style="margin-top:6px;color:var(--text);font-size:14px">🙏 Hare Krishna 🙏</p>
       <button class="ov-btn" onclick="shareAchievement()" style="background:var(--success);color:white">📤 Share Achievement</button>
       <button class="ov-btn" onclick="closeDone(false)" style="background:var(--accent);color:var(--bg)">Finish</button>
@@ -372,14 +365,14 @@
     <div class="ov-box" style="background:var(--card);border:2px solid var(--accent)">
       <div style="font-size:36px">📊</div>
       <h2 style="font-family:'Playfair Display',serif;color:var(--accent);font-size:18px;margin:6px 0">Session Summary</h2>
-      <div id="summaryContent" style="color:var(--text-dim);font-size:13px;line-height:1.8;text-align:left;padding:8px"></div>
+      <div id="summaryContent" style="color:var(--text-mid);font-size:13px;line-height:1.8;text-align:left;padding:8px"></div>
       <button class="ov-btn" onclick="shareAchievement()" style="background:var(--success);color:white">📤 Share</button>
       <button class="ov-btn" onclick="closeSummary()" style="background:var(--accent);color:var(--bg)">Done</button>
     </div>
   </div>
 
   <div id="confirmOv" class="confirm-ov"><div class="confirm-box"><h3 id="confirmTitle">Sure?</h3><p id="confirmMsg"></p><div class="confirm-btns"><button onclick="confirmCancel()" style="background:var(--card-border);color:var(--text)">Cancel</button><button onclick="confirmOk()" style="background:var(--danger);color:white">Yes</button></div></div></div>
-  <div id="interstitialAd" class="ov"><div class="ov-bg"></div><div class="ov-box" style="background:var(--card);border:2px dashed var(--card-border)"><p style="color:var(--text-dim);font-size:12px;margin-bottom:16px">Advertisement</p><div style="height:200px;background:rgba(0,0,0,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px"><span style="color:var(--text-dim);font-size:11px">AdMob Interstitial</span></div><button class="ov-btn" onclick="closeInterstitialAd()" style="background:var(--accent);color:var(--bg)">Close Ad</button></div></div>
+  <div id="interstitialAd" class="ov"><div class="ov-bg"></div><div class="ov-box" style="background:var(--card);border:2px dashed var(--card-border)"><p style="color:var(--text-mid);font-size:12px;margin-bottom:16px">Advertisement</p><div style="height:200px;background:rgba(0,0,0,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px"><span style="color:var(--text-mid);font-size:13px">AdMob Interstitial</span></div><button class="ov-btn" onclick="closeInterstitialAd()" style="background:var(--accent);color:var(--bg)">Close Ad</button></div></div>
 
   <canvas id="particles"></canvas>
   <div class="undo-toast" id="undoToast">↩ Undo 1 count</div>
