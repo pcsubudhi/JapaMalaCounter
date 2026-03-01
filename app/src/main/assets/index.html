@@ -191,11 +191,11 @@
       <div class="step-header"><div class="step-num" id="s1n">1</div><div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div></div>
       <div id="tip1" class="tip-box">Stay completely quiet for 10 seconds. This learns background noise (fan, AC, traffic) for filtering.</div>
       <div style="margin-bottom:6px">
-        <label style="font-size:13px;color:var(--text-mid)">Microphone: <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
+        <label style="font-size:14px;color:var(--text);font-weight:600">🎙 Microphone: <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
         <div id="tipMic" class="tip-box">Select which mic to use. Bluetooth earbuds should appear here. Tap Refresh after connecting.</div>
         <div style="display:flex;gap:6px;margin-top:4px">
-          <select id="micSelect" class="vib-select" style="flex:1;padding:8px;font-size:13px" onchange="selectedMicId=this.value"><option value="">Default Microphone</option></select>
-          <button onclick="refreshMicList()" style="background:var(--card);border:1px solid var(--card-border);border-radius:6px;padding:6px 10px;color:var(--accent);font-size:13px;font-weight:600">Refresh</button>
+          <select id="micSelect" class="vib-select" style="flex:1;padding:10px;font-size:14px;background:#1C130D;border:1.5px solid var(--accent);color:var(--text)" onchange="selectedMicId=this.value"><option value="">Default Microphone</option></select>
+          <button onclick="refreshMicList()" style="background:var(--accent-dim);border:1.5px solid var(--accent);border-radius:8px;padding:8px 12px;color:var(--accent);font-size:13px;font-weight:700">Refresh</button>
         </div>
       </div>
       <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
