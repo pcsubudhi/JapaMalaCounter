@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         }
 
         webView = new WebView(this);
+        webView.setFitsSystemWindows(true);
         setContentView(webView);
 
         WebSettings settings = webView.getSettings();

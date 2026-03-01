@@ -10,8 +10,8 @@
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@300;400;500;600&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   :root{--bg:#1A0F0A;--bg2:#0D0705;--card:#2A1F15;--card-border:#3D2E1F;--accent:#F59E0B;--accent-dim:rgba(245,158,11,0.15);--text:#FEF3C7;--text-dim:#A89070;--success:#10B981;--danger:#EF4444}
-  body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);min-height:100vh;overflow-x:hidden}
-  .app{max-width:480px;margin:0 auto;min-height:100vh}
+  body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);min-height:100vh;overflow-x:hidden;padding-top:env(safe-area-inset-top,0px)}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;padding-top:28px}
   .screen{padding:10px 16px 80px 16px;display:none}.screen.active{display:block}
   .card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
   .label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:500}
@@ -113,18 +113,18 @@
   .tip-box.show{display:block}
 
   /* Top bar */
-  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px}
-  .top-bar-left{display:flex;align-items:center;gap:8px}
+  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 10px;border-bottom:1px solid var(--card-border);margin-bottom:6px}
+  .top-bar-left{display:flex;align-items:center}
   .top-bar-right{display:flex;align-items:center;gap:6px}
-  .tb-btn{background:none;border:1px solid var(--card-border);border-radius:8px;padding:4px 10px;color:var(--text-dim);font-size:12px}
-  .tb-btn:active{background:var(--card-border)}
-  .tb-back{background:none;color:var(--text-dim);font-size:14px;padding:4px 8px;border-radius:8px}
-  .tb-back:active{background:var(--card-border)}
+  .tb-btn{background:var(--card);border:1.5px solid var(--accent);border-radius:10px;padding:7px 12px;color:var(--accent);font-size:13px;font-weight:700}
+  .tb-btn:active{background:var(--accent);color:var(--bg)}
+  .tb-back{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);font-size:13px;font-weight:700;padding:7px 12px;border-radius:10px}
+  .tb-back:active{background:var(--danger);color:white}
 
   /* Pause overlay */
-  .pause-banner{display:none;background:rgba(220,38,38,0.15);border:1px solid var(--danger);border-radius:12px;padding:10px;text-align:center;margin-bottom:6px}
+  .pause-banner{display:none;background:rgba(220,38,38,0.2);border:2px solid var(--danger);border-radius:12px;padding:14px;text-align:center;margin-bottom:8px}
   .pause-banner.show{display:block}
-  .pause-banner span{color:var(--danger);font-weight:600}
+  .pause-banner span{color:var(--danger);font-weight:700;font-size:16px}
 
   /* Sound toggles panel */
   .snd-panel{display:none;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:6px}
@@ -138,7 +138,7 @@
   .toggle.on::after{transform:translateX(18px)}
 
   /* Timer */
-  .timer-display{font-family:'Playfair Display',serif;font-size:14px;color:var(--text-dim);text-align:center;margin-bottom:2px}
+  .timer-display{font-family:'Playfair Display',serif;font-size:16px;color:var(--accent);text-align:center;margin-bottom:4px;padding:4px;background:rgba(0,0,0,0.2);border-radius:8px}
 
   /* Confirm dialog */
   .confirm-ov{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.85)}
@@ -243,18 +243,18 @@
     <!-- Top bar -->
     <div class="top-bar">
       <div class="top-bar-left">
-        <button class="tb-back" onclick="confirmBack()">← Back</button>
+        <button class="tb-back" onclick="confirmBack()">&#9664; Back</button>
       </div>
       <div class="top-bar-right">
-        <button class="tb-btn" id="btnPause" onclick="togglePause()">⏸</button>
-        <button class="tb-btn" onclick="toggleSoundPanel()">🔊</button>
-        <button class="tb-btn" onclick="confirmReset()">↺</button>
+        <button class="tb-btn" id="btnPause" onclick="togglePause()">Pause</button>
+        <button class="tb-btn" id="btnSndToggle" onclick="toggleSoundPanel()">Sound</button>
+        <button class="tb-btn" onclick="confirmReset()">Reset</button>
       </div>
     </div>
 
     <!-- Pause banner -->
     <div id="pauseBanner" class="pause-banner">
-      <span>⏸ PAUSED</span> — tap ▶ to resume
+      <span>PAUSED</span> — tap Resume to continue
     </div>
 
     <!-- Sound toggles panel -->
@@ -570,14 +570,18 @@ function pauseSession(){
   sessionPaused=true;pauseStartTime=Date.now();
   if(detecting)stopListen();
   document.getElementById('pauseBanner').classList.add('show');
-  document.getElementById('btnPause').textContent='▶';
+  document.getElementById('btnPause').textContent='Resume';
+  document.getElementById('btnPause').style.background='var(--success)';
+  document.getElementById('btnPause').style.color='white';
   D('Paused','warn');
 }
 function resumeFromPause(){
   sessionPaused=false;
   sessionPausedTime+=(Date.now()-pauseStartTime);
   document.getElementById('pauseBanner').classList.remove('show');
-  document.getElementById('btnPause').textContent='⏸';
+  document.getElementById('btnPause').textContent='Pause';
+  document.getElementById('btnPause').style.background='var(--card)';
+  document.getElementById('btnPause').style.color='var(--text)';
   D('Resumed','ok');
 }
 function pauseAndGoBack(){
@@ -604,7 +608,7 @@ function resumeSession(){
   document.getElementById('setupScreen').classList.remove('active');
   document.getElementById('counterScreen').classList.add('active');
   document.getElementById('pauseBanner').classList.remove('show');
-  document.getElementById('btnPause').textContent='⏸';
+  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--text)';
   // Restore UI
   document.getElementById('dMalaTarget').textContent=CFG.malas;
   document.getElementById('dCPM').textContent=CFG.cpm;
@@ -657,7 +661,7 @@ function startSession(){
   document.getElementById('pMala').style.width='0%';
   document.getElementById('pauseBanner').classList.remove('show');
   document.getElementById('sndPanel').classList.remove('show');
-  document.getElementById('btnPause').textContent='⏸';
+  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--text)';
   document.getElementById('dbg').innerHTML='';
   D('Session: wpr='+CFG.wpr+' cpm='+CFG.cpm+' malas='+CFG.malas,'ok');
   drawMala();startTimer();
@@ -871,8 +875,8 @@ document.addEventListener('click',function(e){
   if(!document.getElementById('counterScreen').classList.contains('active'))return;
   if(sessionPaused)return;
   var tag=e.target.tagName.toLowerCase();
-  if(tag==='button'||tag==='input'||tag==='select')return;
-  if(e.target.closest('button')||e.target.closest('input')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle'))return;
+  if(tag==='button'||tag==='input'||tag==='select'||tag==='label')return;
+  if(e.target.closest('button')||e.target.closest('input')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle')||e.target.closest('.top-bar')||e.target.closest('.confirm-ov')||e.target.closest('.mode-tabs')||e.target.closest('.slider-row'))return;
   if(curMode==='voice')return;
   tapCount();
 });
