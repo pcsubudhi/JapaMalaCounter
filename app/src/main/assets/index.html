@@ -185,7 +185,7 @@
         <div class="step-num" id="s1n">1</div>
         <div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div>
       </div>
-      <div id="tip1" class="tip-box">Learns your room's background noise (fan, AC, traffic) so it can filter it out. Stay completely quiet for 2 seconds.</div>
+      <div id="tip1" class="tip-box">Learns your room's background noise (fan, AC, traffic) so it can filter it out. Stay completely quiet for 10 seconds for best accuracy.</div>
       <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
       <div id="noiseViz" class="viz" style="display:none"></div>
       <div id="noiseStatus" style="font-size:10px;color:var(--text-dim);margin-top:2px;text-align:center"></div>
@@ -267,6 +267,17 @@
         <div class="snd-title">🔔 Each Chant Complete</div>
         <div class="snd-ctrl"><label>Vol</label><input type="range" id="volChant" min="0" max="100" value="30" oninput="SND.chantVol=this.value/100;document.getElementById('vvChant').textContent=this.value+'%'"><span class="sval" id="vvChant">30%</span></div>
         <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibChant" onchange="SND.chantVib=this.value"><option value="off">Off</option><option value="short" selected>Short</option><option value="medium">Medium</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">📊 Milestone Alerts <span class="tip" onclick="toggleTip('tipMile')">?</span></div>
+        <div id="tipMile" class="tip-box">Announces progress at quarter points (27, 54, 81 of 108). Speaks only the number briefly, e.g. "27". Turn off individual milestones you don't need.</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volMile" min="0" max="100" value="50" oninput="SND.mileVol=this.value/100;document.getElementById('vvMile').textContent=this.value+'%'"><span class="sval" id="vvMile">50%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibMile" onchange="SND.mileVib=this.value"><option value="off">Off</option><option value="short" selected>Short</option><option value="medium">Medium</option></select></div>
+        <div class="snd-ctrl"><label>At</label>
+          <label style="min-width:auto;font-size:11px;color:var(--text)"><input type="checkbox" id="mile25" checked onchange="updateMilestones()"> 25%</label>
+          <label style="min-width:auto;font-size:11px;color:var(--text)"><input type="checkbox" id="mile50" checked onchange="updateMilestones()"> 50%</label>
+          <label style="min-width:auto;font-size:11px;color:var(--text)"><input type="checkbox" id="mile75" checked onchange="updateMilestones()"> 75%</label>
+        </div>
       </div>
       <div class="snd-section">
         <div class="snd-title">📿 Mala Complete</div>
@@ -424,6 +435,7 @@ var ttsPauseUntil=0;
 // Granular sound controls
 var SND={
   chantVol:0.3, chantVib:'short',
+  mileVol:0.5,  mileVib:'short', mile25:true, mile50:true, mile75:true,
   malaVol:0.7,  malaVib:'medium',
   doneVol:1.0,  doneVib:'celebration',
   voice:true
@@ -465,9 +477,9 @@ function updateViz(viz){var spec=getSpectrum();var bars=viz.children;for(var i=0
 // ========= CALIBRATION =========
 async function captureNoise(){
   if(!(await initAudio()))return;
-  var btn=document.getElementById('btnNoise');btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet...';
+  var btn=document.getElementById('btnNoise');btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet for 10s...';
   var viz=initViz('noiseViz');document.getElementById('noiseStatus').textContent='Capturing...';
-  var specS=[],enS=[],fr=0,mx=120;
+  var specS=[],enS=[],fr=0,mx=600;
   function tick(){
     if(fr>=mx){noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;
       btn.className='btn-rec ok';btn.textContent='✅ Noise captured';document.getElementById('noiseStatus').textContent='Level: '+noiseEnergy.toFixed(1);
@@ -509,6 +521,7 @@ function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelec
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function updateSens(){SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%'}
+function updateMilestones(){SND.mile25=document.getElementById('mile25').checked;SND.mile50=document.getElementById('mile50').checked;SND.mile75=document.getElementById('mile75').checked}
 
 // ========= CONFIRM =========
 function showConfirm(t,m,cb){document.getElementById('confirmTitle').textContent=t;document.getElementById('confirmMsg').textContent=m;confirmCallback=cb;document.getElementById('confirmOv').classList.add('show')}
@@ -588,8 +601,17 @@ function ADD(n){
       G_w=0;G_chant++;G_totalC++;
       if(SND.chantVol>0)playSound('chant',SND.chantVol);
       doVibrate(VIB_PATTERNS[SND.chantVib]);
-      // Quarter milestones
-      if(G_chant>0&&G_chant<CFG.cpm&&CFG.cpm>=54){var q=Math.floor(CFG.cpm/4);if(q>0&&G_chant%q===0){pauseDetectionForTTS(3000);if(SND.voice)speak(G_chant+' of '+CFG.cpm)}}
+      // Milestone alerts (quarter points)
+      if(G_chant>0&&G_chant<CFG.cpm&&CFG.cpm>=8){
+        var q25=Math.floor(CFG.cpm/4),q50=Math.floor(CFG.cpm/2),q75=Math.floor(CFG.cpm*3/4);
+        var isMile=(SND.mile25&&G_chant===q25)||(SND.mile50&&G_chant===q50)||(SND.mile75&&G_chant===q75);
+        if(isMile){
+          if(SND.mileVol>0)playSound('chant',SND.mileVol);
+          doVibrate(VIB_PATTERNS[SND.mileVib]);
+          pauseDetectionForTTS(2000);
+          if(SND.voice)speak(''+G_chant);
+        }
+      }
       // MALA COMPLETE?
       if(G_chant>=CFG.cpm){
         document.getElementById('dChant').textContent=G_chant;document.getElementById('dProgress').style.width='100%';drawMala();
