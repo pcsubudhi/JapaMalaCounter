@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1A0F0A">
 <title>📿 Japa Mala Counter</title>
@@ -10,178 +10,185 @@
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@300;400;500;600&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   :root{--bg:#1A0F0A;--bg2:#0D0705;--card:#2A1F15;--card-border:#3D2E1F;--accent:#F59E0B;--accent-dim:rgba(245,158,11,0.15);--text:#FEF3C7;--text-dim:#A89070;--success:#10B981;--danger:#EF4444}
-  body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);min-height:100vh;overflow-x:hidden;padding-top:env(safe-area-inset-top,0px)}
-  .app{max-width:480px;margin:0 auto;min-height:100vh;padding-top:28px}
-  .screen{padding:10px 16px 80px 16px;display:none}.screen.active{display:block}
-  .card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
-  .label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:500}
+  body{font-family:'Crimson Pro','Georgia',serif;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);height:100vh;overflow:hidden;padding-top:env(safe-area-inset-top,0px)}
+  .app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;padding-top:28px}
+  .screen{padding:6px 14px;display:none;flex:1;overflow-y:auto}.screen.active{display:flex;flex-direction:column}
+  .counter-screen{overflow:hidden!important}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
   button{font-family:'Crimson Pro','Georgia',serif;cursor:pointer;border:none;outline:none}
-  .btn-primary{width:100%;padding:18px 28px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:18px;font-weight:700;box-shadow:0 4px 24px rgba(245,158,11,0.4)}
+  .btn-primary{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:17px;font-weight:700;box-shadow:0 4px 24px rgba(245,158,11,0.4)}
   .btn-primary:disabled{opacity:0.4}
-  input[type="number"]{width:100%;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,0.35);border:1px solid var(--card-border);color:var(--text);font-size:16px;font-family:'Crimson Pro',serif;outline:none}
+  input[type="number"]{width:100%;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid var(--card-border);color:var(--text);font-size:15px;font-family:'Crimson Pro',serif;outline:none}
   input:focus{border-color:var(--accent)}
-  .home-title{text-align:center;margin-bottom:16px}
-  .home-title h1{font-family:'Playfair Display',serif;font-size:26px;color:var(--accent)}
-  .home-title p{color:var(--text-dim);font-size:13px;margin-top:4px}
 
-  .step{margin-bottom:4px}
-  .step-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-  .step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+  /* Setup */
+  .home-title{text-align:center;margin-bottom:10px}
+  .home-title h1{font-family:'Playfair Display',serif;font-size:24px;color:var(--accent)}
+  .home-title p{color:var(--text-dim);font-size:12px;margin-top:2px}
+  .step{margin-bottom:2px}
+  .step-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .step-num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
   .step-num.done{background:var(--success)}
-  .step-title{font-size:15px;font-weight:600}
-
-  .btn-rec{width:100%;padding:12px;border-radius:12px;font-size:15px;font-weight:600;transition:all 0.2s}
+  .step-title{font-size:14px;font-weight:600}
+  .btn-rec{width:100%;padding:10px;border-radius:10px;font-size:14px;font-weight:600;transition:all 0.2s}
   .btn-rec.idle{background:linear-gradient(135deg,#059669,#047857);color:white}
   .btn-rec.busy{background:linear-gradient(135deg,#DC2626,#991B1B);color:white;animation:pulse 1s infinite}
   .btn-rec.ok{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
-
-  .viz{height:40px;background:rgba(0,0,0,0.3);border-radius:8px;margin:6px 0;display:flex;align-items:flex-end;gap:1px;padding:4px;overflow:hidden}
+  .viz{height:36px;background:rgba(0,0,0,0.3);border-radius:8px;margin:4px 0;display:flex;align-items:flex-end;gap:1px;padding:3px;overflow:hidden}
   .viz div{flex:1;background:var(--accent);border-radius:1px;min-height:2px;transition:height 0.05s}
-
-  .targets-row{display:flex;gap:6px;margin-bottom:8px}
-  .target-btn{flex:1;padding:9px;border-radius:10px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:14px;font-weight:600}
+  .targets-row{display:flex;gap:5px;margin-bottom:6px}
+  .target-btn{flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:13px;font-weight:600}
   .target-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
-  .wpr-row{display:flex;gap:6px;margin-bottom:8px}
-  .wpr-btn{flex:1;padding:9px;border-radius:10px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:14px;font-weight:600}
+  .wpr-row{display:flex;gap:5px;margin-bottom:6px}
+  .wpr-btn{flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--card-border);color:var(--text-dim);font-size:13px;font-weight:600}
   .wpr-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 
-  .slider-row{display:flex;align-items:center;gap:8px;margin:5px 0}
-  .slider-row label{font-size:11px;color:var(--text-dim);min-width:48px}
-  .slider-row input[type=range]{flex:1;accent-color:var(--accent)}
-  .slider-row .val{font-size:12px;color:var(--accent);min-width:36px;text-align:right}
+  /* Tooltips */
+  .tip{display:inline-block;width:16px;height:16px;border-radius:50%;background:rgba(245,158,11,0.15);color:var(--accent);font-size:10px;text-align:center;line-height:16px;cursor:pointer;margin-left:3px;vertical-align:middle;border:1px solid rgba(245,158,11,0.3)}
+  .tip-box{display:none;background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);margin-top:4px;line-height:1.4}
+  .tip-box.show{display:block}
 
-  .mala-container{position:relative;margin-bottom:2px;display:flex;justify-content:center}
-  .mala-svg{width:100%;max-width:200px}
+  /* Counter top bar */
+  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px;border-bottom:1px solid var(--card-border);margin-bottom:4px}
+  .top-bar-right{display:flex;align-items:center;gap:5px}
+  .tb-btn{background:var(--card);border:1.5px solid var(--accent);border-radius:8px;padding:5px 10px;color:var(--accent);font-size:11px;font-weight:700}
+  .tb-btn:active{background:var(--accent);color:var(--bg)}
+  .tb-back{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px}
+  .tb-back:active{background:var(--danger);color:white}
+
+  /* Pause banner */
+  .pause-banner{display:none;background:rgba(220,38,38,0.2);border:2px solid var(--danger);border-radius:10px;padding:8px;text-align:center;margin-bottom:4px}
+  .pause-banner.show{display:block}
+  .pause-banner span{color:var(--danger);font-weight:700;font-size:14px}
+
+  /* Timer + mala info row */
+  .info-row{display:flex;justify-content:space-between;align-items:center;padding:2px 4px}
+  .timer{font-family:'Playfair Display',serif;font-size:13px;color:var(--accent)}
+  .mala-info{font-family:'Playfair Display',serif;font-size:13px;color:var(--success);font-weight:700}
+
+  /* Mala progress bar */
+  .pbar-mala{background:var(--card-border);border-radius:6px;height:4px;margin:2px 0 4px;overflow:hidden}
+  .pfill-mala{height:100%;border-radius:6px;background:linear-gradient(90deg,#059669,var(--success));transition:width 0.4s;width:0%}
+
+  /* Compact mala ring */
+  .mala-container{position:relative;display:flex;justify-content:center;margin:2px 0}
+  .mala-svg{width:100%;max-width:160px;max-height:160px}
   .mala-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-  .mala-count{font-family:'Playfair Display',serif;font-size:48px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 30px rgba(245,158,11,0.4);transition:transform 0.15s}
-  .mala-count.pop{transform:scale(1.2)}
-  .mala-target{font-size:13px;color:var(--text-dim);margin-top:2px}
-  .progress-bar{background:var(--card-border);border-radius:10px;height:6px;margin:4px 0 6px;overflow:hidden}
-  .progress-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#B45309,var(--accent));transition:width 0.4s;width:0%}
+  .mala-count{font-family:'Playfair Display',serif;font-size:40px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 20px rgba(245,158,11,0.4);transition:transform 0.15s}
+  .mala-count.pop{transform:scale(1.15)}
+  .mala-target{font-size:11px;color:var(--text-dim);margin-top:1px}
+  .progress-bar{background:var(--card-border);border-radius:6px;height:4px;margin:2px 0 4px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#B45309,var(--accent));transition:width 0.4s;width:0%}
 
-  .btn-listen{width:100%;padding:14px;border-radius:14px;color:white;font-size:16px;font-weight:600}
-  .btn-listen.off{background:linear-gradient(135deg,#059669,#047857)}
-  .btn-listen.on{background:linear-gradient(135deg,#DC2626,#991B1B);box-shadow:0 0 20px rgba(220,38,38,0.3)}
+  /* Compact stats */
+  .stats-line{display:flex;justify-content:space-around;padding:3px 0;font-size:11px;color:var(--text-dim)}
+  .stats-line b{color:var(--accent);font-size:13px}
+  .stats-line .gr b{color:var(--success)}
 
-  .match-bar{height:7px;border-radius:4px;margin:6px 0;background:rgba(0,0,0,0.3);overflow:hidden}
-  .match-fill{height:100%;border-radius:4px;width:0%;transition:width 0.1s,background 0.15s}
-  .status-line{text-align:center;font-size:12px;color:var(--text-dim);padding:3px 0}
-  .status-line.hit{color:var(--accent);font-weight:700;font-size:15px}
-
-  .tap-area{width:100%;padding:24px 16px;border-radius:20px;background:var(--card);border:2px solid var(--card-border);color:var(--text);margin-top:6px;text-align:center;transition:all 0.15s}
-  .tap-area:active{background:linear-gradient(135deg,#D97706,#B45309);border-color:var(--accent)}
-
-  .mode-tabs{display:flex;border:1px solid var(--card-border);border-radius:12px;overflow:hidden;margin-bottom:6px}
-  .mtab{flex:1;padding:10px;background:transparent;color:var(--text-dim);font-size:13px;font-weight:500;border-right:1px solid var(--card-border);transition:all 0.2s}
+  /* Mode tabs */
+  .mode-tabs{display:flex;border:1px solid var(--card-border);border-radius:10px;overflow:hidden;margin:4px 0}
+  .mtab{flex:1;padding:7px;background:transparent;color:var(--text-dim);font-size:12px;font-weight:500;border-right:1px solid var(--card-border)}
   .mtab:last-child{border-right:none}
   .mtab.act{background:var(--accent-dim);color:var(--accent);font-weight:600}
 
-  .debug{background:#000;border:2px solid #222;border-radius:10px;padding:4px;margin-top:8px;font-family:monospace;font-size:8px;max-height:80px;overflow-y:auto}
-  .debug div{padding:1px 0;border-bottom:1px solid #111}
-  .debug .ok{color:#4ade80}.debug .warn{color:#fbbf24}.debug .err{color:#f87171}.debug .info{color:#60a5fa}
+  /* Listen button */
+  .btn-listen{width:100%;padding:10px;border-radius:12px;color:white;font-size:14px;font-weight:600}
+  .btn-listen.off{background:linear-gradient(135deg,#059669,#047857)}
+  .btn-listen.on{background:linear-gradient(135deg,#DC2626,#991B1B)}
+  .match-bar{height:5px;border-radius:3px;margin:4px 0;background:rgba(0,0,0,0.3);overflow:hidden}
+  .match-fill{height:100%;border-radius:3px;width:0%;transition:width 0.1s,background 0.15s}
+  .status-line{text-align:center;font-size:11px;color:var(--text-dim);padding:2px 0}
+  .status-line.hit{color:var(--accent);font-weight:700;font-size:13px}
+  .slider-row{display:flex;align-items:center;gap:6px;margin:3px 0}
+  .slider-row label{font-size:10px;color:var(--text-dim);min-width:40px}
+  .slider-row input[type=range]{flex:1;accent-color:var(--accent);height:16px}
+  .slider-row .val{font-size:10px;color:var(--accent);min-width:32px;text-align:right}
 
-  .alarm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
-  .alarm-overlay.active{display:flex}
-
-  .mala-top{text-align:center;padding:2px 0}
-  .mala-top-num{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--success)}
-  .mala-top-label{font-size:10px;color:var(--text-dim)}
-  .pbar-mala{background:var(--card-border);border-radius:8px;height:5px;margin:3px 0 6px;overflow:hidden}
-  .pfill-mala{height:100%;border-radius:8px;background:linear-gradient(90deg,#059669,var(--success));transition:width 0.4s;width:0%}
-
-  .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:5px}
-  .sbox{background:rgba(0,0,0,0.2);border-radius:8px;padding:5px;text-align:center}
-  .sbox .sv{font-size:16px;font-weight:700;color:var(--accent)}
-  .sbox .sl{font-size:8px;color:var(--text-dim);margin-top:1px}
-  .sbox.green .sv{color:var(--success)}
-
-  .ov{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:24px}
-  .ov.active{display:flex}
-  .ov-bg{position:absolute;inset:0;background:rgba(0,0,0,0.9)}
-  .ov-box{position:relative;z-index:1;border-radius:20px;padding:30px;text-align:center;max-width:340px;width:100%}
-  .mala-done-box{background:var(--card);border:2px solid var(--success);box-shadow:0 0 60px rgba(16,185,129,0.3)}
-  .mala-done-box h2{font-family:'Playfair Display',serif;color:var(--success);font-size:20px;margin:8px 0}
-  .all-done-box{background:linear-gradient(135deg,#2A1F15,#1A0F0A);border:3px solid var(--accent);box-shadow:0 0 80px rgba(245,158,11,0.4);animation:celeb 1.5s infinite}
-  @keyframes celeb{0%,100%{box-shadow:0 0 40px rgba(245,158,11,0.3)}50%{box-shadow:0 0 80px rgba(245,158,11,0.6)}}
-  .all-done-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:22px;margin:8px 0}
-  .ov-btn{display:block;width:100%;padding:13px;border-radius:12px;font-size:15px;font-weight:600;margin-top:10px;font-family:'Crimson Pro',serif}
-
-  /* Tooltip styles */
-  .tip{display:inline-block;width:18px;height:18px;border-radius:50%;background:rgba(245,158,11,0.15);color:var(--accent);font-size:11px;text-align:center;line-height:18px;cursor:pointer;margin-left:4px;vertical-align:middle;border:1px solid rgba(245,158,11,0.3)}
-  .tip-box{display:none;background:var(--card);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text);margin-top:6px;line-height:1.5}
-  .tip-box.show{display:block}
-
-  /* Top bar */
-  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 10px;border-bottom:1px solid var(--card-border);margin-bottom:6px}
-  .top-bar-left{display:flex;align-items:center}
-  .top-bar-right{display:flex;align-items:center;gap:6px}
-  .tb-btn{background:var(--card);border:1.5px solid var(--accent);border-radius:10px;padding:7px 12px;color:var(--accent);font-size:13px;font-weight:700}
-  .tb-btn:active{background:var(--accent);color:var(--bg)}
-  .tb-back{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);font-size:13px;font-weight:700;padding:7px 12px;border-radius:10px}
-  .tb-back:active{background:var(--danger);color:white}
-
-  /* Pause overlay */
-  .pause-banner{display:none;background:rgba(220,38,38,0.2);border:2px solid var(--danger);border-radius:12px;padding:14px;text-align:center;margin-bottom:8px}
-  .pause-banner.show{display:block}
-  .pause-banner span{color:var(--danger);font-weight:700;font-size:16px}
-
-  /* Sound toggles panel */
-  .snd-panel{display:none;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:6px}
-  .snd-panel.show{display:block}
-  .snd-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
-  .snd-row:last-child{border-bottom:none}
-  .snd-row label{font-size:13px;color:var(--text)}
-  .toggle{position:relative;width:42px;height:24px;border-radius:12px;background:var(--card-border);cursor:pointer;transition:background 0.2s}
-  .toggle.on{background:var(--success)}
-  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:white;transition:transform 0.2s}
-  .toggle.on::after{transform:translateX(18px)}
-
-  /* Timer */
-  .timer-display{font-family:'Playfair Display',serif;font-size:16px;color:var(--accent);text-align:center;margin-bottom:4px;padding:4px;background:rgba(0,0,0,0.2);border-radius:8px}
-
-  /* Confirm dialog */
-  .confirm-ov{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.85)}
-  .confirm-ov.show{display:flex}
-  .confirm-box{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:24px;text-align:center;max-width:300px;width:100%}
-  .confirm-box h3{color:var(--text);font-size:17px;margin-bottom:8px}
-  .confirm-box p{color:var(--text-dim);font-size:13px;margin-bottom:16px}
-  .confirm-btns{display:flex;gap:10px}
-  .confirm-btns button{flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:600}
+  /* Tap area */
+  .tap-area{width:100%;padding:16px 12px;border-radius:16px;background:var(--card);border:2px solid var(--card-border);color:var(--text);text-align:center;transition:all 0.15s;margin:4px 0}
+  .tap-area:active{background:linear-gradient(135deg,#D97706,#B45309);border-color:var(--accent)}
 
   /* Volume hint */
-  .vol-hint{text-align:center;font-size:11px;color:var(--text-dim);padding:4px 0;opacity:0.7}
+  .vol-hint{text-align:center;font-size:10px;color:var(--text-dim);padding:2px 0;opacity:0.7}
+
+  /* Sound settings panel */
+  .snd-panel{display:none;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:10px 12px;margin-bottom:4px;max-height:70vh;overflow-y:auto}
+  .snd-panel.show{display:block}
+  .snd-section{margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.05)}
+  .snd-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+  .snd-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .snd-ctrl{display:flex;align-items:center;gap:6px;margin:3px 0}
+  .snd-ctrl label{font-size:10px;color:var(--text-dim);min-width:32px}
+  .snd-ctrl input[type=range]{flex:1;accent-color:var(--accent);height:14px}
+  .snd-ctrl .sval{font-size:10px;color:var(--accent);min-width:24px;text-align:right}
+  .vib-select{background:var(--bg);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 6px;font-family:'Crimson Pro',serif}
+
+  /* Overlays */
+  .ov{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
+  .ov.active{display:flex}
+  .ov-bg{position:absolute;inset:0;background:rgba(0,0,0,0.9)}
+  .ov-box{position:relative;z-index:1;border-radius:18px;padding:24px;text-align:center;max-width:320px;width:100%}
+  .mala-done-box{background:var(--card);border:2px solid var(--success);box-shadow:0 0 40px rgba(16,185,129,0.3)}
+  .mala-done-box h2{font-family:'Playfair Display',serif;color:var(--success);font-size:18px;margin:6px 0}
+  .all-done-box{background:linear-gradient(135deg,#2A1F15,#1A0F0A);border:3px solid var(--accent);box-shadow:0 0 60px rgba(245,158,11,0.4);animation:celeb 1.5s infinite}
+  @keyframes celeb{0%,100%{box-shadow:0 0 30px rgba(245,158,11,0.3)}50%{box-shadow:0 0 60px rgba(245,158,11,0.6)}}
+  .all-done-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:20px;margin:6px 0}
+  .ov-btn{display:block;width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:600;margin-top:8px;font-family:'Crimson Pro',serif}
+
+  /* Confirm dialog */
+  .confirm-ov{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.85)}
+  .confirm-ov.show{display:flex}
+  .confirm-box{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:20px;text-align:center;max-width:280px;width:100%}
+  .confirm-box h3{color:var(--text);font-size:16px;margin-bottom:6px}
+  .confirm-box p{color:var(--text-dim);font-size:12px;margin-bottom:12px}
+  .confirm-btns{display:flex;gap:8px}
+  .confirm-btns button{flex:1;padding:10px;border-radius:8px;font-size:13px;font-weight:600}
+
+  /* Debug collapsible */
+  .dbg-toggle{text-align:center;font-size:9px;color:var(--text-dim);padding:2px;cursor:pointer;opacity:0.5}
+  .debug{display:none;background:#000;border:1px solid #222;border-radius:8px;padding:3px;font-family:monospace;font-size:7px;max-height:60px;overflow-y:auto}
+  .debug.show{display:block}
+  .debug div{padding:0;border-bottom:1px solid #111}
+  .debug .ok{color:#4ade80}.debug .warn{color:#fbbf24}.debug .err{color:#f87171}.debug .info{color:#60a5fa}
+
+  /* Ad banner space */
+  .ad-banner{background:rgba(0,0,0,0.3);border:1px dashed var(--card-border);border-radius:8px;padding:12px;text-align:center;margin-top:auto;margin-bottom:8px;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .ad-banner span{font-size:10px;color:var(--text-dim);opacity:0.5}
+
+  /* Resume banner */
+  .resume-banner{display:none;text-align:center;border-color:var(--success)!important;margin-bottom:8px}
+  .resume-banner.show{display:block}
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- SETUP -->
+  <!-- =================== SETUP SCREEN =================== -->
   <div id="setupScreen" class="screen active">
     <div class="home-title">
-      <div style="font-size:40px;margin-bottom:4px">📿</div>
+      <div style="font-size:36px;margin-bottom:2px">📿</div>
       <h1>Japa Counter</h1>
-      <p>Calibrated voice recognition</p>
+      <p>Calibrated voice recognition for chanting</p>
     </div>
 
     <!-- Resume banner -->
-    <div id="resumeBanner" class="card" style="display:none;text-align:center;border-color:var(--success)">
-      <p style="color:var(--success);font-weight:600;margin-bottom:8px">⏸ Paused Session</p>
-      <p style="color:var(--text-dim);font-size:13px;margin-bottom:10px">Mala <span id="rMala">0</span>/<span id="rMalaT">16</span> • Chant <span id="rChant">0</span>/<span id="rCPM">108</span></p>
-      <button onclick="resumeSession()" style="width:100%;padding:12px;border-radius:12px;background:var(--success);color:white;font-size:15px;font-weight:600">▶ Resume Chanting</button>
+    <div id="resumeBanner" class="card resume-banner">
+      <p style="color:var(--success);font-weight:600;margin-bottom:6px">Paused Session</p>
+      <p style="color:var(--text-dim);font-size:12px;margin-bottom:8px">Mala <span id="rMala">0</span>/<span id="rMalaT">16</span> | Chant <span id="rChant">0</span>/<span id="rCPM">108</span></p>
+      <button onclick="resumeSession()" style="width:100%;padding:10px;border-radius:10px;background:var(--success);color:white;font-size:14px;font-weight:600">Resume Chanting</button>
     </div>
 
     <!-- Step 1 -->
     <div class="card step">
       <div class="step-header">
         <div class="step-num" id="s1n">1</div>
-        <div class="step-title">Capture Room Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div>
+        <div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div>
       </div>
-      <div id="tip1" class="tip-box">This helps the app learn your room's background noise (fan, AC, traffic) so it can distinguish your voice from ambient sounds. Stay completely quiet for 2 seconds.</div>
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Stay quiet for 2 seconds.</p>
+      <div id="tip1" class="tip-box">Learns your room's background noise (fan, AC, traffic) so it can filter it out. Stay completely quiet for 2 seconds.</div>
       <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
       <div id="noiseViz" class="viz" style="display:none"></div>
-      <div id="noiseStatus" style="font-size:11px;color:var(--text-dim);margin-top:4px;text-align:center"></div>
+      <div id="noiseStatus" style="font-size:10px;color:var(--text-dim);margin-top:2px;text-align:center"></div>
     </div>
 
     <!-- Step 2 -->
@@ -190,61 +197,60 @@
         <div class="step-num" id="s2n">2</div>
         <div class="step-title">Teach Your Word <span class="tip" onclick="toggleTip('tip2')">?</span></div>
       </div>
-      <div id="tip2" class="tip-box">Say any one word from your mantra (e.g., "Hare" or "Krishna" or "Om") 5 times with short pauses. Speak at the same volume and distance from the phone you'll use while chanting. This creates an audio fingerprint of your voice.</div>
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Say your word <strong style="color:var(--text)">5 times</strong> with pauses.</p>
-      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Your Word ×5</button>
+      <div id="tip2" class="tip-box">Say one word from your mantra (e.g., "Hare" or "Om") 5 times with pauses. Speak at the same volume/distance you'll use while chanting.</div>
+      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Word ×5</button>
       <div id="wordViz" class="viz" style="display:none"></div>
-      <div id="wordStatus" style="font-size:11px;color:var(--text-dim);margin-top:4px;text-align:center"></div>
+      <div id="wordStatus" style="font-size:10px;color:var(--text-dim);margin-top:2px;text-align:center"></div>
     </div>
 
     <!-- Step 3 -->
     <div class="card step">
-      <div class="step-header">
-        <div class="step-num">3</div>
-        <div class="step-title">Settings</div>
-      </div>
+      <div class="step-header"><div class="step-num">3</div><div class="step-title">Settings</div></div>
 
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Words per mantra chant: <span class="tip" onclick="toggleTip('tip3')">?</span></p>
-      <div id="tip3" class="tip-box">"Hare Krishna Hare Krishna Krishna Krishna Hare Hare" = <b>8 words</b>. "Om Namah Shivaya" = <b>3 words</b>. "Om" = <b>1 word</b>. Count the words in one full round of your mantra.</div>
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Words per chant: <span class="tip" onclick="toggleTip('tip3')">?</span></p>
+      <div id="tip3" class="tip-box">"Hare Krishna Hare Krishna Krishna Krishna Hare Hare" = 8 words. "Om Namah Shivaya" = 3. Count words in one full mantra round.</div>
       <div class="wpr-row">
-        <button class="wpr-btn" onclick="pickWPR(1,this)">1</button>
-        <button class="wpr-btn" onclick="pickWPR(4,this)">4</button>
-        <button class="wpr-btn selected" onclick="pickWPR(8,this)">8</button>
-        <button class="wpr-btn" onclick="pickWPR(16,this)">16</button>
+        <button class="wpr-btn" onclick="pickWPR(1)">1</button>
+        <button class="wpr-btn" onclick="pickWPR(4)">4</button>
+        <button class="wpr-btn selected" onclick="pickWPR(8)">8</button>
+        <button class="wpr-btn" onclick="pickWPR(16)">16</button>
       </div>
-      <input type="number" id="inWPR" value="8" min="1" style="margin-bottom:10px">
+      <input type="number" id="inWPR" value="8" min="1" style="margin-bottom:8px">
 
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Chants per Mala: <span class="tip" onclick="toggleTip('tip4')">?</span></p>
-      <div id="tip4" class="tip-box">Traditionally a japa mala has <b>108 beads</b>. Each bead = 1 full chant of your mantra. Some practitioners use <b>54</b> (half mala) or <b>216</b> (double). Choose based on your mala or preference.</div>
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Chants per Mala: <span class="tip" onclick="toggleTip('tip4')">?</span></p>
+      <div id="tip4" class="tip-box">Traditional japa mala = 108 beads. Some use 54 (half) or 216 (double).</div>
       <div class="targets-row">
-        <button class="target-btn" onclick="pickCPM(54,this)">54</button>
-        <button class="target-btn selected" onclick="pickCPM(108,this)">108</button>
-        <button class="target-btn" onclick="pickCPM(216,this)">216</button>
+        <button class="target-btn" onclick="pickCPM(54)">54</button>
+        <button class="target-btn selected" onclick="pickCPM(108)">108</button>
+        <button class="target-btn" onclick="pickCPM(216)">216</button>
       </div>
-      <input type="number" id="inCPM" value="108" min="1" style="margin-bottom:10px">
+      <input type="number" id="inCPM" value="108" min="1" style="margin-bottom:8px">
 
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Total Malas target: <span class="tip" onclick="toggleTip('tip5')">?</span></p>
-      <div id="tip5" class="tip-box">ISKCON recommends minimum <b>16 rounds</b> (malas) daily for initiated devotees. Start with what's comfortable for you — even <b>1 or 4 rounds</b> is a great beginning! 🙏</div>
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:4px">Total Malas: <span class="tip" onclick="toggleTip('tip5')">?</span></p>
+      <div id="tip5" class="tip-box">ISKCON recommends 16 rounds daily for initiated devotees. Start with what's comfortable!</div>
       <div class="targets-row">
-        <button class="target-btn" onclick="pickMalas(4,this)">4</button>
-        <button class="target-btn" onclick="pickMalas(8,this)">8</button>
-        <button class="target-btn selected" onclick="pickMalas(16,this)">16</button>
-        <button class="target-btn" onclick="pickMalas(32,this)">32</button>
-        <button class="target-btn" onclick="pickMalas(64,this)">64</button>
+        <button class="target-btn" onclick="pickMalas(4)">4</button>
+        <button class="target-btn" onclick="pickMalas(8)">8</button>
+        <button class="target-btn selected" onclick="pickMalas(16)">16</button>
+        <button class="target-btn" onclick="pickMalas(32)">32</button>
+        <button class="target-btn" onclick="pickMalas(64)">64</button>
       </div>
       <input type="number" id="inMalas" value="16" min="1">
     </div>
 
     <button id="btnGo" class="btn-primary" onclick="startSession()" disabled>Complete Steps 1 & 2 First</button>
+
+    <!-- Ad banner on setup page -->
+    <div class="ad-banner" id="setupAdBanner">
+      <span>Ad Space — AdMob Banner</span>
+    </div>
   </div>
 
-  <!-- COUNTER -->
-  <div id="counterScreen" class="screen">
+  <!-- =================== COUNTER SCREEN =================== -->
+  <div id="counterScreen" class="screen counter-screen">
     <!-- Top bar -->
     <div class="top-bar">
-      <div class="top-bar-left">
-        <button class="tb-back" onclick="confirmBack()">&#9664; Back</button>
-      </div>
+      <button class="tb-back" onclick="confirmBack()">&#9664; Back</button>
       <div class="top-bar-right">
         <button class="tb-btn" id="btnPause" onclick="togglePause()">Pause</button>
         <button class="tb-btn" id="btnSndToggle" onclick="toggleSoundPanel()">Sound</button>
@@ -253,118 +259,130 @@
     </div>
 
     <!-- Pause banner -->
-    <div id="pauseBanner" class="pause-banner">
-      <span>PAUSED</span> — tap Resume to continue
-    </div>
+    <div id="pauseBanner" class="pause-banner"><span>PAUSED</span> — tap Resume</div>
 
-    <!-- Sound toggles panel -->
+    <!-- Sound settings panel (expandable) -->
     <div id="sndPanel" class="snd-panel">
-      <div class="snd-row"><label>🔔 Chant beep <span class="tip" onclick="toggleTip('tipSnd1')">?</span></label><div id="tip-snd1-wrap"></div><div class="toggle on" id="tChant" onclick="toggleSnd(this)"></div></div>
-      <div id="tipSnd1" class="tip-box">Short beep sound each time a full chant (e.g., 8 words) is completed. Turn off if you find it distracting during meditation.</div>
-      <div class="snd-row"><label>🔔 Mala bell <span class="tip" onclick="toggleTip('tipSnd2')">?</span></label><div class="toggle on" id="tMala" onclick="toggleSnd(this)"></div></div>
-      <div id="tipSnd2" class="tip-box">Bell sound when a full mala (e.g., 108 chants) is completed.</div>
-      <div class="snd-row"><label>🗣 Voice announcements <span class="tip" onclick="toggleTip('tipSnd3')">?</span></label><div class="toggle on" id="tVoice" onclick="toggleSnd(this)"></div></div>
-      <div id="tipSnd3" class="tip-box">Spoken voice notifications like "Mala 3 of 16 complete" so you don't need to look at the screen.</div>
-      <div class="snd-row"><label>📳 Vibration <span class="tip" onclick="toggleTip('tipSnd4')">?</span></label><div class="toggle on" id="tVib" onclick="toggleSnd(this)"></div></div>
-      <div id="tipSnd4" class="tip-box">Phone vibration on each count. Useful when chanting with eyes closed — you feel each bead counted.</div>
+      <div class="snd-section">
+        <div class="snd-title">🔔 Each Chant Complete</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volChant" min="0" max="100" value="30" oninput="SND.chantVol=this.value/100;document.getElementById('vvChant').textContent=this.value+'%'"><span class="sval" id="vvChant">30%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibChant" onchange="SND.chantVib=this.value"><option value="off">Off</option><option value="short" selected>Short</option><option value="medium">Medium</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">📿 Mala Complete</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volMala" min="0" max="100" value="70" oninput="SND.malaVol=this.value/100;document.getElementById('vvMala').textContent=this.value+'%'"><span class="sval" id="vvMala">70%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibMala" onchange="SND.malaVib=this.value"><option value="off">Off</option><option value="short">Short</option><option value="medium" selected>Medium</option><option value="long">Long</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">🎉 All Malas Done</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volDone" min="0" max="100" value="100" oninput="SND.doneVol=this.value/100;document.getElementById('vvDone').textContent=this.value+'%'"><span class="sval" id="vvDone">100%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibDone" onchange="SND.doneVib=this.value"><option value="off">Off</option><option value="short">Short</option><option value="medium">Medium</option><option value="long">Long</option><option value="celebration" selected>Celebration</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">🗣 Voice Announcements <span class="tip" onclick="toggleTip('tipVA')">?</span></div>
+        <div id="tipVA" class="tip-box">Spoken progress like "Mala 3 of 16 complete". Voice volume uses your phone volume.</div>
+        <div class="snd-ctrl"><label>Voice</label><select class="vib-select" id="voiceToggle" onchange="SND.voice=(this.value==='on')"><option value="on" selected>On</option><option value="off">Off</option></select></div>
+      </div>
     </div>
 
-    <!-- Timer -->
-    <div class="timer-display" id="timerDisplay">⏱ 00:00:00</div>
-
-    <!-- Mala level -->
-    <div class="mala-top">
-      <div class="mala-top-num">Mala <span id="dMala">0</span> / <span id="dMalaTarget">16</span></div>
-      <div class="mala-top-label">malas completed</div>
+    <!-- Timer + Mala info -->
+    <div class="info-row">
+      <div class="timer" id="timerDisplay">00:00:00</div>
+      <div class="mala-info">Mala <span id="dMala">0</span>/<span id="dMalaTarget">16</span></div>
     </div>
     <div class="pbar-mala"><div id="pMala" class="pfill-mala"></div></div>
 
-    <!-- Chant ring -->
-    <div class="mala-container"><svg id="malaSvg" class="mala-svg" viewBox="0 0 320 320"></svg><div class="mala-center"><div class="mala-count" id="dChant">0</div><div class="mala-target">of <span id="dCPM">108</span> chants</div></div></div>
+    <!-- Compact mala ring -->
+    <div class="mala-container">
+      <svg id="malaSvg" class="mala-svg" viewBox="0 0 320 320"></svg>
+      <div class="mala-center">
+        <div class="mala-count" id="dChant">0</div>
+        <div class="mala-target">of <span id="dCPM">108</span></div>
+      </div>
+    </div>
     <div class="progress-bar"><div id="dProgress" class="progress-fill"></div></div>
 
-    <!-- Stats -->
-    <div class="stats-grid">
-      <div class="sbox"><div class="sv" id="dWord">0</div><div class="sl">Word /<span id="dWPR">8</span></div></div>
-      <div class="sbox"><div class="sv" id="dTotalW">0</div><div class="sl">Words</div></div>
-      <div class="sbox green"><div class="sv" id="dTotalC">0</div><div class="sl">Chants</div></div>
-      <div class="sbox green"><div class="sv" id="dMala2">0</div><div class="sl">Malas</div></div>
+    <!-- Compact stats -->
+    <div class="stats-line">
+      <span>Word: <b id="dWord">0</b>/<span id="dWPR">8</span></span>
+      <span>Words: <b id="dTotalW">0</b></span>
+      <span class="gr">Chants: <b id="dTotalC">0</b></span>
+      <span class="gr">Malas: <b id="dMala2">0</b></span>
     </div>
 
     <!-- Volume hint -->
-    <div class="vol-hint">📱 Tip: Press volume up/down buttons to count without looking at screen</div>
+    <div class="vol-hint">Tip: Volume buttons also count | Tap anywhere on screen</div>
 
-    <!-- Mode selector -->
+    <!-- Mode tabs -->
     <div class="mode-tabs">
-      <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Voice <span class="tip" onclick="event.stopPropagation();toggleTip('tipM1')">?</span></button>
-      <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap <span class="tip" onclick="event.stopPropagation();toggleTip('tipM2')">?</span></button>
+      <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Voice</button>
+      <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap</button>
       <button class="mtab act" id="tabBoth" onclick="setMode('both')">🎤+👆 Both</button>
     </div>
-    <div id="tipM1" class="tip-box">Voice-only mode: The app listens to your chanting and auto-counts using audio matching. No need to touch the phone!</div>
-    <div id="tipM2" class="tip-box">Tap-only mode: Count by tapping the screen, pressing volume buttons, or tapping anywhere on the counter area. Voice detection is off.</div>
 
     <!-- Voice section -->
     <div id="voiceSec">
-    <div class="card">
       <button id="btnListen" class="btn-listen off" onclick="toggleListen()">🎤 Start Listening</button>
       <div class="match-bar"><div id="mFill" class="match-fill"></div></div>
       <div id="sLine" class="status-line">Tap to start voice detection</div>
       <div class="slider-row">
-        <label>Sensitivity <span class="tip" onclick="toggleTip('tipSens')">?</span></label>
+        <label>Sens <span class="tip" onclick="toggleTip('tipS')">?</span></label>
         <input type="range" id="sSlider" min="20" max="80" value="50" oninput="updateSens()">
         <div class="val" id="sVal">50%</div>
       </div>
-      <div id="tipSens" class="tip-box">Higher sensitivity = picks up softer chanting but may cause false counts. Lower = stricter matching, fewer errors but may miss quiet words. Start at 50% and adjust.</div>
+      <div id="tipS" class="tip-box">Higher = picks up softer chanting. Lower = stricter. Start at 50%.</div>
       <div class="slider-row">
-        <label>Cooldown <span class="tip" onclick="toggleTip('tipCool')">?</span></label>
+        <label>Gap <span class="tip" onclick="toggleTip('tipC')">?</span></label>
         <input type="range" id="cSlider" min="200" max="1500" value="400" step="50" oninput="document.getElementById('cVal').textContent=this.value+'ms'">
         <div class="val" id="cVal">400ms</div>
       </div>
-      <div id="tipCool" class="tip-box">Minimum gap between two word detections (in milliseconds). Increase to 600-800ms if you're getting double-counts on slow chanting. Decrease to 200-300ms for fast chanting.</div>
-    </div>
+      <div id="tipC" class="tip-box">Min gap between detections. Increase for slow chanting, decrease for fast.</div>
     </div>
 
     <!-- Tap section -->
     <div id="tapSec">
-    <button class="tap-area" onclick="tapCount()">
-      <div style="font-size:28px;margin-bottom:2px">🙏</div>
-      <div style="font-size:16px;font-weight:600">Tap to Count</div>
-      <div style="font-size:10px;color:var(--text-dim);margin-top:2px">or tap anywhere on screen • or volume buttons</div>
-    </button>
+      <button class="tap-area" onclick="tapCount()">
+        <div style="font-size:24px">🙏</div>
+        <div style="font-size:15px;font-weight:600">Tap to Count</div>
+      </button>
     </div>
+
+    <!-- Debug (collapsible) -->
+    <div class="dbg-toggle" onclick="document.getElementById('dbg').classList.toggle('show')">▼ debug</div>
     <div class="debug" id="dbg"></div>
   </div>
 
-  <!-- Mala Complete Overlay -->
+  <!-- =================== OVERLAYS =================== -->
+
+  <!-- Mala Complete -->
   <div id="malaOv" class="ov"><div class="ov-bg" onclick="dismissMalaOv()"></div>
     <div class="ov-box mala-done-box">
-      <div style="font-size:46px">📿</div>
+      <div style="font-size:40px">📿</div>
       <h2 id="malaOvTitle">Mala 1 Complete!</h2>
-      <p style="color:var(--text-dim)"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:20px">1</span> of <span id="malaOvTotal">16</span> malas done</p>
-      <p id="malaAutoMsg" style="color:var(--success);font-size:13px;margin-top:8px">Auto-continuing in <span id="malaCountdown">4</span>s...</p>
+      <p style="color:var(--text-dim);font-size:14px"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:18px">1</span> of <span id="malaOvTotal">16</span> malas</p>
+      <p style="color:var(--success);font-size:12px;margin-top:6px">Auto-continuing in <span id="malaCountdown">4</span>s...</p>
       <button class="ov-btn" onclick="dismissMalaOv()" style="background:var(--success);color:white">Continue Now</button>
     </div>
   </div>
 
-  <!-- All Done Overlay -->
+  <!-- All Done -->
   <div id="doneOv" class="ov"><div class="ov-bg"></div>
     <div class="ov-box all-done-box">
-      <div style="font-size:54px">🎉</div>
+      <div style="font-size:46px">🎉</div>
       <h2>All Malas Complete!</h2>
-      <p style="color:var(--text-dim);font-size:15px">Target <span id="doneCount" style="color:var(--accent);font-weight:700;font-size:22px">16</span> Malas achieved!</p>
-      <p style="color:var(--text-dim)">(<span id="doneTotalC" style="color:var(--accent)">1728</span> total chants)</p>
-      <p id="doneTime" style="color:var(--text-dim);font-size:13px;margin-top:4px"></p>
-      <p style="margin-top:8px;color:var(--text);font-size:15px">🙏 Hare Krishna 🙏</p>
-      <button class="ov-btn" onclick="closeDone(false)" style="background:var(--accent);color:var(--bg)">🙏 Finish</button>
-      <button class="ov-btn" onclick="closeDone(true)" style="background:var(--card-border);color:var(--text)">Continue Beyond Target</button>
+      <p style="color:var(--text-dim);font-size:14px"><span id="doneCount" style="color:var(--accent);font-weight:700;font-size:20px">16</span> Malas | <span id="doneTotalC" style="color:var(--accent)">1728</span> chants</p>
+      <p id="doneTime" style="color:var(--text-dim);font-size:12px;margin-top:2px"></p>
+      <p style="margin-top:6px;color:var(--text);font-size:14px">🙏 Hare Krishna 🙏</p>
+      <button class="ov-btn" onclick="closeDone(false)" style="background:var(--accent);color:var(--bg)">Finish</button>
+      <button class="ov-btn" onclick="closeDone(true)" style="background:var(--card-border);color:var(--text)">Continue Beyond</button>
     </div>
   </div>
 
-  <!-- Confirm dialog -->
+  <!-- Confirm -->
   <div id="confirmOv" class="confirm-ov">
     <div class="confirm-box">
       <h3 id="confirmTitle">Are you sure?</h3>
-      <p id="confirmMsg">This action cannot be undone.</p>
+      <p id="confirmMsg">This cannot be undone.</p>
       <div class="confirm-btns">
         <button onclick="confirmCancel()" style="background:var(--card-border);color:var(--text)">Cancel</button>
         <button id="confirmYes" onclick="confirmOk()" style="background:var(--danger);color:white">Yes</button>
@@ -372,519 +390,320 @@
     </div>
   </div>
 
+  <!-- Interstitial Ad (shown on session end) -->
+  <div id="interstitialAd" class="ov">
+    <div class="ov-bg"></div>
+    <div class="ov-box" style="background:var(--card);border:2px dashed var(--card-border)">
+      <p style="color:var(--text-dim);font-size:12px;margin-bottom:16px">Advertisement</p>
+      <div style="height:200px;background:rgba(0,0,0,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+        <span style="color:var(--text-dim);font-size:11px">AdMob Interstitial</span>
+      </div>
+      <button class="ov-btn" onclick="closeInterstitialAd()" style="background:var(--accent);color:var(--bg)">Close Ad</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
 // =============================================
-// JAPA COUNTER v10 — FULL FEATURED
+// JAPA COUNTER v11 — COMPACT + GRANULAR CONTROLS
 // =============================================
 
-var actx=null, mic=null, analyser=null, stream=null;
-var BANDS=24;
-
-var noiseProfile=null, noiseEnergy=0, noiseReady=false;
-var wordSamples=[], wordFingerprint=null, wordReady=false, avgWordDuration=0;
-var detecting=false, cooldownUntil=0, SENSITIVITY=0.50;
-
+var actx=null,mic=null,analyser=null,stream=null,BANDS=24;
+var noiseProfile=null,noiseEnergy=0,noiseReady=false;
+var wordSamples=[],wordFingerprint=null,wordReady=false,avgWordDuration=0;
+var detecting=false,cooldownUntil=0,SENSITIVITY=0.50;
 var G_m=0,G_w=0,G_t=0,G_chant=0,G_mala=0,G_totalC=0;
 var CFG={wpr:8,cpm:108,malas:16};
 var beepCtx=null;
-
-// Session state
-var sessionActive=false, sessionPaused=false, pausedSession=null;
-var sessionStartTime=0, sessionPausedTime=0, timerInterval=null;
-
-// Sound toggles
-var SND={chant:true,mala:true,voice:true,vib:true};
-
-// Confirm callback
+var sessionActive=false,sessionPaused=false,pausedSession=null;
+var sessionStartTime=0,sessionPausedTime=0,timerInterval=null;
 var confirmCallback=null;
+var ttsPauseUntil=0;
 
-function D(m,c){var e=document.getElementById('dbg');if(!e)return;var d=document.createElement('div');d.className=c||'info';d.textContent=new Date().toTimeString().slice(0,8)+' '+m;e.insertBefore(d,e.firstChild);while(e.children.length>40)e.removeChild(e.lastChild)}
+// Granular sound controls
+var SND={
+  chantVol:0.3, chantVib:'short',
+  malaVol:0.7,  malaVib:'medium',
+  doneVol:1.0,  doneVib:'celebration',
+  voice:true
+};
 
-// ========= TOOLTIP =========
+var VIB_PATTERNS={
+  off:[],
+  short:[50],
+  medium:[150,50,150],
+  long:[300,100,300,100,300],
+  celebration:[400,150,400,150,400,150,600]
+};
+
+function D(m,c){var e=document.getElementById('dbg');if(!e)return;var d=document.createElement('div');d.className=c||'info';d.textContent=new Date().toTimeString().slice(0,8)+' '+m;e.insertBefore(d,e.firstChild);while(e.children.length>30)e.removeChild(e.lastChild)}
 function toggleTip(id){var el=document.getElementById(id);if(el)el.classList.toggle('show')}
 
-// ========= AUDIO INIT =========
+function doVibrate(pattern){if(navigator.vibrate&&pattern&&pattern.length)navigator.vibrate(pattern)}
+
+// ========= AUDIO =========
 async function initAudio(){
   if(actx)return true;
   try{
     stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});
     actx=new(window.AudioContext||window.webkitAudioContext)();
-    mic=actx.createMediaStreamSource(stream);
-    analyser=actx.createAnalyser();
-    analyser.fftSize=2048;
-    analyser.smoothingTimeConstant=0.4;
-    mic.connect(analyser);
+    mic=actx.createMediaStreamSource(stream);analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.4;mic.connect(analyser);
     D('Audio OK','ok');return true;
   }catch(e){D('Mic err: '+e.message,'err');alert('Allow microphone access');return false}
 }
 
-// ========= FEATURE EXTRACTION =========
 function getSpectrum(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var bs=Math.floor(buf.length/BANDS),bands=[];for(var b=0;b<BANDS;b++){var s=0;for(var i=b*bs;i<(b+1)*bs&&i<buf.length;i++)s+=buf[i];bands.push(s/bs)}return bands}
 function getEnergy(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var s=0;for(var i=0;i<buf.length;i++)s+=buf[i];return s/buf.length}
 function getCentroid(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var w=0,s=0;for(var i=0;i<buf.length;i++){w+=i*buf[i];s+=buf[i]}return s>0?w/s:0}
 function denoiseSpectrum(spec){if(!noiseProfile)return spec;return spec.map(function(v,i){return Math.max(0,v-noiseProfile[i]*0.8)})}
 function cosSim(a,b){if(!a||!b||a.length!==b.length)return 0;var d=0,ma=0,mb=0;for(var i=0;i<a.length;i++){d+=a[i]*b[i];ma+=a[i]*a[i];mb+=b[i]*b[i]}ma=Math.sqrt(ma);mb=Math.sqrt(mb);return(ma>0&&mb>0)?d/(ma*mb):0}
 function avgArrays(arr){if(!arr.length)return null;var l=arr[0].length,r=new Array(l).fill(0);for(var s=0;s<arr.length;s++)for(var i=0;i<l;i++)r[i]+=arr[s][i];for(var i=0;i<l;i++)r[i]/=arr.length;return r}
-
 function initViz(id){var viz=document.getElementById(id);viz.style.display='flex';viz.innerHTML='';for(var i=0;i<BANDS;i++){var b=document.createElement('div');b.style.height='2px';viz.appendChild(b)}return viz}
 function updateViz(viz){var spec=getSpectrum();var bars=viz.children;for(var i=0;i<bars.length&&i<spec.length;i++){var pct=spec[i]/255*100;bars[i].style.height=Math.max(2,pct)+'%';bars[i].style.background=pct>20?'var(--accent)':'rgba(245,158,11,0.2)'}}
 
-// ========= STEP 1: CAPTURE NOISE =========
+// ========= CALIBRATION =========
 async function captureNoise(){
   if(!(await initAudio()))return;
-  var btn=document.getElementById('btnNoise');
-  btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet...';
-  var viz=initViz('noiseViz');
-  document.getElementById('noiseStatus').textContent='Capturing ambient noise...';
+  var btn=document.getElementById('btnNoise');btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet...';
+  var viz=initViz('noiseViz');document.getElementById('noiseStatus').textContent='Capturing...';
   var specS=[],enS=[],fr=0,mx=120;
   function tick(){
-    if(fr>=mx){
-      noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;
-      btn.className='btn-rec ok';btn.textContent='✅ Noise captured (energy='+noiseEnergy.toFixed(1)+')';
-      document.getElementById('noiseStatus').textContent='Background: '+noiseEnergy.toFixed(1);
-      document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';
-      document.getElementById('btnWord').disabled=false;checkReady();
-      D('Noise: energy='+noiseEnergy.toFixed(1),'ok');return;
-    }
+    if(fr>=mx){noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;
+      btn.className='btn-rec ok';btn.textContent='✅ Noise captured';document.getElementById('noiseStatus').textContent='Level: '+noiseEnergy.toFixed(1);
+      document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';document.getElementById('btnWord').disabled=false;checkReady();return;}
     updateViz(viz);specS.push(getSpectrum());enS.push(getEnergy());fr++;requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
 }
 
-// ========= STEP 2: CAPTURE WORD =========
 async function captureWord(){
   if(!(await initAudio()))return;
-  var btn=document.getElementById('btnWord');
-  btn.className='btn-rec busy';btn.textContent='🔴 Say your word 5 times...';
-  var viz=initViz('wordViz');wordSamples=[];
-  document.getElementById('wordStatus').textContent='Speak now with pauses...';
+  var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Say word 5 times...';
+  var viz=initViz('wordViz');wordSamples=[];document.getElementById('wordStatus').textContent='Speak now...';
   var inW=false,wBuf=[],silC=0,eTh=noiseEnergy+10;
   var timeout=setTimeout(function(){finish()},12000);
-
   function finish(){
     clearTimeout(timeout);
     if(wordSamples.length>=2){
       var allS=wordSamples.map(function(s){return s.spectrum});
       wordFingerprint={spectrum:avgArrays(allS),centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length};
       avgWordDuration=wordFingerprint.avgDuration;wordReady=true;
-      btn.className='btn-rec ok';btn.textContent='✅ '+wordSamples.length+' samples captured';
-      document.getElementById('wordStatus').textContent='Ready ('+wordSamples.length+' samples)';
+      btn.className='btn-rec ok';btn.textContent='✅ '+wordSamples.length+' samples';document.getElementById('wordStatus').textContent='Ready';
       document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓';
-      D('Word: '+wordSamples.length+' samples','ok');
-    }else{
-      btn.className='btn-rec idle';btn.textContent='🎤 Record Your Word ×5 (retry)';
-      document.getElementById('wordStatus').textContent='Only '+wordSamples.length+'. Speak louder.';
-    }
+    }else{btn.className='btn-rec idle';btn.textContent='🎤 Record Word ×5 (retry)';document.getElementById('wordStatus').textContent='Speak louder.';}
     checkReady();
   }
-
   function tick(){
     if(wordSamples.length>=5){finish();return}
     updateViz(viz);var energy=getEnergy(),spec=getSpectrum(),centroid=getCentroid();
-    if(energy>eTh){
-      if(!inW){inW=true;wBuf=[];}
-      wBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});silC=0;
-    }else{
-      silC++;
-      if(inW&&silC>10){
-        inW=false;
-        if(wBuf.length>=4){
-          var aS=avgArrays(wBuf.map(function(f){return f.spec}));
-          var aC=wBuf.reduce(function(a,f){return a+f.centroid},0)/wBuf.length;
-          var pE=Math.max.apply(null,wBuf.map(function(f){return f.energy}));
-          wordSamples.push({spectrum:aS,centroid:aC,peakEnergy:pE,duration:wBuf.length});
-          document.getElementById('wordStatus').textContent=wordSamples.length+' of 5...';
-          D('Sample '+wordSamples.length+'/5','ok');
-        }
-        wBuf=[];
-      }
-    }
+    if(energy>eTh){if(!inW){inW=true;wBuf=[]}wBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});silC=0;}
+    else{silC++;if(inW&&silC>10){inW=false;if(wBuf.length>=4){var aS=avgArrays(wBuf.map(function(f){return f.spec}));var aC=wBuf.reduce(function(a,f){return a+f.centroid},0)/wBuf.length;var pE=Math.max.apply(null,wBuf.map(function(f){return f.energy}));wordSamples.push({spectrum:aS,centroid:aC,peakEnergy:pE,duration:wBuf.length});document.getElementById('wordStatus').textContent=wordSamples.length+'/5...';}wBuf=[];}}
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
 }
 
-function checkReady(){
-  var ok=noiseReady&&wordReady;
-  document.getElementById('btnGo').disabled=!ok;
-  if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting';
-}
-
-// ========= SETUP CONTROLS =========
+function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
 function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
-
 function updateSens(){SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%'}
 
-// ========= CONFIRM DIALOG =========
-function showConfirm(title,msg,cb){
-  document.getElementById('confirmTitle').textContent=title;
-  document.getElementById('confirmMsg').textContent=msg;
-  confirmCallback=cb;
-  document.getElementById('confirmOv').classList.add('show');
-}
+// ========= CONFIRM =========
+function showConfirm(t,m,cb){document.getElementById('confirmTitle').textContent=t;document.getElementById('confirmMsg').textContent=m;confirmCallback=cb;document.getElementById('confirmOv').classList.add('show')}
 function confirmOk(){document.getElementById('confirmOv').classList.remove('show');if(confirmCallback)confirmCallback()}
 function confirmCancel(){document.getElementById('confirmOv').classList.remove('show');confirmCallback=null}
+function confirmReset(){showConfirm('Reset Counter?','All progress will be reset to zero.',function(){resetCounter()})}
+function confirmBack(){if(G_totalC>0){showConfirm('Pause & Go Back?','Progress will be saved.',function(){pauseAndGoBack()})}else{endSession()}}
 
-function confirmReset(){showConfirm('Reset Counter?','This will reset all progress in the current session to zero.',function(){resetCounter()})}
-function confirmBack(){
-  if(G_totalC>0){
-    showConfirm('Pause & Go Back?','Your progress will be saved. You can resume later.',function(){pauseAndGoBack()});
-  }else{
-    endSession();
-  }
-}
-
-// ========= SOUND TOGGLES =========
-function toggleSnd(el){el.classList.toggle('on');var id=el.id;if(id==='tChant')SND.chant=el.classList.contains('on');else if(id==='tMala')SND.mala=el.classList.contains('on');else if(id==='tVoice')SND.voice=el.classList.contains('on');else if(id==='tVib')SND.vib=el.classList.contains('on')}
+// ========= SOUND PANEL =========
 function toggleSoundPanel(){document.getElementById('sndPanel').classList.toggle('show')}
 
 // ========= TIMER =========
-function startTimer(){
-  sessionStartTime=Date.now();sessionPausedTime=0;
-  timerInterval=setInterval(updateTimer,1000);updateTimer();
-}
-function updateTimer(){
-  if(sessionPaused)return;
-  var elapsed=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);
-  var h=Math.floor(elapsed/3600),m=Math.floor((elapsed%3600)/60),s=elapsed%60;
-  document.getElementById('timerDisplay').textContent='⏱ '+pad(h)+':'+pad(m)+':'+pad(s);
-}
+function startTimer(){sessionStartTime=Date.now();sessionPausedTime=0;timerInterval=setInterval(updateTimer,1000);updateTimer()}
+function updateTimer(){if(sessionPaused)return;var e=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);document.getElementById('timerDisplay').textContent=pad(Math.floor(e/3600))+':'+pad(Math.floor((e%3600)/60))+':'+pad(e%60)}
 function pad(n){return n<10?'0'+n:n}
 function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null}}
-function getElapsedStr(){
-  var elapsed=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);
-  var h=Math.floor(elapsed/3600),m=Math.floor((elapsed%3600)/60),s=elapsed%60;
-  return pad(h)+':'+pad(m)+':'+pad(s);
-}
+function getElapsedStr(){var e=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);return pad(Math.floor(e/3600))+':'+pad(Math.floor((e%3600)/60))+':'+pad(e%60)}
 
-// ========= PAUSE / RESUME =========
+// ========= PAUSE/RESUME =========
 var pauseStartTime=0;
-function togglePause(){
-  if(sessionPaused){resumeFromPause()}else{pauseSession()}
-}
-function pauseSession(){
-  sessionPaused=true;pauseStartTime=Date.now();
-  if(detecting)stopListen();
-  document.getElementById('pauseBanner').classList.add('show');
-  document.getElementById('btnPause').textContent='Resume';
-  document.getElementById('btnPause').style.background='var(--success)';
-  document.getElementById('btnPause').style.color='white';
-  D('Paused','warn');
-}
-function resumeFromPause(){
-  sessionPaused=false;
-  sessionPausedTime+=(Date.now()-pauseStartTime);
-  document.getElementById('pauseBanner').classList.remove('show');
-  document.getElementById('btnPause').textContent='Pause';
-  document.getElementById('btnPause').style.background='var(--card)';
-  document.getElementById('btnPause').style.color='var(--text)';
-  D('Resumed','ok');
-}
+function togglePause(){sessionPaused?resumeFromPause():pauseSession()}
+function pauseSession(){sessionPaused=true;pauseStartTime=Date.now();if(detecting)stopListen();document.getElementById('pauseBanner').classList.add('show');document.getElementById('btnPause').textContent='Resume';document.getElementById('btnPause').style.background='var(--success)';document.getElementById('btnPause').style.color='white';D('Paused','warn')}
+function resumeFromPause(){sessionPaused=false;sessionPausedTime+=(Date.now()-pauseStartTime);document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';D('Resumed','ok')}
 function pauseAndGoBack(){
   pauseSession();
   pausedSession={G_m:G_m,G_w:G_w,G_t:G_t,G_chant:G_chant,G_mala:G_mala,G_totalC:G_totalC,CFG:JSON.parse(JSON.stringify(CFG)),startTime:sessionStartTime,pausedTime:sessionPausedTime+(Date.now()-pauseStartTime)};
   stopTimer();
-  document.getElementById('counterScreen').classList.remove('active');
-  document.getElementById('setupScreen').classList.add('active');
-  // Show resume banner
-  document.getElementById('resumeBanner').style.display='block';
-  document.getElementById('rMala').textContent=G_mala;
-  document.getElementById('rMalaT').textContent=CFG.malas;
-  document.getElementById('rChant').textContent=G_chant;
-  document.getElementById('rCPM').textContent=CFG.cpm;
+  document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active');
+  document.getElementById('resumeBanner').classList.add('show');
+  document.getElementById('rMala').textContent=G_mala;document.getElementById('rMalaT').textContent=CFG.malas;
+  document.getElementById('rChant').textContent=G_chant;document.getElementById('rCPM').textContent=CFG.cpm;
+  showInterstitialAd();
 }
 function resumeSession(){
   if(!pausedSession)return;
-  G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;
-  G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;
-  CFG=pausedSession.CFG;
-  sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;
-  sessionPaused=false;
-  document.getElementById('resumeBanner').style.display='none';
-  document.getElementById('setupScreen').classList.remove('active');
-  document.getElementById('counterScreen').classList.add('active');
+  G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;CFG=pausedSession.CFG;
+  sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;sessionPaused=false;
+  document.getElementById('resumeBanner').classList.remove('show');
+  document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');
   document.getElementById('pauseBanner').classList.remove('show');
-  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--text)';
-  // Restore UI
-  document.getElementById('dMalaTarget').textContent=CFG.malas;
-  document.getElementById('dCPM').textContent=CFG.cpm;
-  document.getElementById('dWPR').textContent=CFG.wpr;
-  document.getElementById('dChant').textContent=G_chant;
-  document.getElementById('dWord').textContent=G_w;
-  document.getElementById('dTotalW').textContent=G_t;
-  document.getElementById('dTotalC').textContent=G_totalC;
-  document.getElementById('dMala').textContent=G_mala;
-  document.getElementById('dMala2').textContent=G_mala;
-  document.getElementById('dProgress').style.width=(CFG.cpm>0?Math.min(G_chant/CFG.cpm,1)*100:0)+'%';
-  document.getElementById('pMala').style.width=(CFG.malas>0?Math.min(G_mala/CFG.malas,1)*100:0)+'%';
-  drawMala();
+  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';
+  document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;
+  refreshUI();drawMala();
   timerInterval=setInterval(updateTimer,1000);updateTimer();
-  pausedSession=null;
-  D('Session resumed','ok');
+  pausedSession=null;D('Resumed','ok');
 }
 
-// ========= MODE TOGGLE =========
+// ========= MODE =========
 var curMode='both';
-function setMode(m){
-  curMode=m;
-  document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});
-  document.getElementById('tab'+m.charAt(0).toUpperCase()+m.slice(1)).classList.add('act');
-  document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';
-  document.getElementById('tapSec').style.display=(m==='voice')?'none':'block';
-  if(m==='tap'&&detecting){stopListen()}
-  D('Mode: '+m,'info');
-}
+function setMode(m){curMode=m;document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});document.getElementById('tab'+m.charAt(0).toUpperCase()+m.slice(1)).classList.add('act');document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';document.getElementById('tapSec').style.display=(m==='voice')?'none':'block';if(m==='tap'&&detecting)stopListen()}
 
 // ========= SESSION =========
 function startSession(){
-  CFG.wpr=parseInt(document.getElementById('inWPR').value)||1;
-  CFG.cpm=parseInt(document.getElementById('inCPM').value)||108;
-  CFG.malas=parseInt(document.getElementById('inMalas').value)||16;
+  CFG.wpr=parseInt(document.getElementById('inWPR').value)||1;CFG.cpm=parseInt(document.getElementById('inCPM').value)||108;CFG.malas=parseInt(document.getElementById('inMalas').value)||16;
   SENSITIVITY=document.getElementById('sSlider').value/100;
-  G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;
-  sessionPaused=false;pausedSession=null;
-  document.getElementById('resumeBanner').style.display='none';
-  document.getElementById('dMalaTarget').textContent=CFG.malas;
-  document.getElementById('dCPM').textContent=CFG.cpm;
-  document.getElementById('dWPR').textContent=CFG.wpr;
-  document.getElementById('dChant').textContent='0';
-  document.getElementById('dWord').textContent='0';
-  document.getElementById('dTotalW').textContent='0';
-  document.getElementById('dTotalC').textContent='0';
-  document.getElementById('dMala').textContent='0';
-  document.getElementById('dMala2').textContent='0';
-  document.getElementById('dProgress').style.width='0%';
-  document.getElementById('pMala').style.width='0%';
-  document.getElementById('pauseBanner').classList.remove('show');
-  document.getElementById('sndPanel').classList.remove('show');
-  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--text)';
+  G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;sessionPaused=false;pausedSession=null;
+  document.getElementById('resumeBanner').classList.remove('show');
+  document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;
+  document.getElementById('pauseBanner').classList.remove('show');document.getElementById('sndPanel').classList.remove('show');
+  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';
   document.getElementById('dbg').innerHTML='';
-  D('Session: wpr='+CFG.wpr+' cpm='+CFG.cpm+' malas='+CFG.malas,'ok');
-  drawMala();startTimer();
-  document.getElementById('setupScreen').classList.remove('active');
-  document.getElementById('counterScreen').classList.add('active');
-  sessionActive=true;
+  refreshUI();drawMala();startTimer();
+  document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');
+  sessionActive=true;D('Session: wpr='+CFG.wpr+' cpm='+CFG.cpm+' malas='+CFG.malas,'ok');
 }
-function endSession(){
-  stopListen();stopTimer();sessionActive=false;pausedSession=null;
-  document.getElementById('resumeBanner').style.display='none';
-  document.getElementById('counterScreen').classList.remove('active');
-  document.getElementById('setupScreen').classList.add('active');
-}
-function closeDone(cont){
-  document.getElementById('doneOv').classList.remove('active');
-  if(!cont)endSession();
-}
-function resetCounter(){
-  G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;
-  document.getElementById('dChant').textContent='0';document.getElementById('dWord').textContent='0';
-  document.getElementById('dTotalW').textContent='0';document.getElementById('dTotalC').textContent='0';
-  document.getElementById('dMala').textContent='0';document.getElementById('dMala2').textContent='0';
-  document.getElementById('dProgress').style.width='0%';document.getElementById('pMala').style.width='0%';
-  drawMala();sessionStartTime=Date.now();sessionPausedTime=0;updateTimer();
-  D('Reset','warn');
-}
+function endSession(){stopListen();stopTimer();sessionActive=false;pausedSession=null;document.getElementById('resumeBanner').classList.remove('show');document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active');showInterstitialAd()}
+function closeDone(cont){document.getElementById('doneOv').classList.remove('active');if(!cont)endSession()}
+function resetCounter(){G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;refreshUI();drawMala();sessionStartTime=Date.now();sessionPausedTime=0;updateTimer();D('Reset','warn')}
+function refreshUI(){document.getElementById('dChant').textContent=G_chant;document.getElementById('dWord').textContent=G_w;document.getElementById('dTotalW').textContent=G_t;document.getElementById('dTotalC').textContent=G_totalC;document.getElementById('dMala').textContent=G_mala;document.getElementById('dMala2').textContent=G_mala;document.getElementById('dProgress').style.width=(CFG.cpm>0?Math.min(G_chant/CFG.cpm,1)*100:0)+'%';document.getElementById('pMala').style.width=(CFG.malas>0?Math.min(G_mala/CFG.malas,1)*100:0)+'%'}
 
 // ========= COUNTER =========
-var ttsPauseUntil=0;
-
 function ADD(n){
   if(n<=0||sessionPaused)return;
   for(var i=0;i<n;i++){
     G_t++;G_w++;
     if(G_w>=CFG.wpr){
       G_w=0;G_chant++;G_totalC++;
-      if(SND.chant)playSound('chant');
-      if(SND.vib&&navigator.vibrate)navigator.vibrate([50]);
-      // Voice progress at quarter-mala milestones
-      if(G_chant>0 && G_chant<CFG.cpm && CFG.cpm>=54){
-        var quarter=Math.floor(CFG.cpm/4);
-        if(quarter>0 && G_chant%quarter===0){
-          pauseDetectionForTTS(3000);
-          if(SND.voice)speak(G_chant+' of '+CFG.cpm);
-        }
-      }
+      if(SND.chantVol>0)playSound('chant',SND.chantVol);
+      doVibrate(VIB_PATTERNS[SND.chantVib]);
+      // Quarter milestones
+      if(G_chant>0&&G_chant<CFG.cpm&&CFG.cpm>=54){var q=Math.floor(CFG.cpm/4);if(q>0&&G_chant%q===0){pauseDetectionForTTS(3000);if(SND.voice)speak(G_chant+' of '+CFG.cpm)}}
       // MALA COMPLETE?
       if(G_chant>=CFG.cpm){
-        document.getElementById('dChant').textContent=G_chant;
-        document.getElementById('dProgress').style.width='100%';
-        drawMala();
-
+        document.getElementById('dChant').textContent=G_chant;document.getElementById('dProgress').style.width='100%';drawMala();
         G_chant=0;G_mala++;
         if(G_mala>=CFG.malas){
           setTimeout(function(){
-            if(SND.mala)playSound('alldone');
-            if(SND.vib&&navigator.vibrate)navigator.vibrate([400,150,400,150,400,150,600]);
+            if(SND.doneVol>0)playSound('alldone',SND.doneVol);
+            doVibrate(VIB_PATTERNS[SND.doneVib]);
             pauseDetectionForTTS(8000);
             if(SND.voice)speak('Target '+CFG.malas+' Malas complete! Hare Krishna! Hare Krishna!');
-            document.getElementById('doneCount').textContent=G_mala;
-            document.getElementById('doneTotalC').textContent=G_totalC;
+            document.getElementById('doneCount').textContent=G_mala;document.getElementById('doneTotalC').textContent=G_totalC;
             document.getElementById('doneTime').textContent='Time: '+getElapsedStr();
             document.getElementById('doneOv').classList.add('active');
           },300);
-        } else {
+        }else{
           setTimeout(function(){
-            if(SND.mala)playSound('mala');
-            if(SND.vib&&navigator.vibrate)navigator.vibrate([250,100,250,100,250]);
+            if(SND.malaVol>0)playSound('mala',SND.malaVol);
+            doVibrate(VIB_PATTERNS[SND.malaVib]);
             pauseDetectionForTTS(6000);
             if(SND.voice)speak('Mala '+G_mala+' of '+CFG.malas+' complete. Continue chanting.');
             document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
-            document.getElementById('malaOvDone').textContent=G_mala;
-            document.getElementById('malaOvTotal').textContent=CFG.malas;
+            document.getElementById('malaOvDone').textContent=G_mala;document.getElementById('malaOvTotal').textContent=CFG.malas;
             showMalaOvAutoClose();
           },300);
         }
       }
-    }else{if(SND.vib&&navigator.vibrate)navigator.vibrate([25])}
+    }else{doVibrate(VIB_PATTERNS[SND.chantVib])}
   }
-  // Update UI
-  document.getElementById('dChant').textContent=G_chant;
-  document.getElementById('dWord').textContent=G_w;
-  document.getElementById('dTotalW').textContent=G_t;
-  document.getElementById('dTotalC').textContent=G_totalC;
-  document.getElementById('dMala').textContent=G_mala;
-  document.getElementById('dMala2').textContent=G_mala;
-  document.getElementById('dProgress').style.width=(CFG.cpm>0?Math.min(G_chant/CFG.cpm,1)*100:0)+'%';
-  document.getElementById('pMala').style.width=(CFG.malas>0?Math.min(G_mala/CFG.malas,1)*100:0)+'%';
+  refreshUI();
   var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);
   drawMala();
 }
 function tapCount(){if(!sessionPaused){D('TAP','info');ADD(1)}}
 
-// ========= MALA =========
-function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm,54),fc=CFG.cpm>0?Math.floor((G_chant/CFG.cpm)*bc):0,h='';for(var i=0;i<bc;i++){var a=(i/bc)*2*Math.PI-Math.PI/2,x=160+120*Math.cos(a),y=160+120*Math.sin(a),f=i<fc;h+='<circle cx="'+x+'" cy="'+y+'" r="8" fill="'+(f?'#F59E0B':'rgba(245,158,11,0.15)')+'" stroke="'+(f?'#D97706':'rgba(245,158,11,0.3)')+'" stroke-width="1.5" style="transition:all 0.3s;'+(f?'filter:drop-shadow(0 0 6px rgba(245,158,11,0.6))':'')+'"/>';}h+='<circle cx="160" cy="38" r="12" fill="#B45309" stroke="#92400E" stroke-width="2"/>';s.innerHTML=h}
+// ========= MALA RING =========
+function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm,54),fc=CFG.cpm>0?Math.floor((G_chant/CFG.cpm)*bc):0,h='';for(var i=0;i<bc;i++){var a=(i/bc)*2*Math.PI-Math.PI/2,x=160+120*Math.cos(a),y=160+120*Math.sin(a),f=i<fc;h+='<circle cx="'+x+'" cy="'+y+'" r="7" fill="'+(f?'#F59E0B':'rgba(245,158,11,0.15)')+'" stroke="'+(f?'#D97706':'rgba(245,158,11,0.3)')+'" stroke-width="1.5" style="transition:all 0.3s;'+(f?'filter:drop-shadow(0 0 5px rgba(245,158,11,0.6))':'')+'"/>';}h+='<circle cx="160" cy="42" r="10" fill="#B45309" stroke="#92400E" stroke-width="2"/>';s.innerHTML=h}
 
 // ========= DETECTION =========
-var detectAF=null, dInWord=false, dWordBuf=[], dSilCount=0;
-
+var detectAF=null,dInWord=false,dWordBuf=[],dSilCount=0;
 function toggleListen(){detecting?stopListen():startListen()}
-
 async function startListen(){
   if(!(await initAudio()))return;
   detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
-  document.getElementById('btnListen').className='btn-listen on';
-  document.getElementById('btnListen').textContent='⏹ Stop';
-  document.getElementById('sLine').textContent='Listening... chant your mantra';
-  D('Listening','ok');
-
-  var eMargin=10;
+  document.getElementById('btnListen').className='btn-listen on';document.getElementById('btnListen').textContent='Stop Listening';
+  document.getElementById('sLine').textContent='Listening...';D('Listening','ok');
+  var eM=10;
   function tick(){
     if(!detecting)return;
     var energy=getEnergy(),spec=getSpectrum(),now=Date.now();
-    SENSITIVITY=document.getElementById('sSlider').value/100;
-    document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
-    var cooldownMs=parseInt(document.getElementById('cSlider').value)||400;
-    document.getElementById('cVal').textContent=cooldownMs+'ms';
-    var threshold=noiseEnergy+eMargin;
-
-    if(energy>threshold){
-      if(!dInWord){dInWord=true;dWordBuf=[]}
-      dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});dSilCount=0;
-    }else{
-      dSilCount++;
-      if(dInWord&&dSilCount>8){
-        dInWord=false;
-        var dur=dWordBuf.length,peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
-        if(peakE<wordFingerprint.minEnergy*0.6){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-        var minD=avgWordDuration*0.3,maxD=avgWordDuration*3.0;
-        if(dur<minD||dur>maxD){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-        if(now<ttsPauseUntil){D('TTS pause','warn');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-        if(now<cooldownUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-
-        var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));
-        var sim=cosSim(segSpec,wordFingerprint.spectrum);
-        var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;
-        var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);
-        var centScore=Math.max(0,1-centDiff*2);
-        var score=sim*0.7+centScore*0.3;
-        var matchTh=1.0-SENSITIVITY;
-
-        var fill=document.getElementById('mFill');
-        fill.style.width=Math.min(score*100,100)+'%';
-        fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
-
-        if(score>=matchTh){
-          D('🎯 HIT score='+score.toFixed(3),'ok');
-          document.getElementById('sLine').className='status-line hit';
-          document.getElementById('sLine').textContent='✓ Detected! ('+score.toFixed(2)+')';
-          ADD(1);cooldownUntil=now+cooldownMs;
-          setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},400);
-        }
-        dWordBuf=[];
-      }
-    }
+    SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
+    var cooldownMs=parseInt(document.getElementById('cSlider').value)||400;document.getElementById('cVal').textContent=cooldownMs+'ms';
+    var th=noiseEnergy+eM;
+    if(energy>th){if(!dInWord){dInWord=true;dWordBuf=[]}dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});dSilCount=0;}
+    else{dSilCount++;if(dInWord&&dSilCount>8){dInWord=false;var dur=dWordBuf.length,peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
+      if(peakE<wordFingerprint.minEnergy*0.6){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+      if(dur<avgWordDuration*0.3||dur>avgWordDuration*3.0){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+      if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+      if(now<cooldownUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+      var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));var sim=cosSim(segSpec,wordFingerprint.spectrum);
+      var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;
+      var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);var centScore=Math.max(0,1-centDiff*2);
+      var score=sim*0.7+centScore*0.3;var matchTh=1.0-SENSITIVITY;
+      var fill=document.getElementById('mFill');fill.style.width=Math.min(score*100,100)+'%';fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
+      if(score>=matchTh){D('HIT '+score.toFixed(2),'ok');document.getElementById('sLine').className='status-line hit';document.getElementById('sLine').textContent='✓ ('+score.toFixed(2)+')';ADD(1);cooldownUntil=now+cooldownMs;setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},400);}
+      dWordBuf=[];}}
     detectAF=requestAnimationFrame(tick);
   }
   detectAF=requestAnimationFrame(tick);
 }
-
-function stopListen(){
-  detecting=false;if(detectAF)cancelAnimationFrame(detectAF);
-  document.getElementById('btnListen').className='btn-listen off';
-  document.getElementById('btnListen').textContent='🎤 Start Listening';
-  document.getElementById('sLine').textContent='Stopped';D('Stopped','warn');
-}
+function stopListen(){detecting=false;if(detectAF)cancelAnimationFrame(detectAF);document.getElementById('btnListen').className='btn-listen off';document.getElementById('btnListen').textContent='🎤 Start Listening';document.getElementById('sLine').textContent='Stopped'}
 
 // ========= SOUNDS =========
-function playSound(type){
+function playSound(type,vol){
   try{
     if(!beepCtx)beepCtx=new(window.AudioContext||window.webkitAudioContext)();
     if(beepCtx.state==='suspended')beepCtx.resume();
-    var now=beepCtx.currentTime;
-    if(type==='chant'){
-      var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=440;g.gain.setValueAtTime(0.3,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);o.start(now);o.stop(now+0.2);
-    }else if(type==='mala'){
-      var o1=beepCtx.createOscillator(),g1=beepCtx.createGain();o1.connect(g1);g1.connect(beepCtx.destination);o1.type='sine';o1.frequency.value=528;g1.gain.setValueAtTime(0.5,now);g1.gain.exponentialRampToValueAtTime(0.01,now+2.5);o1.start(now);o1.stop(now+2.5);
-      var o2=beepCtx.createOscillator(),g2=beepCtx.createGain();o2.connect(g2);g2.connect(beepCtx.destination);o2.type='sine';o2.frequency.value=660;g2.gain.setValueAtTime(0.3,now+0.3);g2.gain.exponentialRampToValueAtTime(0.01,now+2.5);o2.start(now+0.3);o2.stop(now+2.5);
-    }else if(type==='alldone'){
-      [440,554,660,880].forEach(function(f,i){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.4,now+i*0.5);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.5+2);o.start(now+i*0.5);o.stop(now+i*0.5+2)});
-    }
+    var now=beepCtx.currentTime;var v=vol||0.5;
+    if(type==='chant'){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=440;g.gain.setValueAtTime(v*0.5,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);o.start(now);o.stop(now+0.2)}
+    else if(type==='mala'){var o1=beepCtx.createOscillator(),g1=beepCtx.createGain();o1.connect(g1);g1.connect(beepCtx.destination);o1.type='sine';o1.frequency.value=528;g1.gain.setValueAtTime(v*0.6,now);g1.gain.exponentialRampToValueAtTime(0.01,now+2);o1.start(now);o1.stop(now+2);
+      var o2=beepCtx.createOscillator(),g2=beepCtx.createGain();o2.connect(g2);g2.connect(beepCtx.destination);o2.type='sine';o2.frequency.value=660;g2.gain.setValueAtTime(v*0.4,now+0.3);g2.gain.exponentialRampToValueAtTime(0.01,now+2);o2.start(now+0.3);o2.stop(now+2)}
+    else if(type==='alldone'){[440,554,660,880].forEach(function(f,i){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(v*0.5,now+i*0.4);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.4+1.5);o.start(now+i*0.4);o.stop(now+i*0.4+1.5)})}
   }catch(e){}
 }
-function speak(text){
-  try{
-    if(window.NativeApp&&typeof NativeApp.speak==='function'){NativeApp.speak(text);return}
-    if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}
-  }catch(e){D('TTS err','err')}
-}
-function pauseDetectionForTTS(ms){ttsPauseUntil=Date.now()+ms;D('TTS pause '+ms+'ms','warn')}
+function speak(text){try{if(window.NativeApp&&typeof NativeApp.speak==='function'){NativeApp.speak(text);return}if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}}catch(e){}}
+function pauseDetectionForTTS(ms){ttsPauseUntil=Date.now()+ms}
 
-// ========= AUTO-CLOSE MALA OVERLAY =========
+// ========= MALA OVERLAY =========
 var malaOvTimer=null,malaCountdownTimer=null;
-function showMalaOvAutoClose(){
-  document.getElementById('malaOv').classList.add('active');
-  var sec=4,cdEl=document.getElementById('malaCountdown');
-  if(cdEl)cdEl.textContent=sec;
-  if(malaCountdownTimer)clearInterval(malaCountdownTimer);
-  malaCountdownTimer=setInterval(function(){sec--;if(cdEl)cdEl.textContent=sec;if(sec<=0){clearInterval(malaCountdownTimer);malaCountdownTimer=null}},1000);
-  if(malaOvTimer)clearTimeout(malaOvTimer);
-  malaOvTimer=setTimeout(function(){dismissMalaOv()},4000);
-}
-function dismissMalaOv(){
-  if(malaOvTimer){clearTimeout(malaOvTimer);malaOvTimer=null}
-  if(malaCountdownTimer){clearInterval(malaCountdownTimer);malaCountdownTimer=null}
-  document.getElementById('malaOv').classList.remove('active');
-}
+function showMalaOvAutoClose(){document.getElementById('malaOv').classList.add('active');var sec=4,cd=document.getElementById('malaCountdown');if(cd)cd.textContent=sec;if(malaCountdownTimer)clearInterval(malaCountdownTimer);malaCountdownTimer=setInterval(function(){sec--;if(cd)cd.textContent=sec;if(sec<=0){clearInterval(malaCountdownTimer);malaCountdownTimer=null}},1000);if(malaOvTimer)clearTimeout(malaOvTimer);malaOvTimer=setTimeout(function(){dismissMalaOv()},4000)}
+function dismissMalaOv(){if(malaOvTimer){clearTimeout(malaOvTimer);malaOvTimer=null}if(malaCountdownTimer){clearInterval(malaCountdownTimer);malaCountdownTimer=null}document.getElementById('malaOv').classList.remove('active')}
 
-// ========= TAP ANYWHERE ON COUNTER SCREEN =========
+// ========= INTERSTITIAL AD =========
+function showInterstitialAd(){
+  // This placeholder will be replaced by real AdMob interstitial
+  // For now show placeholder briefly
+  // In production: if(admobInterstitial.isLoaded()) admobInterstitial.show();
+  document.getElementById('interstitialAd').classList.add('active');
+}
+function closeInterstitialAd(){document.getElementById('interstitialAd').classList.remove('active')}
+
+// ========= TAP ANYWHERE =========
 document.addEventListener('click',function(e){
   if(!document.getElementById('counterScreen').classList.contains('active'))return;
   if(sessionPaused)return;
   var tag=e.target.tagName.toLowerCase();
   if(tag==='button'||tag==='input'||tag==='select'||tag==='label')return;
-  if(e.target.closest('button')||e.target.closest('input')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle')||e.target.closest('.top-bar')||e.target.closest('.confirm-ov')||e.target.closest('.mode-tabs')||e.target.closest('.slider-row'))return;
+  if(e.target.closest('button')||e.target.closest('input')||e.target.closest('select')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle')||e.target.closest('.top-bar')||e.target.closest('.confirm-ov')||e.target.closest('.mode-tabs')||e.target.closest('.slider-row')||e.target.closest('.dbg-toggle'))return;
   if(curMode==='voice')return;
   tapCount();
 });
 
-// Keyboard capture (desktop)
 document.addEventListener('keydown',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();tapCount()}});
 
-D('v10 loaded','ok');
+D('v11 loaded','ok');
 </script>
 </body>
 </html>
