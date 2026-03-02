@@ -516,32 +516,37 @@ function renderMicList(){
     var sel=curId===d.deviceId?' selected':'';
     html+='<div class="mic-item'+sel+'" onclick="selectMic(\''+d.deviceId+'\')"><div class="mic-radio"></div><div class="mic-name">'+label+'</div><div class="mic-type">'+type+'</div></div>';
   });
-  // Show connected external device info
   html+='<div id="btHint" style="text-align:center;font-size:12px;color:var(--accent);padding:4px 0"></div>';
   list.innerHTML=html;
-  // Try to find connected external audio device name
-  detectConnectedDevice();
+  // Get REAL device names from native Android API
+  getNativeDeviceNames();
 }
-function detectConnectedDevice(){
-  try{navigator.mediaDevices.enumerateDevices().then(function(allDevs){
-    var hint=document.getElementById('btHint');if(!hint)return;
-    // Method 1: Check all audio devices for non-standard names
-    var allLabels=allDevs.filter(function(d){return d.label&&d.deviceId!=='default'}).map(function(d){return d.label});
-    var external=allDevs.find(function(d){
-      if(!d.label||d.deviceId==='default')return false;
-      var ll=d.label.toLowerCase();
-      // Skip standard Android device names
-      return ll.indexOf('built-in')< 0&&ll.indexOf('microphone 1')<0&&ll.indexOf('speakerphone')<0&&ll.indexOf('earpiece')<0&&ll.indexOf('speaker')<0&&ll.indexOf('default')<0;
-    });
-    if(external){
-      hint.textContent='🔗 Connected: '+external.label;
-    }else{
-      // Method 2: If we see "Bluetooth headset" in inputs, there IS a BT device
-      var hasBT=allDevs.find(function(d){return d.label&&d.label.toLowerCase().indexOf('bluetooth')>=0});
-      if(hasBT)hint.textContent='🔗 Bluetooth device connected (use "Test Mic" to verify)';
-      else hint.textContent='';
+function getNativeDeviceNames(){
+  try{
+    if(!window.NativeApp||typeof NativeApp.getAudioDevices!=='function')return;
+    var json=NativeApp.getAudioDevices();
+    var devices=JSON.parse(json);
+    if(!devices||!devices.length)return;
+    var hint=document.getElementById('btHint');
+    // Find Bluetooth devices with real names
+    var btDevices=devices.filter(function(d){return d.type==='Bluetooth'&&d.name});
+    if(btDevices.length>0){
+      // Get unique names
+      var names=[];btDevices.forEach(function(d){if(names.indexOf(d.name)<0)names.push(d.name)});
+      if(hint)hint.innerHTML='🔗 <b>'+names.join(', ')+'</b> connected via Bluetooth';
     }
-  })}catch(e){}
+    // Also check if any mic item says "Bluetooth headset" and we can improve its label
+    var micItems=document.querySelectorAll('.mic-item .mic-name');
+    micItems.forEach(function(el){
+      if(el.textContent.toLowerCase().indexOf('bluetooth')>=0&&btDevices.length>0){
+        var realName=btDevices[0].name;
+        if(realName&&realName!=='Bluetooth'&&realName.length>1){
+          el.textContent=realName+' (BT Mic)';
+        }
+      }
+    });
+    D('Native devices: '+devices.length+', BT: '+btDevices.length,'ok');
+  }catch(e){D('Native dev err: '+e.message,'warn')}
 }
 function selectMic(id){
   selectedMicId=id;
@@ -552,15 +557,14 @@ function selectMic(id){
   D('Selected mic: '+(id?id.substring(0,12)+'...':'Default'),'ok');
 }
 
-// =================== MIC TEST (Record + Playback via Web Audio) ===================
+// =================== MIC TEST (Record + Native Playback) ===================
 var micTestStream=null,micTestCtx=null,micTestAnalyser=null,micTestAF=null,micTesting=false;
-var micRecordedBuffer=null,micPlaybackSource=null,micPlaybackCtx=null,micIsPlaying=false;
+var micRecordedPCM=null,micRecordedSampleRate=0;
 var MIC_TEST_DURATION=4;
 
 async function testMic(){
   if(micTesting){stopMicTest();return}
-  micRecordedBuffer=null;
-  stopPlayback();
+  micRecordedPCM=null;
   var testArea=document.getElementById('micTestArea');
   var bar=document.getElementById('micTestBar');
   var label=document.getElementById('micTestLabel');
@@ -586,36 +590,24 @@ async function testMic(){
     var bufferSize=4096;
     var recorder=micTestCtx.createScriptProcessor(bufferSize,1,1);
     var pcmChunks=[];
-    recorder.onaudioprocess=function(e){if(micTesting){var data=e.inputBuffer.getChannelData(0);pcmChunks.push(new Float32Array(data))}};
+    recorder.onaudioprocess=function(e){if(micTesting){pcmChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)))}};
     src.connect(recorder);
     recorder.connect(micTestCtx.destination);
     micTesting=true;
     var maxE=0,hasAudio=false,secLeft=MIC_TEST_DURATION;
-    var activeTrack=micTestStream.getAudioTracks()[0];
-    var activeName=activeTrack?activeTrack.label:'Unknown';
-    label.textContent='🔴 Recording via: '+activeName.substring(0,30);
-    // Update BT hint with actual active mic name
-    var btHint=document.getElementById('btHint');
-    if(btHint&&activeName.toLowerCase().indexOf('bluetooth')>=0){
-      btHint.textContent='🔗 Active: '+activeName;
-    }
+    label.textContent='🔴 Recording...';
     cdEl.textContent='Speak now! '+secLeft+'s';
     var cdInterval=setInterval(function(){secLeft--;if(secLeft>0){cdEl.textContent='Speak now! '+secLeft+'s'}else{cdEl.textContent='Done!';clearInterval(cdInterval)}},1000);
     var autoStop=setTimeout(function(){
       if(micTesting){
-        // Build AudioBuffer from PCM chunks
-        var totalLength=0;pcmChunks.forEach(function(c){totalLength+=c.length});
-        var merged=new Float32Array(totalLength);var offset=0;
-        pcmChunks.forEach(function(c){merged.set(c,offset);offset+=c.length});
-        var sampleRate=micTestCtx.sampleRate;
+        // Merge PCM chunks
+        var totalLen=0;pcmChunks.forEach(function(c){totalLen+=c.length});
+        var merged=new Float32Array(totalLen);var off=0;
+        pcmChunks.forEach(function(c){merged.set(c,off);off+=c.length});
+        micRecordedPCM=merged;
+        micRecordedSampleRate=micTestCtx.sampleRate;
         recorder.disconnect();
-        // Create playback buffer
-        var playCtx=new(window.AudioContext||window.webkitAudioContext)();
-        var audioBuffer=playCtx.createBuffer(1,merged.length,sampleRate);
-        audioBuffer.getChannelData(0).set(merged);
-        micRecordedBuffer=audioBuffer;
-        micPlaybackCtx=playCtx;
-        D('Recorded '+merged.length+' samples @ '+sampleRate+'Hz','ok');
+        D('Recorded '+merged.length+' samples @ '+micRecordedSampleRate+'Hz','ok');
         finishMicTest(maxE,hasAudio);
       }
     },MIC_TEST_DURATION*1000);
@@ -659,23 +651,63 @@ function stopMicTest(){
   var btn=document.getElementById('btnTestMic');
   btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
 }
-function playTestRecording(){
-  if(!micRecordedBuffer||!micPlaybackCtx)return;
-  var playBtn=document.getElementById('btnPlayTest');
-  if(micIsPlaying){stopPlayback();playBtn.textContent='▶ Play Again';return}
-  // Resume context (needed for user gesture in WebView)
-  if(micPlaybackCtx.state==='suspended')micPlaybackCtx.resume();
-  micPlaybackSource=micPlaybackCtx.createBufferSource();
-  micPlaybackSource.buffer=micRecordedBuffer;
-  micPlaybackSource.connect(micPlaybackCtx.destination);
-  micPlaybackSource.onended=function(){micIsPlaying=false;playBtn.textContent='▶ Play Again';micPlaybackSource=null};
-  micPlaybackSource.start(0);
-  micIsPlaying=true;
-  playBtn.textContent='⏹ Stop Playback';
+// Encode PCM Float32 to WAV base64 for native playback
+function pcmToWavBase64(pcm,sampleRate){
+  var numCh=1,bitsPerSample=16;
+  var byteRate=sampleRate*numCh*bitsPerSample/8;
+  var blockAlign=numCh*bitsPerSample/8;
+  var dataSize=pcm.length*blockAlign;
+  var buffer=new ArrayBuffer(44+dataSize);
+  var view=new DataView(buffer);
+  // RIFF header
+  writeStr(view,0,'RIFF');view.setUint32(4,36+dataSize,true);writeStr(view,8,'WAVE');
+  writeStr(view,12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);
+  view.setUint16(22,numCh,true);view.setUint32(24,sampleRate,true);
+  view.setUint32(28,byteRate,true);view.setUint16(32,blockAlign,true);
+  view.setUint16(34,bitsPerSample,true);writeStr(view,36,'data');view.setUint32(40,dataSize,true);
+  // PCM data
+  var offset=44;
+  for(var i=0;i<pcm.length;i++){
+    var s=Math.max(-1,Math.min(1,pcm[i]));
+    view.setInt16(offset,s<0?s*0x8000:s*0x7FFF,true);
+    offset+=2;
+  }
+  // Convert to base64
+  var bytes=new Uint8Array(buffer);
+  var binary='';for(var i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
+  return btoa(binary);
 }
-function stopPlayback(){
-  if(micPlaybackSource){try{micPlaybackSource.stop()}catch(e){}}
-  micPlaybackSource=null;micIsPlaying=false;
+function writeStr(view,offset,str){for(var i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i))}
+
+// Called from native when playback finishes
+function onNativePlaybackDone(){
+  var playBtn=document.getElementById('btnPlayTest');
+  if(playBtn){playBtn.textContent='▶ Play Again'}
+  D('Playback done','ok');
+}
+function playTestRecording(){
+  if(!micRecordedPCM||!micRecordedPCM.length){D('No recording','warn');return}
+  var playBtn=document.getElementById('btnPlayTest');
+  // Try native playback first (reliable on Android)
+  if(window.NativeApp&&typeof NativeApp.playBase64Audio==='function'){
+    playBtn.textContent='🔊 Playing...';
+    var wavB64=pcmToWavBase64(micRecordedPCM,micRecordedSampleRate);
+    NativeApp.playBase64Audio(wavB64);
+    D('Native playback started','ok');
+    return;
+  }
+  // Fallback: Web Audio API playback
+  try{
+    var pCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(pCtx.state==='suspended')pCtx.resume();
+    var aBuf=pCtx.createBuffer(1,micRecordedPCM.length,micRecordedSampleRate);
+    aBuf.getChannelData(0).set(micRecordedPCM);
+    var src=pCtx.createBufferSource();src.buffer=aBuf;
+    src.connect(pCtx.destination);
+    src.onended=function(){playBtn.textContent='▶ Play Again';pCtx.close()};
+    src.start(0);
+    playBtn.textContent='🔊 Playing...';
+  }catch(e){playBtn.textContent='❌ '+e.message;D('Play err:'+e.message,'err')}
 }
 
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){refreshMicList();D('Device changed','warn')});
