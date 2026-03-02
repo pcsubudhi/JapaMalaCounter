@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private LocalServer localServer;
     private MediaPlayer mediaPlayer;
     private static final int MIC_PERMISSION_CODE = 100;
-    private static final int BT_PERMISSION_CODE = 101;
     private static final int SERVER_PORT = 8899;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -121,25 +120,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         webView.addJavascriptInterface(new JapaBridge(), "NativeApp");
 
-        // Request mic permission first (critical)
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
         } else {
             loadPage();
-            // Request Bluetooth permission separately (nice-to-have, for device names)
-            requestBluetoothPermission();
-        }
-    }
-
-    private void requestBluetoothPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, BT_PERMISSION_CODE);
-            }
         }
     }
 
@@ -235,19 +221,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
         }
 
-        /**
-         * Returns JSON array of audio devices with REAL device names from Android native API.
-         * WebView's enumerateDevices() gives generic labels like "Bluetooth headset",
-         * but AudioDeviceInfo.getProductName() returns actual names like "soundcore V20i".
-         */
         @JavascriptInterface
         public String getAudioDevices() {
             try {
                 AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                 if (am == null) return "[]";
-
                 JSONArray result = new JSONArray();
-
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     AudioDeviceInfo[] inputs = am.getDevices(AudioManager.GET_DEVICES_INPUTS);
                     for (AudioDeviceInfo device : inputs) {
@@ -255,37 +234,26 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         obj.put("id", device.getId());
                         obj.put("name", device.getProductName().toString());
                         obj.put("type", getDeviceTypeName(device.getType()));
-                        obj.put("typeCode", device.getType());
-                        obj.put("isSource", device.isSource());
+                        obj.put("isSource", true);
                         result.put(obj);
                     }
-
-                    // Also check outputs for BT device real name
                     AudioDeviceInfo[] outputs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
                     for (AudioDeviceInfo device : outputs) {
                         int t = device.getType();
-                        if (t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                            t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                            t == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                            t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                            t == AudioDeviceInfo.TYPE_USB_HEADSET ||
-                            t == AudioDeviceInfo.TYPE_USB_DEVICE) {
+                        if (t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                            t == AudioDeviceInfo.TYPE_WIRED_HEADSET || t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                            t == AudioDeviceInfo.TYPE_USB_HEADSET || t == AudioDeviceInfo.TYPE_USB_DEVICE) {
                             JSONObject obj = new JSONObject();
                             obj.put("id", device.getId());
                             obj.put("name", device.getProductName().toString());
                             obj.put("type", getDeviceTypeName(device.getType()));
-                            obj.put("typeCode", device.getType());
-                            obj.put("isSource", false);
                             obj.put("isOutput", true);
                             result.put(obj);
                         }
                     }
                 }
-
                 return result.toString();
-            } catch (Exception e) {
-                return "[]";
-            }
+            } catch (Exception e) { return "[]"; }
         }
 
         private String getDeviceTypeName(int type) {
@@ -299,15 +267,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 case AudioDeviceInfo.TYPE_USB_HEADSET: return "USB";
                 case AudioDeviceInfo.TYPE_BUILTIN_EARPIECE: return "Earpiece";
                 case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER: return "Speaker";
-                case AudioDeviceInfo.TYPE_TELEPHONY: return "Telephony";
                 default: return "Other";
             }
         }
 
-        /**
-         * Play audio from base64-encoded WAV data via native MediaPlayer.
-         * This works reliably on all Android versions unlike WebView Audio playback.
-         */
         @JavascriptInterface
         public void playBase64Audio(final String base64Data) {
             new Thread(new Runnable() {
@@ -315,53 +278,37 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 public void run() {
                     try {
                         byte[] audioBytes = Base64.decode(base64Data, Base64.DEFAULT);
-                        File tempFile = new File(getCacheDir(), "mic_test.wav");
+                        final File tempFile = new File(getCacheDir(), "mic_test.wav");
                         FileOutputStream fos = new FileOutputStream(tempFile);
                         fos.write(audioBytes);
                         fos.close();
-
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 try {
-                                    if (mediaPlayer != null) {
-                                        mediaPlayer.release();
-                                        mediaPlayer = null;
-                                    }
+                                    if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
                                     mediaPlayer = new MediaPlayer();
                                     mediaPlayer.setDataSource(tempFile.getAbsolutePath());
                                     mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                                        @Override
-                                        public void onPrepared(MediaPlayer mp) {
-                                            mp.start();
-                                        }
+                                        @Override public void onPrepared(MediaPlayer mp) { mp.start(); }
                                     });
                                     mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                                        @Override
-                                        public void onCompletion(MediaPlayer mp) {
+                                        @Override public void onCompletion(MediaPlayer mp) {
                                             webView.evaluateJavascript("if(typeof onNativePlaybackDone==='function')onNativePlaybackDone()", null);
-                                            mp.release();
-                                            mediaPlayer = null;
+                                            mp.release(); mediaPlayer = null;
                                         }
                                     });
                                     mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-                                        @Override
-                                        public boolean onError(MediaPlayer mp, int what, int extra) {
+                                        @Override public boolean onError(MediaPlayer mp, int what, int extra) {
                                             webView.evaluateJavascript("if(typeof onNativePlaybackDone==='function')onNativePlaybackDone()", null);
-                                            mp.release();
-                                            mediaPlayer = null;
-                                            return true;
+                                            mp.release(); mediaPlayer = null; return true;
                                         }
                                     });
                                     mediaPlayer.prepareAsync();
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                                } catch (Exception e) { e.printStackTrace(); }
                             }
                         });
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    } catch (Exception e) { e.printStackTrace(); }
                 }
             }).start();
         }
@@ -373,8 +320,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 public void run() {
                     if (mediaPlayer != null) {
                         try { mediaPlayer.stop(); } catch (Exception e) {}
-                        mediaPlayer.release();
-                        mediaPlayer = null;
+                        mediaPlayer.release(); mediaPlayer = null;
                     }
                 }
             });
@@ -386,13 +332,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_CODE) {
-            boolean micGranted = false;
-            for (int i = 0; i < permissions.length; i++) {
-                if (permissions[i].equals(Manifest.permission.RECORD_AUDIO) && grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                    micGranted = true;
-                }
-            }
-            if (micGranted) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 if (pendingPermissionRequest != null) {
                     pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
                     pendingPermissionRequest = null;
@@ -400,8 +340,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 if (webView.getUrl() == null) {
                     loadPage();
                 }
-                // Now request Bluetooth permission (non-blocking, for device names)
-                requestBluetoothPermission();
             } else {
                 Toast.makeText(this, "Microphone needed for voice counting", Toast.LENGTH_LONG).show();
                 loadPage();
@@ -409,7 +347,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         }
     }
 
-    // ========= LIFECYCLE =========
     @Override
     protected void onResume() {
         super.onResume();
@@ -451,9 +388,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         if (running) e.printStackTrace();
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException e) { e.printStackTrace(); }
         }
 
         private void handleClient(Socket client) {
@@ -462,10 +397,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 byte[] buf = new byte[4096];
                 int len = is.read(buf);
                 if (len <= 0) { client.close(); return; }
-
                 String request = new String(buf, 0, len);
                 String path = "index.html";
-
                 if (request.startsWith("GET ")) {
                     int start = 4;
                     int end = request.indexOf(' ', start);
@@ -475,7 +408,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         if (path.isEmpty()) path = "index.html";
                     }
                 }
-
                 byte[] content;
                 String contentType = "text/html";
                 try {
@@ -483,12 +415,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     byte[] buffer = new byte[8192];
                     int read;
-                    while ((read = assetStream.read(buffer)) != -1) {
-                        baos.write(buffer, 0, read);
-                    }
+                    while ((read = assetStream.read(buffer)) != -1) { baos.write(buffer, 0, read); }
                     assetStream.close();
                     content = baos.toByteArray();
-
                     if (path.endsWith(".js")) contentType = "application/javascript";
                     else if (path.endsWith(".css")) contentType = "text/css";
                     else if (path.endsWith(".png")) contentType = "image/png";
@@ -497,30 +426,18 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     content = "Not Found".getBytes();
                     contentType = "text/plain";
                 }
-
                 OutputStream os = client.getOutputStream();
-                String header = "HTTP/1.1 200 OK\r\n"
-                        + "Content-Type: " + contentType + "\r\n"
-                        + "Content-Length: " + content.length + "\r\n"
-                        + "Access-Control-Allow-Origin: *\r\n"
-                        + "Connection: close\r\n"
-                        + "\r\n";
+                String header = "HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\nContent-Length: " + content.length + "\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n";
                 os.write(header.getBytes());
                 os.write(content);
                 os.flush();
                 client.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException e) { e.printStackTrace(); }
         }
 
         void stopServer() {
             running = false;
-            try {
-                if (serverSocket != null) serverSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            try { if (serverSocket != null) serverSocket.close(); } catch (IOException e) { e.printStackTrace(); }
         }
     }
 }
