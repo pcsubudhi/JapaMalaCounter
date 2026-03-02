@@ -13,7 +13,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="Japa Counter"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
