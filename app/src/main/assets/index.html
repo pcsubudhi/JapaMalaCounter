@@ -710,7 +710,7 @@ function playTestRecording(){
   }catch(e){playBtn.textContent='❌ '+e.message;D('Play err:'+e.message,'err')}
 }
 
-if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){refreshMicList();D('Device changed','warn')});
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){D('Audio device changed — tap Refresh','warn');document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--accent);font-size:13px;padding:10px">Device changed! Tap Refresh to update mic list</div>'});
 
 // =================== AUDIO ===================
 async function initAudio(){
@@ -720,7 +720,7 @@ async function initAudio(){
     stream=await navigator.mediaDevices.getUserMedia({audio:ac});actx=new(window.AudioContext||window.webkitAudioContext)();mic=actx.createMediaStreamSource(stream);analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.4;mic.connect(analyser);selectedMicId=mid;
     var tr=stream.getAudioTracks();if(tr.length>0)document.getElementById('noiseStatus').textContent='Mic: '+(tr[0].label||'Active');
     return true;
-  }catch(e){D('Mic err:'+e.message,'err');alert('Microphone access failed');return false}
+  }catch(e){D('Mic err:'+e.message,'err');document.getElementById('noiseStatus').innerHTML='<span style="color:var(--danger)">❌ Mic access failed. Tap Refresh in mic section above.</span>';return false}
 }
 
 function getSpectrum(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var bs=Math.floor(buf.length/BANDS),bands=[];for(var b=0;b<BANDS;b++){var s=0;for(var i=b*bs;i<(b+1)*bs&&i<buf.length;i++)s+=buf[i];bands.push(s/bs)}return bands}
@@ -946,7 +946,7 @@ function init(){
   var saved=loadSessionProgress();if(saved&&saved.G_totalC>0){document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=saved.G_mala;document.getElementById('rMalaT').textContent=saved.CFG.malas;document.getElementById('rChant').textContent=saved.G_chant;document.getElementById('rCPM').textContent=saved.CFG.cpm;
     // Override resumeSession to use saved data
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
-  setupLongPress();setTimeout(function(){refreshMicList()},2000);
+  setupLongPress();document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--accent);font-size:13px;padding:10px">Tap Refresh or Capture Silence to detect microphones</div>';
   D('v12 loaded','ok');
 }
 init();
