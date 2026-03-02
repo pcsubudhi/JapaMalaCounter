@@ -50,7 +50,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private Vibrator vibrator;
     private TextToSpeech tts;
     private boolean ttsReady = false;
-    private PermissionRequest pendingPermissionRequest;
     private LocalServer localServer;
     private MediaPlayer mediaPlayer;
     private static final int MIC_PERMISSION_CODE = 100;
@@ -100,21 +99,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (ContextCompat.checkSelfPermission(MainActivity.this,
-                                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                            request.grant(request.getResources());
-                        } else {
-                            pendingPermissionRequest = request;
-                            ActivityCompat.requestPermissions(MainActivity.this,
-                                    new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
-                        }
+                        request.grant(request.getResources());
                     }
                 });
-            }
-
-            @Override
-            public void onPermissionRequestCanceled(PermissionRequest request) {
-                pendingPermissionRequest = null;
             }
         });
 
@@ -333,12 +320,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (pendingPermissionRequest != null) {
-                    pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
-                    pendingPermissionRequest = null;
-                }
                 if (webView.getUrl() == null) {
                     loadPage();
+                } else {
+                    webView.reload();
                 }
             } else {
                 Toast.makeText(this, "Microphone needed for voice counting", Toast.LENGTH_LONG).show();
