@@ -502,31 +502,46 @@ function renderMicList(){
   var curId=document.getElementById('micSelect').value;
   if(detectedMics.length===0){list.innerHTML='<div style="text-align:center;color:var(--text-mid);font-size:13px;padding:10px">No microphones found</div>';return}
   var html='';
-  // Check for Bluetooth/external audio devices from output list
-  try{navigator.mediaDevices.enumerateDevices().then(function(allDevs){
-    var outputs=allDevs.filter(function(d){return d.kind==='audiooutput'&&d.label});
-    // Find non-built-in output device (likely BT/wired headset)
-    var external=outputs.find(function(d){
-      var ll=d.label.toLowerCase();
-      return ll.indexOf('built-in')<0&&ll.indexOf('speaker')<0&&ll.indexOf('earpiece')<0&&ll.indexOf('default')<0&&d.deviceId!=='default';
-    });
-    if(external){var hint=document.getElementById('btHint');if(hint)hint.textContent='🔗 Connected audio device: '+external.label}
-  })}catch(e){}
   // Default mic option
   html+='<div class="mic-item'+(curId===''?' selected':'')+'" onclick="selectMic(\'\')"><div class="mic-radio"></div><div class="mic-name">Default Microphone</div><div class="mic-type">Auto</div></div>';
   detectedMics.forEach(function(d,i){
     var label=d.label||('Microphone '+(i+1));
     var type='Built-in';
     var ll=label.toLowerCase();
-    if(ll.indexOf('bluetooth')>=0||ll.indexOf('bt ')>=0||ll.indexOf('airpod')>=0||ll.indexOf('buds')>=0||ll.indexOf('jbl')>=0||ll.indexOf('sony')>=0||ll.indexOf('bose')>=0||ll.indexOf('soundcore')>=0||ll.indexOf('jabra')>=0)type='Bluetooth';
-    else if(ll.indexOf('headset')>=0||ll.indexOf('wired')>=0||ll.indexOf('headphone')>=0||ll.indexOf('earphone')>=0)type='Wired';
+    if(ll.indexOf('bluetooth')>=0||ll.indexOf('bt ')>=0)type='Bluetooth';
+    else if(ll.indexOf('headset')>=0||ll.indexOf('headphone')>=0||ll.indexOf('earphone')>=0||ll.indexOf('earpiece')>=0)type='Headset';
     else if(ll.indexOf('usb')>=0)type='USB';
+    else if(ll.indexOf('speakerphone')>=0)type='Speaker';
     else if(ll.indexOf('camera')>=0||ll.indexOf('webcam')>=0)type='Camera';
     var sel=curId===d.deviceId?' selected':'';
     html+='<div class="mic-item'+sel+'" onclick="selectMic(\''+d.deviceId+'\')"><div class="mic-radio"></div><div class="mic-name">'+label+'</div><div class="mic-type">'+type+'</div></div>';
   });
+  // Show connected external device info
   html+='<div id="btHint" style="text-align:center;font-size:12px;color:var(--accent);padding:4px 0"></div>';
   list.innerHTML=html;
+  // Try to find connected external audio device name
+  detectConnectedDevice();
+}
+function detectConnectedDevice(){
+  try{navigator.mediaDevices.enumerateDevices().then(function(allDevs){
+    var hint=document.getElementById('btHint');if(!hint)return;
+    // Method 1: Check all audio devices for non-standard names
+    var allLabels=allDevs.filter(function(d){return d.label&&d.deviceId!=='default'}).map(function(d){return d.label});
+    var external=allDevs.find(function(d){
+      if(!d.label||d.deviceId==='default')return false;
+      var ll=d.label.toLowerCase();
+      // Skip standard Android device names
+      return ll.indexOf('built-in')< 0&&ll.indexOf('microphone 1')<0&&ll.indexOf('speakerphone')<0&&ll.indexOf('earpiece')<0&&ll.indexOf('speaker')<0&&ll.indexOf('default')<0;
+    });
+    if(external){
+      hint.textContent='🔗 Connected: '+external.label;
+    }else{
+      // Method 2: If we see "Bluetooth headset" in inputs, there IS a BT device
+      var hasBT=allDevs.find(function(d){return d.label&&d.label.toLowerCase().indexOf('bluetooth')>=0});
+      if(hasBT)hint.textContent='🔗 Bluetooth device connected (use "Test Mic" to verify)';
+      else hint.textContent='';
+    }
+  })}catch(e){}
 }
 function selectMic(id){
   selectedMicId=id;
@@ -537,16 +552,15 @@ function selectMic(id){
   D('Selected mic: '+(id?id.substring(0,12)+'...':'Default'),'ok');
 }
 
-// =================== MIC TEST (Record + Playback) ===================
+// =================== MIC TEST (Record + Playback via Web Audio) ===================
 var micTestStream=null,micTestCtx=null,micTestAnalyser=null,micTestAF=null,micTesting=false;
-var micRecorder=null,micRecordedBlob=null,micPlaybackAudio=null;
-var MIC_TEST_DURATION=4; // seconds
+var micRecordedBuffer=null,micPlaybackSource=null,micPlaybackCtx=null,micIsPlaying=false;
+var MIC_TEST_DURATION=4;
 
 async function testMic(){
   if(micTesting){stopMicTest();return}
-  // Reset
-  micRecordedBlob=null;
-  if(micPlaybackAudio){micPlaybackAudio.pause();micPlaybackAudio=null}
+  micRecordedBuffer=null;
+  stopPlayback();
   var testArea=document.getElementById('micTestArea');
   var bar=document.getElementById('micTestBar');
   var label=document.getElementById('micTestLabel');
@@ -568,33 +582,48 @@ async function testMic(){
     var src=micTestCtx.createMediaStreamSource(micTestStream);
     micTestAnalyser=micTestCtx.createAnalyser();micTestAnalyser.fftSize=2048;micTestAnalyser.smoothingTimeConstant=0.4;
     src.connect(micTestAnalyser);
-    // Start MediaRecorder
-    micRecorder=new MediaRecorder(micTestStream);
-    var chunks=[];
-    micRecorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
-    micRecorder.onstop=function(){micRecordedBlob=new Blob(chunks,{type:'audio/webm'});D('Recorded '+Math.round(micRecordedBlob.size/1024)+'KB','ok')};
-    micRecorder.start();
+    // Record raw PCM using ScriptProcessorNode
+    var bufferSize=4096;
+    var recorder=micTestCtx.createScriptProcessor(bufferSize,1,1);
+    var pcmChunks=[];
+    recorder.onaudioprocess=function(e){if(micTesting){var data=e.inputBuffer.getChannelData(0);pcmChunks.push(new Float32Array(data))}};
+    src.connect(recorder);
+    recorder.connect(micTestCtx.destination);
     micTesting=true;
     var maxE=0,hasAudio=false,secLeft=MIC_TEST_DURATION;
-    var activeLabel=micTestStream.getAudioTracks()[0]?micTestStream.getAudioTracks()[0].label:'Unknown';
-    label.textContent='🔴 Recording...';
-    cdEl.textContent='Speak now! '+secLeft+'s remaining';
-    // Countdown
-    var cdInterval=setInterval(function(){
-      secLeft--;
-      if(secLeft>0){cdEl.textContent='Speak now! '+secLeft+'s remaining'}
-      else{cdEl.textContent='Done!';clearInterval(cdInterval)}
-    },1000);
-    // Auto-stop after duration
+    var activeTrack=micTestStream.getAudioTracks()[0];
+    var activeName=activeTrack?activeTrack.label:'Unknown';
+    label.textContent='🔴 Recording via: '+activeName.substring(0,30);
+    // Update BT hint with actual active mic name
+    var btHint=document.getElementById('btHint');
+    if(btHint&&activeName.toLowerCase().indexOf('bluetooth')>=0){
+      btHint.textContent='🔗 Active: '+activeName;
+    }
+    cdEl.textContent='Speak now! '+secLeft+'s';
+    var cdInterval=setInterval(function(){secLeft--;if(secLeft>0){cdEl.textContent='Speak now! '+secLeft+'s'}else{cdEl.textContent='Done!';clearInterval(cdInterval)}},1000);
     var autoStop=setTimeout(function(){
-      if(micTesting){finishMicTest(maxE,hasAudio)}
+      if(micTesting){
+        // Build AudioBuffer from PCM chunks
+        var totalLength=0;pcmChunks.forEach(function(c){totalLength+=c.length});
+        var merged=new Float32Array(totalLength);var offset=0;
+        pcmChunks.forEach(function(c){merged.set(c,offset);offset+=c.length});
+        var sampleRate=micTestCtx.sampleRate;
+        recorder.disconnect();
+        // Create playback buffer
+        var playCtx=new(window.AudioContext||window.webkitAudioContext)();
+        var audioBuffer=playCtx.createBuffer(1,merged.length,sampleRate);
+        audioBuffer.getChannelData(0).set(merged);
+        micRecordedBuffer=audioBuffer;
+        micPlaybackCtx=playCtx;
+        D('Recorded '+merged.length+' samples @ '+sampleRate+'Hz','ok');
+        finishMicTest(maxE,hasAudio);
+      }
     },MIC_TEST_DURATION*1000);
     function tick(){
       if(!micTesting)return;
       var buf=new Uint8Array(micTestAnalyser.frequencyBinCount);micTestAnalyser.getByteFrequencyData(buf);
       var e=0;for(var i=0;i<buf.length;i++)e+=buf[i];e/=buf.length;
-      if(e>maxE)maxE=e;
-      if(e>3)hasAudio=true;
+      if(e>maxE)maxE=e;if(e>3)hasAudio=true;
       var pct=Math.min(e/50*100,100);
       bar.style.width=pct+'%';
       bar.style.background=e>15?'var(--accent)':e>3?'var(--success)':'var(--card-border)';
@@ -615,7 +644,7 @@ function finishMicTest(maxE,hasAudio){
   cdEl.style.display='none';
   if(hasAudio&&maxE>5){
     label.textContent='✅ Mic working! (level: '+maxE.toFixed(0)+')';label.style.color='var(--success)';
-    playBtn.style.display='block';playBtn.textContent='▶ Play Recording — hear what mic captured';
+    playBtn.style.display='block';playBtn.textContent='▶ Play Recording';
   }else{
     label.textContent='❌ No audio detected. Try another mic.';label.style.color='var(--danger)';
     playBtn.style.display='none';
@@ -624,23 +653,29 @@ function finishMicTest(maxE,hasAudio){
 function stopMicTest(){
   micTesting=false;
   if(micTestAF)cancelAnimationFrame(micTestAF);
-  if(micRecorder&&micRecorder.state==='recording')try{micRecorder.stop()}catch(e){}
   if(micTestStream)micTestStream.getTracks().forEach(function(t){t.stop()});
   if(micTestCtx)try{micTestCtx.close()}catch(e){}
-  micTestStream=null;micTestCtx=null;micTestAnalyser=null;micRecorder=null;
+  micTestStream=null;micTestCtx=null;micTestAnalyser=null;
   var btn=document.getElementById('btnTestMic');
   btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
 }
 function playTestRecording(){
-  if(!micRecordedBlob){return}
+  if(!micRecordedBuffer||!micPlaybackCtx)return;
   var playBtn=document.getElementById('btnPlayTest');
-  if(micPlaybackAudio){micPlaybackAudio.pause();micPlaybackAudio=null;playBtn.textContent='▶ Play Recording';return}
-  var url=URL.createObjectURL(micRecordedBlob);
-  micPlaybackAudio=new Audio(url);
-  micPlaybackAudio.onplay=function(){playBtn.textContent='⏹ Stop Playback'};
-  micPlaybackAudio.onended=function(){playBtn.textContent='▶ Play Again';micPlaybackAudio=null};
-  micPlaybackAudio.onerror=function(){playBtn.textContent='❌ Playback failed';D('Playback err','err')};
-  micPlaybackAudio.play().catch(function(e){playBtn.textContent='❌ '+e.message;D('Play err:'+e.message,'err')});
+  if(micIsPlaying){stopPlayback();playBtn.textContent='▶ Play Again';return}
+  // Resume context (needed for user gesture in WebView)
+  if(micPlaybackCtx.state==='suspended')micPlaybackCtx.resume();
+  micPlaybackSource=micPlaybackCtx.createBufferSource();
+  micPlaybackSource.buffer=micRecordedBuffer;
+  micPlaybackSource.connect(micPlaybackCtx.destination);
+  micPlaybackSource.onended=function(){micIsPlaying=false;playBtn.textContent='▶ Play Again';micPlaybackSource=null};
+  micPlaybackSource.start(0);
+  micIsPlaying=true;
+  playBtn.textContent='⏹ Stop Playback';
+}
+function stopPlayback(){
+  if(micPlaybackSource){try{micPlaybackSource.stop()}catch(e){}}
+  micPlaybackSource=null;micIsPlaying=false;
 }
 
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){refreshMicList();D('Device changed','warn')});
