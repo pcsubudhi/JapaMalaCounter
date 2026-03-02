@@ -146,6 +146,15 @@
   .chk-row{display:flex;align-items:center;gap:8px;margin:5px 0}
   .chk-row label{font-size:14px;color:var(--text);font-weight:500}
   .chk-row input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
+  /* Mic list */
+  .mic-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:4px 0;border-radius:10px;background:rgba(0,0,0,0.25);border:1.5px solid var(--card-border);cursor:pointer;transition:all 0.2s}
+  .mic-item:active{transform:scale(0.98)}
+  .mic-item.selected{border-color:var(--accent);background:var(--accent-dim)}
+  .mic-item .mic-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--card-border);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .mic-item.selected .mic-radio{border-color:var(--accent)}
+  .mic-item.selected .mic-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  .mic-item .mic-name{font-size:13px;color:var(--text);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mic-item .mic-type{font-size:11px;color:var(--text-mid);background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:10px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -191,11 +200,23 @@
       <div class="step-header"><div class="step-num" id="s1n">1</div><div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div></div>
       <div id="tip1" class="tip-box">Stay completely quiet for 10 seconds. This learns background noise (fan, AC, traffic) for filtering.</div>
       <div style="margin-bottom:6px">
-        <label style="font-size:14px;color:var(--text);font-weight:600">🎙 Microphone: <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
-        <div id="tipMic" class="tip-box">Select which mic to use. Bluetooth earbuds should appear here. Tap Refresh after connecting.</div>
-        <div style="display:flex;gap:6px;margin-top:4px">
-          <select id="micSelect" class="vib-select" style="flex:1;padding:10px;font-size:14px;background:#1C130D;border:1.5px solid var(--accent);color:var(--text)" onchange="selectedMicId=this.value"><option value="">Default Microphone</option></select>
-          <button onclick="refreshMicList()" style="background:var(--accent-dim);border:1.5px solid var(--accent);border-radius:8px;padding:8px 12px;color:var(--accent);font-size:13px;font-weight:700">Refresh</button>
+        <label style="font-size:14px;color:var(--text);font-weight:600">🎙 Microphone <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
+        <div id="tipMic" class="tip-box">Shows all detected mics. Bluetooth earbuds appear here when connected. Use "Test" to verify a mic works before calibrating.</div>
+        <!-- Hidden select for programmatic use -->
+        <select id="micSelect" style="display:none" onchange="selectedMicId=this.value"><option value="">Default</option></select>
+        <!-- Visual mic list -->
+        <div id="micList" style="margin-top:6px">
+          <div style="text-align:center;color:var(--text-mid);font-size:13px;padding:10px">Scanning for microphones...</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button onclick="refreshMicList()" style="flex:1;background:var(--card);border:1.5px solid var(--accent);border-radius:8px;padding:9px 12px;color:var(--accent);font-size:13px;font-weight:700">🔄 Refresh</button>
+          <button id="btnTestMic" onclick="testMic()" style="flex:1;background:var(--accent-dim);border:1.5px solid var(--success);border-radius:8px;padding:9px 12px;color:var(--success);font-size:13px;font-weight:700">🎤 Test Mic</button>
+        </div>
+        <div id="micTestArea" style="display:none;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;background:rgba(0,0,0,0.35);border-radius:6px;height:20px;overflow:hidden"><div id="micTestBar" style="height:100%;width:0%;background:var(--success);border-radius:6px;transition:width 0.1s"></div></div>
+            <span id="micTestLabel" style="font-size:12px;color:var(--text-mid);min-width:60px;text-align:right">Testing...</span>
+          </div>
         </div>
       </div>
       <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
@@ -454,14 +475,118 @@ function showWelcome(){if(!localStorage.getItem('japa_welcomed')){document.getEl
 function closeWelcome(){document.getElementById('welcomeOv').classList.remove('show');localStorage.setItem('japa_welcomed','1')}
 
 // =================== MIC LIST ===================
+var detectedMics=[];
 async function refreshMicList(){
-  try{var ts=await navigator.mediaDevices.getUserMedia({audio:true});var devs=await navigator.mediaDevices.enumerateDevices();ts.getTracks().forEach(function(t){t.stop()});
-    var sel=document.getElementById('micSelect'),cv=sel.value;sel.innerHTML='<option value="">Default Microphone</option>';
-    devs.filter(function(d){return d.kind==='audioinput'}).forEach(function(d,i){var o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('Mic '+(i+1));sel.appendChild(o)});
+  try{
+    var ts=await navigator.mediaDevices.getUserMedia({audio:true});
+    var devs=await navigator.mediaDevices.enumerateDevices();
+    ts.getTracks().forEach(function(t){t.stop()});
+    detectedMics=devs.filter(function(d){return d.kind==='audioinput'});
+    // Update hidden select
+    var sel=document.getElementById('micSelect'),cv=sel.value;
+    sel.innerHTML='<option value="">Default Microphone</option>';
+    detectedMics.forEach(function(d,i){var o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('Mic '+(i+1));sel.appendChild(o)});
     if(cv){sel.value=cv;if(!sel.value)sel.value=''}
-  }catch(e){D('Mic err:'+e.message,'err')}
+    // Build visual list
+    renderMicList();
+    D('Found '+detectedMics.length+' mic(s)','ok');
+  }catch(e){
+    D('Mic err:'+e.message,'err');
+    document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--danger);font-size:13px;padding:10px">Mic access denied. Check permissions.</div>';
+  }
 }
-if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){refreshMicList()});
+function renderMicList(){
+  var list=document.getElementById('micList');
+  var curId=document.getElementById('micSelect').value;
+  if(detectedMics.length===0){list.innerHTML='<div style="text-align:center;color:var(--text-mid);font-size:13px;padding:10px">No microphones found</div>';return}
+  var html='';
+  // Default mic option
+  html+='<div class="mic-item'+(curId===''?' selected':'')+'" onclick="selectMic(\'\')"><div class="mic-radio"></div><div class="mic-name">Default Microphone</div><div class="mic-type">Auto</div></div>';
+  detectedMics.forEach(function(d,i){
+    var label=d.label||('Microphone '+(i+1));
+    var type='Built-in';
+    var ll=label.toLowerCase();
+    if(ll.indexOf('bluetooth')>=0||ll.indexOf('bt ')>=0||ll.indexOf('airpod')>=0||ll.indexOf('buds')>=0||ll.indexOf('jbl')>=0||ll.indexOf('sony')>=0||ll.indexOf('bose')>=0)type='Bluetooth';
+    else if(ll.indexOf('headset')>=0||ll.indexOf('wired')>=0||ll.indexOf('headphone')>=0||ll.indexOf('earphone')>=0)type='Wired';
+    else if(ll.indexOf('usb')>=0)type='USB';
+    else if(ll.indexOf('camera')>=0||ll.indexOf('webcam')>=0)type='Camera';
+    var sel=curId===d.deviceId?' selected':'';
+    html+='<div class="mic-item'+sel+'" onclick="selectMic(\''+d.deviceId+'\')"><div class="mic-radio"></div><div class="mic-name">'+label+'</div><div class="mic-type">'+type+'</div></div>';
+  });
+  list.innerHTML=html;
+}
+function selectMic(id){
+  selectedMicId=id;
+  document.getElementById('micSelect').value=id;
+  // If audio was already initialized, force re-init on next use
+  if(actx){if(stream)stream.getTracks().forEach(function(t){t.stop()});mic.disconnect();actx=null;mic=null;analyser=null;stream=null}
+  renderMicList();
+  D('Selected mic: '+(id?id.substring(0,12)+'...':'Default'),'ok');
+}
+
+// =================== MIC TEST ===================
+var micTestStream=null,micTestCtx=null,micTestAnalyser=null,micTestAF=null,micTesting=false;
+async function testMic(){
+  if(micTesting){stopMicTest();return}
+  var testArea=document.getElementById('micTestArea');
+  var bar=document.getElementById('micTestBar');
+  var label=document.getElementById('micTestLabel');
+  var btn=document.getElementById('btnTestMic');
+  testArea.style.display='block';
+  label.textContent='Starting...';label.style.color='var(--text-mid)';
+  bar.style.width='0%';bar.style.background='var(--success)';
+  btn.textContent='⏹ Stop Test';btn.style.borderColor='var(--danger)';btn.style.color='var(--danger)';
+  try{
+    var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};
+    var mid=document.getElementById('micSelect').value;
+    if(mid)ac.deviceId={exact:mid};
+    micTestStream=await navigator.mediaDevices.getUserMedia({audio:ac});
+    micTestCtx=new(window.AudioContext||window.webkitAudioContext)();
+    var src=micTestCtx.createMediaStreamSource(micTestStream);
+    micTestAnalyser=micTestCtx.createAnalyser();micTestAnalyser.fftSize=2048;micTestAnalyser.smoothingTimeConstant=0.4;
+    src.connect(micTestAnalyser);
+    micTesting=true;
+    var maxE=0,hasAudio=false;
+    var activeLabel=micTestStream.getAudioTracks()[0]?micTestStream.getAudioTracks()[0].label:'Unknown';
+    label.textContent='Listening on: '+activeLabel.substring(0,25);
+    // Auto-stop after 5 seconds
+    var autoStop=setTimeout(function(){
+      if(micTesting){
+        stopMicTest();
+        if(maxE>5){label.textContent='✅ Mic working! (level: '+maxE.toFixed(0)+')';label.style.color='var(--success)'}
+        else{label.textContent='❌ No audio detected. Try another mic.';label.style.color='var(--danger)'}
+      }
+    },5000);
+    function tick(){
+      if(!micTesting){return}
+      var buf=new Uint8Array(micTestAnalyser.frequencyBinCount);micTestAnalyser.getByteFrequencyData(buf);
+      var e=0;for(var i=0;i<buf.length;i++)e+=buf[i];e/=buf.length;
+      if(e>maxE)maxE=e;
+      if(e>3)hasAudio=true;
+      var pct=Math.min(e/50*100,100);
+      bar.style.width=pct+'%';
+      bar.style.background=e>15?'var(--accent)':e>3?'var(--success)':'var(--card-border)';
+      if(hasAudio)label.textContent='🔊 Audio detected! Level: '+e.toFixed(0);
+      micTestAF=requestAnimationFrame(tick);
+    }
+    micTestAF=requestAnimationFrame(tick);
+  }catch(e){
+    label.textContent='❌ Cannot access mic: '+e.message;label.style.color='var(--danger)';
+    btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
+    D('Mic test err: '+e.message,'err');
+  }
+}
+function stopMicTest(){
+  micTesting=false;
+  if(micTestAF)cancelAnimationFrame(micTestAF);
+  if(micTestStream)micTestStream.getTracks().forEach(function(t){t.stop()});
+  if(micTestCtx)try{micTestCtx.close()}catch(e){}
+  micTestStream=null;micTestCtx=null;micTestAnalyser=null;
+  var btn=document.getElementById('btnTestMic');
+  btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
+}
+
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){refreshMicList();D('Device changed','warn')});
 
 // =================== AUDIO ===================
 async function initAudio(){
