@@ -494,7 +494,7 @@ async function refreshMicList(){
     D('Found '+detectedMics.length+' mic(s)','ok');
   }catch(e){
     D('Mic err:'+e.message,'err');
-    document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--danger);font-size:13px;padding:10px">Mic access denied. Check permissions.</div>';
+    document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--accent);font-size:13px;padding:10px">Tap Refresh to detect microphones</div>';
   }
 }
 function renderMicList(){
@@ -946,7 +946,7 @@ function init(){
   var saved=loadSessionProgress();if(saved&&saved.G_totalC>0){document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=saved.G_mala;document.getElementById('rMalaT').textContent=saved.CFG.malas;document.getElementById('rChant').textContent=saved.G_chant;document.getElementById('rCPM').textContent=saved.CFG.cpm;
     // Override resumeSession to use saved data
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
-  setupLongPress();setTimeout(function(){refreshMicList()},500);
+  setupLongPress();setTimeout(function(){refreshMicList()},2000);
   D('v12 loaded','ok');
 }
 init();

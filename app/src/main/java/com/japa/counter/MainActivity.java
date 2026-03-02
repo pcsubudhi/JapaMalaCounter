@@ -121,29 +121,25 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         webView.addJavascriptInterface(new JapaBridge(), "NativeApp");
 
-        // Request both mic and Bluetooth permissions
-        String[] perms;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            perms = new String[]{
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.BLUETOOTH_CONNECT
-            };
-        } else {
-            perms = new String[]{Manifest.permission.RECORD_AUDIO};
-        }
-
-        boolean needPerms = false;
-        for (String p : perms) {
-            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
-                needPerms = true;
-                break;
-            }
-        }
-
-        if (needPerms) {
-            ActivityCompat.requestPermissions(this, perms, MIC_PERMISSION_CODE);
+        // Request mic permission first (critical)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
         } else {
             loadPage();
+            // Request Bluetooth permission separately (nice-to-have, for device names)
+            requestBluetoothPermission();
+        }
+    }
+
+    private void requestBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, BT_PERMISSION_CODE);
+            }
         }
     }
 
@@ -404,6 +400,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 if (webView.getUrl() == null) {
                     loadPage();
                 }
+                // Now request Bluetooth permission (non-blocking, for device names)
+                requestBluetoothPermission();
             } else {
                 Toast.makeText(this, "Microphone needed for voice counting", Toast.LENGTH_LONG).show();
                 loadPage();
