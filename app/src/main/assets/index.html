@@ -228,9 +228,9 @@
 
     <!-- Step 2 -->
     <div class="card step">
-      <div class="step-header"><div class="step-num" id="s2n">2</div><div class="step-title">Teach Your Word <span class="tip" onclick="toggleTip('tip2')">?</span></div></div>
-      <div id="tip2" class="tip-box">Say one word from your mantra 5 times with pauses. Same volume/distance as actual chanting.</div>
-      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Word ×5</button>
+      <div class="step-header"><div class="step-num" id="s2n">2</div><div class="step-title">Test Your Voice <span class="tip" onclick="toggleTip('tip2')">?</span></div></div>
+      <div id="tip2" class="tip-box">Speak at the same volume and distance you'll use while chanting. The app counts each voice pulse (word or mantra) based on sound level — no need to teach a specific word.</div>
+      <button id="btnWord" class="btn-rec idle" onclick="testVoiceLevel()">🎤 Test Voice Level</button>
       <div id="wordViz" class="viz" style="display:none"></div>
       <div id="wordStatus" style="font-size:12px;color:var(--text-mid);margin-top:2px;text-align:center"></div>
     </div>
@@ -356,8 +356,8 @@
       <button id="btnListen" class="btn-listen off" onclick="toggleListen()">🎤 Start Listening</button>
       <div class="match-bar"><div id="mFill" class="match-fill"></div></div>
       <div id="sLine" class="status-line">Tap to start voice detection</div>
-      <div class="slider-row"><label>Sens</label><input type="range" id="sSlider" min="20" max="80" value="50" oninput="updateSens()"><div class="val" id="sVal">50%</div></div>
-      <div class="slider-row"><label>Gap</label><input type="range" id="cSlider" min="200" max="1500" value="400" step="50" oninput="document.getElementById('cVal').textContent=this.value+'ms'"><div class="val" id="cVal">400ms</div></div>
+      <div class="slider-row"><label>Sens</label><input type="range" id="sSlider" min="30" max="90" value="60" oninput="updateSens()"><div class="val" id="sVal">60%</div></div>
+      <div class="slider-row"><label>Gap</label><input type="range" id="cSlider" min="100" max="1500" value="300" step="50" oninput="document.getElementById('cVal').textContent=this.value+'ms'"><div class="val" id="cVal">300ms</div></div>
     </div>
     <div id="tapSec">
       <button class="tap-area" id="tapBtn" onclick="tapCount()"><div style="font-size:24px">🙏</div><div style="font-size:15px;font-weight:600">Tap to Count</div></button>
@@ -406,7 +406,8 @@
 var actx=null,mic=null,analyser=null,stream=null,BANDS=24,selectedMicId='';
 var noiseProfile=null,noiseEnergy=0,noiseReady=false;
 var wordSamples=[],wordFingerprint=null,wordReady=false,avgWordDuration=0;
-var detecting=false,cooldownUntil=0,SENSITIVITY=0.50;
+var voiceTested=false,voicePeakEnergy=0,voiceMinEnergy=0;
+var detecting=false,cooldownUntil=0,SENSITIVITY=0.60;
 var G_m=0,G_w=0,G_t=0,G_chant=0,G_mala=0,G_totalC=0;
 var CFG={wpr:8,cpm:108,malas:16};
 var beepCtx=null,sessionActive=false,sessionPaused=false,pausedSession=null;
@@ -762,12 +763,30 @@ async function captureNoise(){
   var viz=initViz('noiseViz');document.getElementById('noiseStatus').textContent='Capturing...';var specS=[],enS=[],fr=0,mx=600;
   function tick(){if(fr>=mx){noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;btn.className='btn-rec ok';btn.textContent='✅ Noise captured';document.getElementById('noiseStatus').textContent='Level: '+noiseEnergy.toFixed(1);document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';document.getElementById('btnWord').disabled=false;checkReady();return}updateViz(viz);specS.push(getSpectrum());enS.push(getEnergy());fr++;requestAnimationFrame(tick)}requestAnimationFrame(tick);
 }
-async function captureWord(){
-  if(!(await initAudio()))return;var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Say word 5 times...';
-  var viz=initViz('wordViz');wordSamples=[];document.getElementById('wordStatus').textContent='Speak now...';
-  var inW=false,wBuf=[],silC=0,eTh=noiseEnergy+10,timeout=setTimeout(function(){finish()},12000);
-  function finish(){clearTimeout(timeout);if(wordSamples.length>=2){var allS=wordSamples.map(function(s){return s.spectrum});wordFingerprint={spectrum:avgArrays(allS),centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length};avgWordDuration=wordFingerprint.avgDuration;wordReady=true;btn.className='btn-rec ok';btn.textContent='✅ '+wordSamples.length+' samples';document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓'}else{btn.className='btn-rec idle';btn.textContent='🎤 Record Word ×5 (retry)'}checkReady()}
-  function tick(){if(wordSamples.length>=5){finish();return}updateViz(viz);var energy=getEnergy(),spec=getSpectrum(),centroid=getCentroid();if(energy>eTh){if(!inW){inW=true;wBuf=[]}wBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});silC=0}else{silC++;if(inW&&silC>10){inW=false;if(wBuf.length>=4){var aS=avgArrays(wBuf.map(function(f){return f.spec}));var aC=wBuf.reduce(function(a,f){return a+f.centroid},0)/wBuf.length;var pE=Math.max.apply(null,wBuf.map(function(f){return f.energy}));wordSamples.push({spectrum:aS,centroid:aC,peakEnergy:pE,duration:wBuf.length});document.getElementById('wordStatus').textContent=wordSamples.length+'/5...'}wBuf=[]}}requestAnimationFrame(tick)}requestAnimationFrame(tick);
+async function testVoiceLevel(){
+  if(!(await initAudio()))return;var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Speak for 5 seconds...';
+  var viz=initViz('wordViz');document.getElementById('wordStatus').textContent='Say your mantra normally...';
+  var peakEs=[],pulseCount=0,inW=false,silC=0,eTh=noiseEnergy+Math.max(10,noiseEnergy*0.3);
+  var timeout=setTimeout(function(){finish()},6000);
+  function finish(){clearTimeout(timeout);
+    if(peakEs.length>=1){
+      voicePeakEnergy=peakEs.reduce(function(a,b){return a+b},0)/peakEs.length;
+      voiceMinEnergy=Math.min.apply(null,peakEs)*0.5;
+      voiceTested=true;wordReady=true;
+      btn.className='btn-rec ok';btn.textContent='✅ Voice OK ('+pulseCount+' pulses detected)';
+      document.getElementById('wordStatus').textContent='Peak level: '+voicePeakEnergy.toFixed(0)+' | Noise: '+noiseEnergy.toFixed(0);
+      document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓';
+    }else{
+      btn.className='btn-rec idle';btn.textContent='🎤 Test Voice Level (retry)';
+      document.getElementById('wordStatus').textContent='No voice detected. Speak louder or move closer.';
+    }
+    checkReady();
+  }
+  function tick(){updateViz(viz);var energy=getEnergy();
+    if(energy>eTh){if(!inW){inW=true}silC=0}
+    else{silC++;if(inW&&silC>6){inW=false;peakEs.push(energy);pulseCount++;
+      document.getElementById('wordStatus').textContent=pulseCount+' pulses detected...';}}
+    requestAnimationFrame(tick)}requestAnimationFrame(tick);
 }
 
 // =================== ADAPTIVE NOISE RECALIBRATION ===================
@@ -792,7 +811,7 @@ function startNoiseRecalib(){
 }
 function stopNoiseRecalib(){if(noiseRecalibTimer){clearInterval(noiseRecalibTimer);noiseRecalibTimer=null}}
 
-function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
+function checkReady(){var ok=noiseReady&&voiceTested;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
 function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
@@ -911,24 +930,41 @@ function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm
 var detectAF=null,dInWord=false,dWordBuf=[],dSilCount=0;
 function toggleListen(){detecting?stopListen():startListen()}
 async function startListen(){
-  if(!(await initAudio()))return;detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
+  if(!(await initAudio()))return;detecting=true;dInWord=false;dSilCount=0;cooldownUntil=0;
   document.getElementById('btnListen').className='btn-listen on';document.getElementById('btnListen').textContent='Stop Listening';document.getElementById('sLine').textContent='Listening...';
-  var eM=Math.max(15,noiseEnergy*0.4);
-  function tick(){if(!detecting)return;var energy=getEnergy(),spec=getSpectrum(),now=Date.now();SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';var cooldownMs=parseInt(document.getElementById('cSlider').value)||400;document.getElementById('cVal').textContent=cooldownMs+'ms';var th=noiseEnergy+eM;
-    if(energy>th){if(!dInWord){dInWord=true;dWordBuf=[]}dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});dSilCount=0}
-    else{dSilCount++;if(dInWord&&dSilCount>5){dInWord=false;var dur=dWordBuf.length,peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
-      if(peakE<wordFingerprint.minEnergy*0.7){D('Skip: weak peak='+peakE.toFixed(1),'info');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(dur<avgWordDuration*0.25||dur>avgWordDuration*3.5){D('Skip: dur='+dur+' (expect '+Math.round(avgWordDuration*0.25)+'-'+Math.round(avgWordDuration*3.5)+')','info');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(now<cooldownUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));var sim=cosSim(segSpec,wordFingerprint.spectrum);var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);var centScore=Math.max(0,1-centDiff*2);
-      // Reject if centroid is way off (different person/sound)
-      if(centDiff>0.6){D('Skip: wrong pitch ('+centDiff.toFixed(2)+')','info');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      var score=sim*0.6+centScore*0.4;var matchTh=1.0-SENSITIVITY;
-      var fill=document.getElementById('mFill');fill.style.width=Math.min(score*100,100)+'%';fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
-      if(score>=matchTh){ADD(1);cooldownUntil=now+cooldownMs;document.getElementById('sLine').className='status-line hit';document.getElementById('sLine').textContent='✓ '+score.toFixed(2)+' (peak:'+peakE.toFixed(0)+' dur:'+dur+')';setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},600)}
-      else{D('Miss: score='+score.toFixed(2)+' need='+matchTh.toFixed(2)+' sim='+sim.toFixed(2)+' cent='+centScore.toFixed(2),'info')}
-      dWordBuf=[]}}
+  var pulseFrames=0;
+  function tick(){if(!detecting)return;var energy=getEnergy(),now=Date.now();
+    SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
+    var cooldownMs=parseInt(document.getElementById('cSlider').value)||300;document.getElementById('cVal').textContent=cooldownMs+'ms';
+    // Dynamic threshold: noise floor + margin scaled by sensitivity
+    // Higher sensitivity = lower threshold = easier to trigger
+    var margin=Math.max(8,noiseEnergy*0.5)*(1.5-SENSITIVITY);
+    var th=noiseEnergy+margin;
+    // Energy above threshold = voice detected
+    if(energy>th){
+      if(!dInWord){dInWord=true;pulseFrames=0}
+      pulseFrames++;dSilCount=0;
+    }else{
+      dSilCount++;
+      if(dInWord&&dSilCount>5){
+        dInWord=false;
+        // Minimum 3 frames (~50ms) to be a real word, not a click/noise
+        if(pulseFrames<3){detectAF=requestAnimationFrame(tick);return}
+        // Cooldown check
+        if(now<cooldownUntil){detectAF=requestAnimationFrame(tick);return}
+        // TTS pause check
+        if(now<ttsPauseUntil){detectAF=requestAnimationFrame(tick);return}
+        // COUNT IT!
+        ADD(1);cooldownUntil=now+cooldownMs;
+        document.getElementById('sLine').className='status-line hit';
+        document.getElementById('sLine').textContent='✓ (frames:'+pulseFrames+')';
+        setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},500);
+        pulseFrames=0;
+      }
+    }
+    // Update match bar with current energy level
+    var fill=document.getElementById('mFill');var pct=Math.min(((energy-noiseEnergy)/Math.max(1,th-noiseEnergy))*100,100);
+    fill.style.width=Math.max(0,pct)+'%';fill.style.background=energy>th?'var(--accent)':'var(--card-border)';
     detectAF=requestAnimationFrame(tick)}detectAF=requestAnimationFrame(tick);
 }
 function stopListen(){detecting=false;if(detectAF)cancelAnimationFrame(detectAF);document.getElementById('btnListen').className='btn-listen off';document.getElementById('btnListen').textContent='🎤 Start Listening';document.getElementById('sLine').textContent='Stopped'}
