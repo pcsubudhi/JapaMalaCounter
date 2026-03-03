@@ -913,17 +913,21 @@ function toggleListen(){detecting?stopListen():startListen()}
 async function startListen(){
   if(!(await initAudio()))return;detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
   document.getElementById('btnListen').className='btn-listen on';document.getElementById('btnListen').textContent='Stop Listening';document.getElementById('sLine').textContent='Listening...';
-  var eM=10;
+  var eM=Math.max(15,noiseEnergy*0.4);
   function tick(){if(!detecting)return;var energy=getEnergy(),spec=getSpectrum(),now=Date.now();SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';var cooldownMs=parseInt(document.getElementById('cSlider').value)||400;document.getElementById('cVal').textContent=cooldownMs+'ms';var th=noiseEnergy+eM;
     if(energy>th){if(!dInWord){dInWord=true;dWordBuf=[]}dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});dSilCount=0}
-    else{dSilCount++;if(dInWord&&dSilCount>8){dInWord=false;var dur=dWordBuf.length,peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
-      if(peakE<wordFingerprint.minEnergy*0.6){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(dur<avgWordDuration*0.3||dur>avgWordDuration*3.0){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+    else{dSilCount++;if(dInWord&&dSilCount>5){dInWord=false;var dur=dWordBuf.length,peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
+      if(peakE<wordFingerprint.minEnergy*0.7){D('Skip: weak peak='+peakE.toFixed(1),'info');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+      if(dur<avgWordDuration*0.25||dur>avgWordDuration*3.5){D('Skip: dur='+dur+' (expect '+Math.round(avgWordDuration*0.25)+'-'+Math.round(avgWordDuration*3.5)+')','info');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
       if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
       if(now<cooldownUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));var sim=cosSim(segSpec,wordFingerprint.spectrum);var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);var centScore=Math.max(0,1-centDiff*2);var score=sim*0.7+centScore*0.3;var matchTh=1.0-SENSITIVITY;
+      var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));var sim=cosSim(segSpec,wordFingerprint.spectrum);var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);var centScore=Math.max(0,1-centDiff*2);
+      // Reject if centroid is way off (different person/sound)
+      if(centDiff>0.6){D('Skip: wrong pitch ('+centDiff.toFixed(2)+')','info');dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+      var score=sim*0.6+centScore*0.4;var matchTh=1.0-SENSITIVITY;
       var fill=document.getElementById('mFill');fill.style.width=Math.min(score*100,100)+'%';fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
-      if(score>=matchTh){ADD(1);cooldownUntil=now+cooldownMs;document.getElementById('sLine').className='status-line hit';document.getElementById('sLine').textContent='✓ ('+score.toFixed(2)+')';setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},400)}
+      if(score>=matchTh){ADD(1);cooldownUntil=now+cooldownMs;document.getElementById('sLine').className='status-line hit';document.getElementById('sLine').textContent='✓ '+score.toFixed(2)+' (peak:'+peakE.toFixed(0)+' dur:'+dur+')';setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},600)}
+      else{D('Miss: score='+score.toFixed(2)+' need='+matchTh.toFixed(2)+' sim='+sim.toFixed(2)+' cent='+centScore.toFixed(2),'info')}
       dWordBuf=[]}}
     detectAF=requestAnimationFrame(tick)}detectAF=requestAnimationFrame(tick);
 }
