@@ -15,6 +15,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 import android.util.Base64;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
@@ -45,6 +46,7 @@ import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
+    private static final String TAG = "JapaCounter";
     private WebView webView;
     private PowerManager.WakeLock wakeLock;
     private Vibrator vibrator;
@@ -208,6 +210,42 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
         }
 
+        // ========= BLUETOOTH SCO CONTROL =========
+        @JavascriptInterface
+        public void startBtSco() {
+            try {
+                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                if (am == null) return;
+                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                am.startBluetoothSco();
+                am.setBluetoothScoOn(true);
+                Log.d(TAG, "BT SCO started");
+            } catch (Exception e) {
+                Log.e(TAG, "startBtSco error: " + e.getMessage());
+            }
+        }
+
+        @JavascriptInterface
+        public void stopBtSco() {
+            try {
+                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                if (am == null) return;
+                am.setBluetoothScoOn(false);
+                am.stopBluetoothSco();
+                am.setMode(AudioManager.MODE_NORMAL);
+                Log.d(TAG, "BT SCO stopped");
+            } catch (Exception e) {
+                Log.e(TAG, "stopBtSco error: " + e.getMessage());
+            }
+        }
+
+        @JavascriptInterface
+        public boolean isBtScoAvailable() {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            return am != null && am.isBluetoothScoAvailableOffCall();
+        }
+
+        // ========= AUDIO DEVICE INFO =========
         @JavascriptInterface
         public String getAudioDevices() {
             try {
@@ -258,6 +296,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             }
         }
 
+        // ========= NATIVE PLAYBACK VIA PHONE SPEAKER =========
         @JavascriptInterface
         public void playBase64Audio(final String base64Data) {
             new Thread(new Runnable() {
@@ -269,33 +308,45 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         FileOutputStream fos = new FileOutputStream(tempFile);
                         fos.write(audioBytes);
                         fos.close();
+                        Log.d(TAG, "WAV written: " + audioBytes.length + " bytes");
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 try {
                                     if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
+                                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                                    am.setMode(AudioManager.MODE_NORMAL);
+                                    am.setSpeakerphoneOn(true);
                                     mediaPlayer = new MediaPlayer();
                                     mediaPlayer.setDataSource(tempFile.getAbsolutePath());
                                     mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                                        @Override public void onPrepared(MediaPlayer mp) { mp.start(); }
+                                        @Override public void onPrepared(MediaPlayer mp) {
+                                            Log.d(TAG, "Playing via speaker");
+                                            mp.start();
+                                        }
                                     });
                                     mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                                         @Override public void onCompletion(MediaPlayer mp) {
+                                            AudioManager a = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                                            a.setSpeakerphoneOn(false);
                                             webView.evaluateJavascript("if(typeof onNativePlaybackDone==='function')onNativePlaybackDone()", null);
                                             mp.release(); mediaPlayer = null;
                                         }
                                     });
                                     mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                                         @Override public boolean onError(MediaPlayer mp, int what, int extra) {
+                                            Log.e(TAG, "Play error: " + what);
+                                            AudioManager a = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                                            a.setSpeakerphoneOn(false);
                                             webView.evaluateJavascript("if(typeof onNativePlaybackDone==='function')onNativePlaybackDone()", null);
                                             mp.release(); mediaPlayer = null; return true;
                                         }
                                     });
                                     mediaPlayer.prepareAsync();
-                                } catch (Exception e) { e.printStackTrace(); }
+                                } catch (Exception e) { Log.e(TAG, "Play error: " + e.getMessage()); }
                             }
                         });
-                    } catch (Exception e) { e.printStackTrace(); }
+                    } catch (Exception e) { Log.e(TAG, "WAV error: " + e.getMessage()); }
                 }
             }).start();
         }
@@ -309,6 +360,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         try { mediaPlayer.stop(); } catch (Exception e) {}
                         mediaPlayer.release(); mediaPlayer = null;
                     }
+                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                    am.setSpeakerphoneOn(false);
                 }
             });
         }
@@ -343,6 +396,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onDestroy();
         if (tts != null) { tts.stop(); tts.shutdown(); }
         if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
+        try {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            am.setBluetoothScoOn(false);
+            am.stopBluetoothSco();
+            am.setMode(AudioManager.MODE_NORMAL);
+            am.setSpeakerphoneOn(false);
+        } catch (Exception e) {}
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (localServer != null) localServer.stopServer();
         if (webView != null) webView.destroy();
@@ -422,7 +482,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         void stopServer() {
             running = false;
-            try { if (serverSocket != null) serverSocket.close(); } catch (IOException e) { e.printStackTrace(); }
+            try { if (serverSocket != null) serverSocket.close(); } catch (IOException e) {}
         }
     }
 }

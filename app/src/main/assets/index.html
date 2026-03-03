@@ -560,7 +560,7 @@ function selectMic(id){
 // =================== MIC TEST (Record + Native Playback) ===================
 var micTestStream=null,micTestCtx=null,micTestAnalyser=null,micTestAF=null,micTesting=false;
 var micRecordedPCM=null,micRecordedSampleRate=0;
-var MIC_TEST_DURATION=4;
+var MIC_TEST_DURATION=8;
 
 async function testMic(){
   if(micTesting){stopMicTest();return}
@@ -581,6 +581,17 @@ async function testMic(){
     var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};
     var mid=document.getElementById('micSelect').value;
     if(mid)ac.deviceId={exact:mid};
+    // Activate BT SCO if bluetooth mic is selected
+    var isBtMic=false;
+    if(window.NativeApp&&typeof NativeApp.startBtSco==='function'){
+      var selEl=document.querySelector('.mic-item.selected .mic-name');
+      var selLabel=selEl?selEl.textContent.toLowerCase():'';
+      if(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0){
+        NativeApp.startBtSco();isBtMic=true;
+        label.textContent='🔗 Connecting BT mic...';
+        await new Promise(function(r){setTimeout(r,2000)});
+      }
+    }
     micTestStream=await navigator.mediaDevices.getUserMedia({audio:ac});
     micTestCtx=new(window.AudioContext||window.webkitAudioContext)();
     var src=micTestCtx.createMediaStreamSource(micTestStream);
@@ -647,6 +658,8 @@ function stopMicTest(){
   if(micTestAF)cancelAnimationFrame(micTestAF);
   if(micTestStream)micTestStream.getTracks().forEach(function(t){t.stop()});
   if(micTestCtx)try{micTestCtx.close()}catch(e){}
+  // Stop BT SCO if it was activated
+  if(window.NativeApp&&typeof NativeApp.stopBtSco==='function')try{NativeApp.stopBtSco()}catch(e){}
   micTestStream=null;micTestCtx=null;micTestAnalyser=null;
   var btn=document.getElementById('btnTestMic');
   btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
@@ -688,15 +701,17 @@ function onNativePlaybackDone(){
 function playTestRecording(){
   if(!micRecordedPCM||!micRecordedPCM.length){D('No recording','warn');return}
   var playBtn=document.getElementById('btnPlayTest');
-  // Try native playback first (reliable on Android)
+  playBtn.textContent='🔊 Playing via speaker...';
+  // Method 1: Native MediaPlayer via phone speaker (best for BT recordings)
   if(window.NativeApp&&typeof NativeApp.playBase64Audio==='function'){
-    playBtn.textContent='🔊 Playing...';
-    var wavB64=pcmToWavBase64(micRecordedPCM,micRecordedSampleRate);
-    NativeApp.playBase64Audio(wavB64);
-    D('Native playback started','ok');
+    try{
+      var wavB64=pcmToWavBase64(micRecordedPCM,micRecordedSampleRate);
+      D('Playing WAV ('+wavB64.length+' chars) via native speaker','ok');
+      NativeApp.playBase64Audio(wavB64);
+    }catch(e){playBtn.textContent='❌ '+e.message;D('Native play err: '+e.message,'err')}
     return;
   }
-  // Fallback: Web Audio API playback
+  // Method 2: Web Audio API fallback
   try{
     var pCtx=new(window.AudioContext||window.webkitAudioContext)();
     if(pCtx.state==='suspended')pCtx.resume();
@@ -704,9 +719,9 @@ function playTestRecording(){
     aBuf.getChannelData(0).set(micRecordedPCM);
     var src=pCtx.createBufferSource();src.buffer=aBuf;
     src.connect(pCtx.destination);
-    src.onended=function(){playBtn.textContent='▶ Play Again';pCtx.close()};
+    src.onended=function(){playBtn.textContent='▶ Play Again';try{pCtx.close()}catch(e){}};
     src.start(0);
-    playBtn.textContent='🔊 Playing...';
+    D('Web Audio playback started','ok');
   }catch(e){playBtn.textContent='❌ '+e.message;D('Play err:'+e.message,'err')}
 }
 
@@ -717,6 +732,15 @@ async function initAudio(){
   if(actx){var nid=document.getElementById('micSelect').value;if(nid!==selectedMicId){if(stream)stream.getTracks().forEach(function(t){t.stop()});mic.disconnect();actx=null;mic=null;analyser=null;stream=null;selectedMicId=nid}else return true}
   try{var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};var mid=document.getElementById('micSelect').value;
     if(mid){ac.deviceId={exact:mid}}
+    // Activate BT SCO if bluetooth mic selected for capture/counting
+    if(window.NativeApp&&typeof NativeApp.startBtSco==='function'){
+      var selEl=document.querySelector('.mic-item.selected .mic-name');
+      var selLabel=selEl?selEl.textContent.toLowerCase():'';
+      if(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0){
+        NativeApp.startBtSco();
+        await new Promise(function(r){setTimeout(r,2000)});
+      }
+    }
     stream=await navigator.mediaDevices.getUserMedia({audio:ac});actx=new(window.AudioContext||window.webkitAudioContext)();mic=actx.createMediaStreamSource(stream);analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.4;mic.connect(analyser);selectedMicId=mid;
     var tr=stream.getAudioTracks();if(tr.length>0)document.getElementById('noiseStatus').textContent='Mic: '+(tr[0].label||'Active');
     return true;
@@ -946,7 +970,7 @@ function init(){
   var saved=loadSessionProgress();if(saved&&saved.G_totalC>0){document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=saved.G_mala;document.getElementById('rMalaT').textContent=saved.CFG.malas;document.getElementById('rChant').textContent=saved.G_chant;document.getElementById('rCPM').textContent=saved.CFG.cpm;
     // Override resumeSession to use saved data
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
-  setupLongPress();document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--accent);font-size:13px;padding:10px">Tap Refresh or Capture Silence to detect microphones</div>';
+  setupLongPress();setTimeout(function(){refreshMicList()},1500);
   D('v12 loaded','ok');
 }
 init();
