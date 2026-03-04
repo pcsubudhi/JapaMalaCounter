@@ -3,16 +3,21 @@ package com.japa.counter;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
-import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.util.Base64;
 import android.util.Log;
@@ -39,14 +44,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Locale;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
     private static final String TAG = "JapaCounter";
+    private static final int MIC_PERMISSION_CODE = 100;
+    private static final int SERVER_PORT = 8899;
+
     private WebView webView;
     private PowerManager.WakeLock wakeLock;
     private Vibrator vibrator;
@@ -54,13 +60,26 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private boolean ttsReady = false;
     private LocalServer localServer;
     private MediaPlayer mediaPlayer;
-    private static final int MIC_PERMISSION_CODE = 100;
-    private static final int SERVER_PORT = 8899;
+    private AudioManager audioManager;
+    private Handler mainHandler;
+
+    // Google Speech Recognition
+    private SpeechRecognizer speechRecognizer;
+    private Intent speechIntent;
+    private boolean isListening = false;
+    private boolean shouldContinueListening = false;
+    private String lastPartialResult = "";
+    private long lastWordTime = 0;
+    private int totalWordsDetected = 0;
+    private String targetWord = "hare"; // Can be changed to "radha" etc.
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mainHandler = new Handler(Looper.getMainLooper());
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().setStatusBarColor(0xFF140B07);
@@ -94,16 +113,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         webView.setWebViewClient(new WebViewClient());
-
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        request.grant(request.getResources());
-                    }
-                });
+                mainHandler.post(() -> request.grant(request.getResources()));
             }
         });
 
@@ -139,13 +152,8 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (webView != null) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        webView.evaluateJavascript(
-                            "if(typeof tapCount==='function'&&document.getElementById('counterScreen')&&document.getElementById('counterScreen').classList.contains('active')){tapCount()}", null);
-                    }
-                });
+                mainHandler.post(() -> webView.evaluateJavascript(
+                    "if(typeof tapCount==='function'&&document.getElementById('counterScreen')&&document.getElementById('counterScreen').classList.contains('active')){tapCount()}", null));
             }
             return true;
         }
@@ -162,6 +170,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
     // ========= JS BRIDGE =========
     public class JapaBridge {
+
+        @JavascriptInterface
+        public void log(String msg) {
+            Log.d(TAG, "JS: " + msg);
+        }
+
         @JavascriptInterface
         public void vibrate(int ms) {
             if (vibrator != null && vibrator.hasVibrator()) {
@@ -175,196 +189,319 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         @JavascriptInterface
         public void keepScreenOn(final boolean on) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (on) {
-                        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                        if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire(4 * 60 * 60 * 1000L);
-                    } else {
-                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
-                    }
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public void showToast(final String msg) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public void speak(final String text) {
-            if (tts != null && ttsReady) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "japa_tts");
+            mainHandler.post(() -> {
+                if (on) {
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire(4 * 60 * 60 * 1000L);
                 } else {
-                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
                 }
+            });
+        }
+
+        @JavascriptInterface
+        public void speak(String text) {
+            if (ttsReady && tts != null) {
+                tts.speak(text, TextToSpeech.QUEUE_ADD, null, "japa");
             }
         }
 
-        // ========= BLUETOOTH SCO CONTROL =========
+        // =====================================================
+        // GOOGLE SPEECH RECOGNITION
+        // =====================================================
+
+        @JavascriptInterface
+        public void startSpeechRecognition(String word, String language) {
+            targetWord = (word != null && !word.isEmpty()) ? word.toLowerCase() : "hare";
+            Log.d(TAG, "Starting Google Speech for: " + targetWord + ", lang: " + language);
+            
+            mainHandler.post(() -> {
+                if (speechRecognizer != null) {
+                    speechRecognizer.destroy();
+                }
+
+                if (!SpeechRecognizer.isRecognitionAvailable(MainActivity.this)) {
+                    callJS("onSpeechError('Speech recognition not available')");
+                    return;
+                }
+
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(MainActivity.this);
+                speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                    @Override
+                    public void onReadyForSpeech(Bundle params) {
+                        isListening = true;
+                        callJS("onSpeechReady()");
+                    }
+
+                    @Override public void onBeginningOfSpeech() {}
+                    @Override public void onRmsChanged(float rmsdB) {}
+                    @Override public void onBufferReceived(byte[] buffer) {}
+                    @Override public void onEndOfSpeech() {}
+
+                    @Override
+                    public void onError(int error) {
+                        isListening = false;
+                        if (shouldContinueListening && error != SpeechRecognizer.ERROR_CLIENT) {
+                            mainHandler.postDelayed(() -> {
+                                if (shouldContinueListening) restartListening();
+                            }, 100);
+                        }
+                    }
+
+                    @Override
+                    public void onResults(Bundle results) {
+                        ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                        if (matches != null && !matches.isEmpty()) {
+                            processTranscript(matches.get(0), true);
+                        }
+                        isListening = false;
+                        if (shouldContinueListening) {
+                            mainHandler.postDelayed(() -> {
+                                if (shouldContinueListening) restartListening();
+                            }, 50);
+                        }
+                    }
+
+                    @Override
+                    public void onPartialResults(Bundle partialResults) {
+                        ArrayList<String> matches = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                        if (matches != null && !matches.isEmpty()) {
+                            processTranscript(matches.get(0), false);
+                        }
+                    }
+
+                    @Override public void onEvent(int eventType, Bundle params) {}
+                });
+
+                speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000);
+
+                String lang = (language != null && !language.isEmpty()) ? language : "hi-IN";
+                speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang);
+
+                shouldContinueListening = true;
+                lastPartialResult = "";
+                totalWordsDetected = 0;
+                speechRecognizer.startListening(speechIntent);
+            });
+        }
+
+        @JavascriptInterface
+        public void stopSpeechRecognition() {
+            Log.d(TAG, "Stopping speech. Total: " + totalWordsDetected);
+            shouldContinueListening = false;
+            mainHandler.post(() -> {
+                if (speechRecognizer != null) {
+                    speechRecognizer.stopListening();
+                    speechRecognizer.cancel();
+                    isListening = false;
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean isSpeechAvailable() {
+            return SpeechRecognizer.isRecognitionAvailable(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public void setTargetWord(String word) {
+            targetWord = (word != null) ? word.toLowerCase() : "hare";
+            Log.d(TAG, "Target word set to: " + targetWord);
+        }
+
+        // =====================================================
+        // BLUETOOTH SCO
+        // =====================================================
+
         @JavascriptInterface
         public void startBtSco() {
-            try {
-                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                if (am == null) return;
-                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                am.startBluetoothSco();
-                am.setBluetoothScoOn(true);
-                Log.d(TAG, "BT SCO started");
-            } catch (Exception e) {
-                Log.e(TAG, "startBtSco error: " + e.getMessage());
-            }
+            mainHandler.post(() -> {
+                try {
+                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                    audioManager.startBluetoothSco();
+                    audioManager.setBluetoothScoOn(true);
+                } catch (Exception e) {
+                    Log.e(TAG, "BT SCO error: " + e.getMessage());
+                }
+            });
         }
 
         @JavascriptInterface
         public void stopBtSco() {
-            try {
-                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                if (am == null) return;
-                am.setBluetoothScoOn(false);
-                am.stopBluetoothSco();
-                am.setMode(AudioManager.MODE_NORMAL);
-                Log.d(TAG, "BT SCO stopped");
-            } catch (Exception e) {
-                Log.e(TAG, "stopBtSco error: " + e.getMessage());
-            }
+            mainHandler.post(() -> {
+                try {
+                    audioManager.setBluetoothScoOn(false);
+                    audioManager.stopBluetoothSco();
+                    audioManager.setMode(AudioManager.MODE_NORMAL);
+                } catch (Exception e) {}
+            });
         }
 
-        @JavascriptInterface
-        public boolean isBtScoAvailable() {
-            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            return am != null && am.isBluetoothScoAvailableOffCall();
-        }
+        // =====================================================
+        // AUDIO PLAYBACK
+        // =====================================================
 
-        // ========= AUDIO DEVICE INFO =========
-        @JavascriptInterface
-        public String getAudioDevices() {
-            try {
-                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                if (am == null) return "[]";
-                JSONArray result = new JSONArray();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    AudioDeviceInfo[] inputs = am.getDevices(AudioManager.GET_DEVICES_INPUTS);
-                    for (AudioDeviceInfo device : inputs) {
-                        JSONObject obj = new JSONObject();
-                        obj.put("id", device.getId());
-                        obj.put("name", device.getProductName().toString());
-                        obj.put("type", getDeviceTypeName(device.getType()));
-                        obj.put("isSource", true);
-                        result.put(obj);
-                    }
-                    AudioDeviceInfo[] outputs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
-                    for (AudioDeviceInfo device : outputs) {
-                        int t = device.getType();
-                        if (t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                            t == AudioDeviceInfo.TYPE_WIRED_HEADSET || t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
-                            t == AudioDeviceInfo.TYPE_USB_HEADSET || t == AudioDeviceInfo.TYPE_USB_DEVICE) {
-                            JSONObject obj = new JSONObject();
-                            obj.put("id", device.getId());
-                            obj.put("name", device.getProductName().toString());
-                            obj.put("type", getDeviceTypeName(device.getType()));
-                            obj.put("isOutput", true);
-                            result.put(obj);
-                        }
-                    }
-                }
-                return result.toString();
-            } catch (Exception e) { return "[]"; }
-        }
-
-        private String getDeviceTypeName(int type) {
-            switch (type) {
-                case AudioDeviceInfo.TYPE_BLUETOOTH_SCO: return "Bluetooth";
-                case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP: return "Bluetooth";
-                case AudioDeviceInfo.TYPE_BUILTIN_MIC: return "Built-in";
-                case AudioDeviceInfo.TYPE_WIRED_HEADSET: return "Wired";
-                case AudioDeviceInfo.TYPE_WIRED_HEADPHONES: return "Wired";
-                case AudioDeviceInfo.TYPE_USB_DEVICE: return "USB";
-                case AudioDeviceInfo.TYPE_USB_HEADSET: return "USB";
-                case AudioDeviceInfo.TYPE_BUILTIN_EARPIECE: return "Earpiece";
-                case AudioDeviceInfo.TYPE_BUILTIN_SPEAKER: return "Speaker";
-                default: return "Other";
-            }
-        }
-
-        // ========= NATIVE PLAYBACK VIA PHONE SPEAKER =========
         @JavascriptInterface
         public void playBase64Audio(final String base64Data) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        byte[] audioBytes = Base64.decode(base64Data, Base64.DEFAULT);
-                        final File tempFile = new File(getCacheDir(), "mic_test.wav");
-                        FileOutputStream fos = new FileOutputStream(tempFile);
-                        fos.write(audioBytes);
-                        fos.close();
-                        Log.d(TAG, "WAV written: " + audioBytes.length + " bytes");
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
-                                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                                    am.setMode(AudioManager.MODE_NORMAL);
-                                    am.setSpeakerphoneOn(true);
-                                    mediaPlayer = new MediaPlayer();
-                                    mediaPlayer.setDataSource(tempFile.getAbsolutePath());
-                                    mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                                        @Override public void onPrepared(MediaPlayer mp) {
-                                            Log.d(TAG, "Playing via speaker");
-                                            mp.start();
-                                        }
-                                    });
-                                    mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                                        @Override public void onCompletion(MediaPlayer mp) {
-                                            AudioManager a = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                                            a.setSpeakerphoneOn(false);
-                                            webView.evaluateJavascript("if(typeof onNativePlaybackDone==='function')onNativePlaybackDone()", null);
-                                            mp.release(); mediaPlayer = null;
-                                        }
-                                    });
-                                    mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-                                        @Override public boolean onError(MediaPlayer mp, int what, int extra) {
-                                            Log.e(TAG, "Play error: " + what);
-                                            AudioManager a = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                                            a.setSpeakerphoneOn(false);
-                                            webView.evaluateJavascript("if(typeof onNativePlaybackDone==='function')onNativePlaybackDone()", null);
-                                            mp.release(); mediaPlayer = null; return true;
-                                        }
-                                    });
-                                    mediaPlayer.prepareAsync();
-                                } catch (Exception e) { Log.e(TAG, "Play error: " + e.getMessage()); }
-                            }
-                        });
-                    } catch (Exception e) { Log.e(TAG, "WAV error: " + e.getMessage()); }
-                }
+            new Thread(() -> {
+                try {
+                    byte[] audioBytes = Base64.decode(base64Data, Base64.DEFAULT);
+                    final File tempFile = new File(getCacheDir(), "mic_test.wav");
+                    FileOutputStream fos = new FileOutputStream(tempFile);
+                    fos.write(audioBytes);
+                    fos.close();
+
+                    mainHandler.post(() -> {
+                        try {
+                            if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
+                            audioManager.setMode(AudioManager.MODE_NORMAL);
+                            audioManager.setSpeakerphoneOn(true);
+                            mediaPlayer = new MediaPlayer();
+                            mediaPlayer.setDataSource(tempFile.getAbsolutePath());
+                            mediaPlayer.setOnPreparedListener(mp -> mp.start());
+                            mediaPlayer.setOnCompletionListener(mp -> {
+                                audioManager.setSpeakerphoneOn(false);
+                                callJS("onNativePlaybackDone()");
+                                mp.release(); mediaPlayer = null;
+                            });
+                            mediaPlayer.setOnErrorListener((mp, what, extra) -> {
+                                audioManager.setSpeakerphoneOn(false);
+                                callJS("onNativePlaybackDone()");
+                                mp.release(); mediaPlayer = null;
+                                return true;
+                            });
+                            mediaPlayer.prepareAsync();
+                        } catch (Exception e) { Log.e(TAG, "Play error: " + e.getMessage()); }
+                    });
+                } catch (Exception e) { Log.e(TAG, "WAV error: " + e.getMessage()); }
             }).start();
         }
 
         @JavascriptInterface
         public void stopAudioPlayback() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (mediaPlayer != null) {
-                        try { mediaPlayer.stop(); } catch (Exception e) {}
-                        mediaPlayer.release(); mediaPlayer = null;
-                    }
-                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                    am.setSpeakerphoneOn(false);
+            mainHandler.post(() -> {
+                if (mediaPlayer != null) {
+                    try { mediaPlayer.stop(); } catch (Exception e) {}
+                    mediaPlayer.release(); mediaPlayer = null;
                 }
+                audioManager.setSpeakerphoneOn(false);
             });
         }
+    }
+
+    // =====================================================
+    // SPEECH PROCESSING
+    // =====================================================
+
+    private void restartListening() {
+        if (speechRecognizer != null && speechIntent != null) {
+            try {
+                lastPartialResult = "";
+                speechRecognizer.startListening(speechIntent);
+            } catch (Exception e) {
+                Log.e(TAG, "Restart error: " + e.getMessage());
+            }
+        }
+    }
+
+    private void processTranscript(String text, boolean isFinal) {
+        if (text == null || text.isEmpty()) return;
+        
+        String lowerText = text.toLowerCase();
+        
+        int currentCount = countTargetWords(lowerText);
+        int previousCount = countTargetWords(lastPartialResult.toLowerCase());
+        int newWords = currentCount - previousCount;
+        
+        if (newWords > 0) {
+            long now = System.currentTimeMillis();
+            if (now - lastWordTime >= 40) { // 40ms minimum gap
+                for (int i = 0; i < newWords; i++) {
+                    totalWordsDetected++;
+                    callJS("onWordDetected('" + targetWord + "')");
+                    Log.d(TAG, "WORD #" + totalWordsDetected + ": " + targetWord);
+                }
+                lastWordTime = now;
+            }
+        }
+        
+        lastPartialResult = text;
+        
+        String safeText = text.replace("'", "").replace("\\", "").replace("\n", " ");
+        callJS("onTranscript('" + safeText + "','" + (isFinal ? "final" : "partial") + "')");
+    }
+
+    private int countTargetWords(String text) {
+        if (text == null) return 0;
+        
+        int count = 0;
+        String[] words = text.split("[\\s,]+");
+        
+        for (String word : words) {
+            word = word.replaceAll("[^a-zA-Z]", "").toLowerCase();
+            if (word.isEmpty()) continue;
+            
+            // Check for exact match or known variations
+            if (matchesTarget(word)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean matchesTarget(String word) {
+        if (word.equals(targetWord)) return true;
+        
+        // HARE variations
+        if (targetWord.equals("hare")) {
+            return word.equals("harey") || word.equals("hari") || word.equals("hary") ||
+                   word.equals("harry") || word.equals("hurry") || word.equals("hore") ||
+                   word.equals("are") || word.equals("haray") || word.equals("here");
+        }
+        // KRISHNA variations
+        if (targetWord.equals("krishna")) {
+            return word.equals("krishn") || word.equals("krsna") || word.equals("krishan") ||
+                   word.equals("krishnaa") || word.equals("krushna") || word.equals("krishana") ||
+                   word.equals("kisna") || word.equals("krisna") || word.equals("krishana");
+        }
+        // RAMA variations
+        if (targetWord.equals("rama")) {
+            return word.equals("ram") || word.equals("raam") || word.equals("ramaa") ||
+                   word.equals("rom") || word.equals("ruma");
+        }
+        // RADHA variations
+        if (targetWord.equals("radha")) {
+            return word.equals("radhe") || word.equals("radhey") || word.equals("rada") ||
+                   word.equals("radah") || word.equals("raadha") || word.equals("radharani");
+        }
+        // GOVINDA variations
+        if (targetWord.equals("govinda")) {
+            return word.equals("govind") || word.equals("gobinda") || word.equals("gobind");
+        }
+        
+        // Fuzzy match - if word contains target (for any custom word)
+        if (word.length() >= 3 && targetWord.length() >= 3) {
+            if (word.contains(targetWord) || targetWord.contains(word)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private void callJS(String script) {
+        mainHandler.post(() -> {
+            if (webView != null) {
+                webView.evaluateJavascript("javascript:" + script, null);
+            }
+        });
     }
 
     // ========= PERMISSIONS =========
@@ -372,16 +509,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (webView.getUrl() == null) {
-                    loadPage();
-                } else {
-                    webView.reload();
-                }
-            } else {
-                Toast.makeText(this, "Microphone needed for voice counting", Toast.LENGTH_LONG).show();
-                loadPage();
-            }
+            loadPage();
         }
     }
 
@@ -392,16 +520,24 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        shouldContinueListening = false;
+        if (speechRecognizer != null) {
+            speechRecognizer.stopListening();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (speechRecognizer != null) { speechRecognizer.destroy(); }
         if (tts != null) { tts.stop(); tts.shutdown(); }
-        if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
+        if (mediaPlayer != null) { mediaPlayer.release(); }
         try {
-            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            am.setBluetoothScoOn(false);
-            am.stopBluetoothSco();
-            am.setMode(AudioManager.MODE_NORMAL);
-            am.setSpeakerphoneOn(false);
+            audioManager.setBluetoothScoOn(false);
+            audioManager.stopBluetoothSco();
+            audioManager.setMode(AudioManager.MODE_NORMAL);
         } catch (Exception e) {}
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (localServer != null) localServer.stopServer();

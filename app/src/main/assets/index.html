@@ -347,9 +347,10 @@
     <div class="vol-hint">Volume buttons count | Tap anywhere | Long-press to undo</div>
 
     <div class="mode-tabs">
-      <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Voice</button>
+      <button class="mtab act" id="tabGoogle" onclick="setMode('google')">🗣️ Google</button>
+      <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Audio</button>
+      <button class="mtab" id="tabBoth" onclick="setMode('both')">🔀 Hybrid</button>
       <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap</button>
-      <button class="mtab act" id="tabBoth" onclick="setMode('both')">🎤+👆 Both</button>
     </div>
 
     <div id="voiceSec">
@@ -830,8 +831,23 @@ function resumeFromPause(){sessionPaused=false;sessionPausedTime+=(Date.now()-pa
 function pauseAndGoBack(){pauseSession();pausedSession={G_m:G_m,G_w:G_w,G_t:G_t,G_chant:G_chant,G_mala:G_mala,G_totalC:G_totalC,CFG:JSON.parse(JSON.stringify(CFG)),startTime:sessionStartTime,pausedTime:sessionPausedTime+(Date.now()-pauseStartTime)};stopTimer();stopNoiseRecalib();document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active');document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=G_mala;document.getElementById('rMalaT').textContent=CFG.malas;document.getElementById('rChant').textContent=G_chant;document.getElementById('rCPM').textContent=CFG.cpm;saveSettings();showInterstitialAd()}
 function resumeSession(){if(!pausedSession)return;G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;CFG=pausedSession.CFG;sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;sessionPaused=false;document.getElementById('resumeBanner').classList.remove('show');document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;refreshUI();drawMala();timerInterval=setInterval(function(){updateTimer();updateSpeed()},1000);updateTimer();startNoiseRecalib();pausedSession=null}
 
-var curMode='both';
-function setMode(m){curMode=m;document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});document.getElementById('tab'+m.charAt(0).toUpperCase()+m.slice(1)).classList.add('act');document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';document.getElementById('tapSec').style.display=(m==='voice')?'none':'block';if(m==='tap'&&detecting)stopListen()}
+var curMode='google';
+function setMode(m){
+  curMode=m;
+  document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});
+  var tabId='tab'+m.charAt(0).toUpperCase()+m.slice(1);
+  var tab=document.getElementById(tabId);
+  if(tab)tab.classList.add('act');
+  
+  // Show/hide voice section based on mode
+  document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';
+  document.getElementById('tapSec').style.display=(m==='google')?'none':'block';
+  
+  // Stop detection when switching modes
+  if(detecting)stopListen();
+  
+  D('Mode: '+m,'info');
+}
 
 // =================== SESSION ===================
 function startSession(){
@@ -907,25 +923,133 @@ function undoCount(){
 // =================== MALA RING (with glow) ===================
 function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm,54),fc=CFG.cpm>0?Math.floor((G_chant/CFG.cpm)*bc):0,h='';for(var i=0;i<bc;i++){var a=(i/bc)*2*Math.PI-Math.PI/2,x=160+120*Math.cos(a),y=160+120*Math.sin(a),f=i<fc;var glow=f&&i===fc-1?'filter:drop-shadow(0 0 10px rgba(245,158,11,0.9))':'';h+='<circle cx="'+x+'" cy="'+y+'" r="7" fill="'+(f?'#F59E0B':'rgba(245,158,11,0.15)')+'" stroke="'+(f?'#D97706':'rgba(245,158,11,0.3)')+'" stroke-width="1.5" style="transition:all 0.3s;'+(f?'filter:drop-shadow(0 0 5px rgba(245,158,11,0.6));':'')+glow+'"/>';}h+='<circle cx="160" cy="42" r="10" fill="#B45309" stroke="#92400E" stroke-width="2"/>';s.innerHTML=h}
 
-// =================== DETECTION (v13 - reduced undercounting) ===================
+// =================== DETECTION (v14 - Multi-mode: Google/Audio/Hybrid) ===================
 var detectAF=null,dInWord=false,dWordBuf=[],dSilCount=0;
 var adaptiveCooldown=150,lastDetectTime=0,recentGaps=[];
+var googleSpeechActive=false,audioDetectActive=false;
+var lastGoogleWordTime=0,lastAudioWordTime=0;
+
 function toggleListen(){detecting?stopListen():startListen()}
+
 async function startListen(){
-  if(!(await initAudio()))return;detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
+  detecting=true;
+  document.getElementById('btnListen').className='btn-listen on';
+  document.getElementById('btnListen').textContent='⏹ Stop';
+  
+  // Reset state
+  dInWord=false;dWordBuf=[];dSilCount=0;
   adaptiveCooldown=150;lastDetectTime=0;recentGaps=[];
-  document.getElementById('btnListen').className='btn-listen on';document.getElementById('btnListen').textContent='⏹ Stop';document.getElementById('sLine').textContent='Listening...';
-  var eM=8; // Reduced from 10 - more sensitive to quieter sounds
+  lastGoogleWordTime=0;lastAudioWordTime=0;
+  
+  D('Starting mode: '+curMode,'ok');
+  
+  // Start Google Speech for 'google' or 'both' modes
+  if(curMode==='google'||curMode==='both'){
+    startGoogleSpeech();
+  }
+  
+  // Start Audio detection for 'voice' or 'both' modes
+  if(curMode==='voice'||curMode==='both'){
+    if(!(await initAudio()))return;
+    startAudioDetection();
+  }
+  
+  document.getElementById('sLine').textContent='Listening ('+curMode+')...';
+}
+
+function stopListen(){
+  detecting=false;
+  
+  // Stop Google Speech
+  if(googleSpeechActive){
+    stopGoogleSpeech();
+  }
+  
+  // Stop Audio detection
+  if(audioDetectActive){
+    stopAudioDetection();
+  }
+  
+  document.getElementById('btnListen').className='btn-listen off';
+  document.getElementById('btnListen').textContent='🎤 Start Listening';
+  document.getElementById('sLine').textContent='Stopped';
+  D('Stopped. Cooldown was: '+adaptiveCooldown.toFixed(0)+'ms','info');
+}
+
+// =================== GOOGLE SPEECH RECOGNITION ===================
+function startGoogleSpeech(){
+  if(typeof NativeApp==='undefined'||typeof NativeApp.startSpeechRecognition!=='function'){
+    D('Google Speech not available','warn');
+    return;
+  }
+  
+  var targetWord=CFG.target||'hare';
+  var lang='hi-IN'; // Hindi works best for Sanskrit mantras
+  
+  NativeApp.startSpeechRecognition(targetWord,lang);
+  googleSpeechActive=true;
+  D('Google Speech started for: '+targetWord,'ok');
+}
+
+function stopGoogleSpeech(){
+  if(typeof NativeApp!=='undefined'&&typeof NativeApp.stopSpeechRecognition==='function'){
+    NativeApp.stopSpeechRecognition();
+  }
+  googleSpeechActive=false;
+}
+
+// Called by native Android when Google detects a word
+function onWordDetected(word){
+  if(!detecting||sessionPaused)return;
+  if(!document.getElementById('counterScreen').classList.contains('active'))return;
+  
+  var now=Date.now();
+  
+  // Deduplication: don't count if audio detection just counted
+  if(curMode==='both'&&now-lastAudioWordTime<100){
+    D('Google skip (audio counted)','info');
+    return;
+  }
+  
+  lastGoogleWordTime=now;
+  lastDetectTime=now;
+  
+  ADD(1);
+  D('🗣️ Google: '+word,'ok');
+  
+  document.getElementById('sLine').className='status-line hit';
+  document.getElementById('sLine').textContent='✓ Google: '+word;
+  setTimeout(function(){
+    if(detecting){
+      document.getElementById('sLine').className='status-line';
+      document.getElementById('sLine').textContent='Listening...';
+    }
+  },300);
+}
+
+function onTranscript(text,type){
+  if(type==='final'){
+    D('📝 '+text.substring(0,50),'info');
+  }
+}
+
+function onSpeechReady(){D('🗣️ Google ready','ok')}
+function onSpeechError(err){D('Google: '+err,'warn')}
+
+// =================== AUDIO ENERGY DETECTION ===================
+function startAudioDetection(){
+  audioDetectActive=true;
+  var eM=8;
   
   function tick(){
-    if(!detecting)return;
+    if(!detecting||!audioDetectActive)return;
+    
     var energy=getEnergy(),spec=getSpectrum(),now=Date.now();
     SENSITIVITY=document.getElementById('sSlider').value/100;
     document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
     var baseCooldownMs=parseInt(document.getElementById('cSlider').value)||180;
     document.getElementById('cVal').textContent=baseCooldownMs+'ms';
     
-    // More sensitive threshold
     var th=noiseEnergy+eM;
     
     // Word boundary detection
@@ -935,77 +1059,72 @@ async function startListen(){
       dSilCount=0;
     }else{
       dSilCount++;
-      // Reduced silence frames from 6 to 4 - faster word boundary detection
-      if(dInWord&&dSilCount>4){
+      if(dInWord&&dSilCount>3){
         dInWord=false;
         var dur=dWordBuf.length;
         var peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
         
-        // RELAXED FILTERS - catch more words
-        // 1. Energy filter - reduced from 0.4 to 0.25
+        // Filters
         var minEnergy=wordFingerprint?wordFingerprint.minEnergy*0.25:5;
-        if(peakE<minEnergy){
-          D('✗ quiet '+peakE.toFixed(0),'info');
-          dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
-        }
+        if(peakE<minEnergy){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
-        // 2. Duration filter - more permissive for fast chanting
-        var minDur=avgWordDuration?avgWordDuration*0.15:2; // Reduced from 0.2
-        var maxDur=avgWordDuration?avgWordDuration*5.0:50; // Increased from 4.0
-        if(dur<minDur||dur>maxDur){
-          D('✗ dur:'+dur+' ('+minDur.toFixed(0)+'-'+maxDur.toFixed(0)+')','info');
-          dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
-        }
+        var minDur=avgWordDuration?avgWordDuration*0.15:2;
+        var maxDur=avgWordDuration?avgWordDuration*5.0:50;
+        if(dur<minDur||dur>maxDur){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
-        // 3. TTS pause check
         if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
-        // 4. Adaptive cooldown - adjusts to chanting speed
-        var effectiveCooldown=Math.min(baseCooldownMs,adaptiveCooldown);
-        if(now-lastDetectTime<effectiveCooldown){
-          D('✗ cooldown','info');
+        // Cooldown check
+        var effectiveCooldown=Math.min(baseCooldownMs*0.6,adaptiveCooldown);
+        if(now-lastDetectTime<effectiveCooldown){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+        
+        // In hybrid mode, skip if Google just detected
+        if(curMode==='both'&&now-lastGoogleWordTime<100){
           dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
         }
         
-        // Calculate match score
-        var score=0.5; // Default score if no fingerprint
+        // Calculate score
+        var score=0.5;
         if(wordFingerprint&&wordFingerprint.spectrum){
           var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));
           var sim=cosSim(segSpec,wordFingerprint.spectrum);
           var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;
           var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);
-          var centScore=Math.max(0,1-centDiff*1.5); // Relaxed from 2
-          score=sim*0.6+centScore*0.25+0.15; // Added base 0.15 boost
+          var centScore=Math.max(0,1-centDiff*1.5);
+          score=sim*0.6+centScore*0.25+0.15;
         }
         
-        // Relaxed threshold - SENSITIVITY now has more effect
-        var matchTh=0.85-SENSITIVITY*0.5; // Range: 0.35 to 0.85 (was 0.5 to 1.0)
+        var matchTh=0.85-SENSITIVITY*0.5;
         
-        // Update UI
         var fill=document.getElementById('mFill');
         fill.style.width=Math.min(score*100,100)+'%';
         fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
         
         if(score>=matchTh){
-          // SUCCESS - count the word
-          ADD(1);
-          
-          // Update adaptive cooldown based on chanting speed
-          var gap=now-lastDetectTime;
-          if(lastDetectTime>0&&gap>50&&gap<1000){
-            recentGaps.push(gap);
-            if(recentGaps.length>8)recentGaps.shift();
-            // Adaptive cooldown = 50% of average gap (allows faster detection)
-            var avgGap=recentGaps.reduce(function(a,b){return a+b},0)/recentGaps.length;
-            adaptiveCooldown=Math.max(80,Math.min(250,avgGap*0.5));
-          }
+          lastAudioWordTime=now;
           lastDetectTime=now;
           
+          // Update adaptive cooldown
+          var gap=now-lastDetectTime;
+          if(gap>30&&gap<1000){
+            recentGaps.push(gap);
+            if(recentGaps.length>10)recentGaps.shift();
+            var avgGap=recentGaps.reduce(function(a,b){return a+b},0)/recentGaps.length;
+            adaptiveCooldown=Math.max(50,Math.min(200,avgGap*0.4));
+          }
+          
+          ADD(1);
+          
           document.getElementById('sLine').className='status-line hit';
-          document.getElementById('sLine').textContent='✓ '+score.toFixed(2)+' d:'+dur+' g:'+gap;
-          setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},300);
+          document.getElementById('sLine').textContent='✓ Audio: '+score.toFixed(2)+' d:'+dur;
+          setTimeout(function(){
+            if(detecting){
+              document.getElementById('sLine').className='status-line';
+              document.getElementById('sLine').textContent='Listening...';
+            }
+          },300);
         }else{
-          document.getElementById('sLine').textContent='✗ '+score.toFixed(2)+'/'+matchTh.toFixed(2)+' d:'+dur+' p:'+peakE.toFixed(0);
+          document.getElementById('sLine').textContent='✗ '+score.toFixed(2)+'/'+matchTh.toFixed(2)+' d:'+dur;
         }
         dWordBuf=[];
       }
@@ -1014,7 +1133,11 @@ async function startListen(){
   }
   detectAF=requestAnimationFrame(tick);
 }
-function stopListen(){detecting=false;if(detectAF)cancelAnimationFrame(detectAF);document.getElementById('btnListen').className='btn-listen off';document.getElementById('btnListen').textContent='🎤 Start Listening';document.getElementById('sLine').textContent='Stopped';D('Adaptive cooldown was: '+adaptiveCooldown.toFixed(0)+'ms','info')}
+
+function stopAudioDetection(){
+  audioDetectActive=false;
+  if(detectAF)cancelAnimationFrame(detectAF);
+}
 
 // =================== SOUNDS ===================
 function playSound(type,vol){try{if(!beepCtx)beepCtx=new(window.AudioContext||window.webkitAudioContext)();if(beepCtx.state==='suspended')beepCtx.resume();var now=beepCtx.currentTime,v=vol||0.5;
