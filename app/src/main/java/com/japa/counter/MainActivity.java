@@ -463,17 +463,56 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         if (text == null) return 0;
         
         int count = 0;
-        String[] words = text.split("[\\s,]+");
+        String lowerText = text.toLowerCase();
         
+        // Count Hindi/Devanagari words directly
+        // हरे (Hare), कृष्णा/कृष्ण (Krishna), राम/रामा (Rama), राधा/राधे (Radha)
+        
+        // Count HARE - हरे
+        int idx = 0;
+        while ((idx = text.indexOf("हरे", idx)) != -1) {
+            count++;
+            idx += 2;
+        }
+        // Also count हर (partial)
+        idx = 0;
+        while ((idx = text.indexOf("हर ", idx)) != -1) {
+            count++;
+            idx += 2;
+        }
+        
+        // Count KRISHNA - कृष्णा or कृष्ण
+        idx = 0;
+        while ((idx = text.indexOf("कृष्ण", idx)) != -1) {
+            count++;
+            idx += 4;
+        }
+        
+        // Count RAMA - राम or रामा
+        idx = 0;
+        while ((idx = text.indexOf("राम", idx)) != -1) {
+            count++;
+            idx += 3;
+        }
+        
+        // Count RADHA - राधा or राधे
+        idx = 0;
+        while ((idx = text.indexOf("राध", idx)) != -1) {
+            count++;
+            idx += 3;
+        }
+        
+        // Also check English transliterations
+        String[] words = lowerText.split("[\\s,]+");
         for (String word : words) {
             word = word.replaceAll("[^a-zA-Z]", "").toLowerCase();
             if (word.isEmpty()) continue;
-            
-            // Check for exact match or known variations
             if (matchesTarget(word)) {
                 count++;
             }
         }
+        
+        Log.d(TAG, "Counted " + count + " words in: " + text.substring(0, Math.min(text.length(), 50)));
         return count;
     }
 
