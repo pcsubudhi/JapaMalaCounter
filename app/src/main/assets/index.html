@@ -73,6 +73,13 @@
   .stats-line{display:flex;justify-content:space-around;padding:3px 0;font-size:13px;color:var(--text-mid);font-weight:500}
   .stats-line b{color:var(--accent);font-size:15px;font-weight:700}
   .stats-line .gr b{color:var(--success)}
+  .mantra-item{background:rgba(0,0,0,0.3);border:1.5px solid var(--card-border);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all 0.2s}
+  .mantra-item:hover{border-color:var(--accent)}
+  .mantra-item.selected{background:var(--accent-dim);border-color:var(--accent)}
+  .mantra-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+  .mantra-text{font-size:12px;color:var(--text-mid);line-height:1.4;margin-bottom:3px}
+  .mantra-item.selected .mantra-text{color:var(--text)}
+  .mantra-info{font-size:11px;color:var(--accent);font-weight:500}
   .mode-tabs{display:flex;border:1.5px solid var(--card-border);border-radius:10px;overflow:hidden;margin:3px 0}
   .mtab{flex:1;padding:8px;background:transparent;color:var(--text-mid);font-size:13px;font-weight:600;border-right:1px solid var(--card-border)}
   .mtab:last-child{border-right:none}
@@ -195,8 +202,39 @@
       <button onclick="resumeSession()" style="width:100%;padding:10px;border-radius:10px;background:var(--success);color:white;font-size:14px;font-weight:600">Resume Chanting</button>
     </div>
 
-    <!-- Step 1 -->
+    <!-- Mantra Selection -->
     <div class="card step">
+      <div class="step-header"><div class="step-num">🕉</div><div class="step-title">Select Mantra <span class="tip" onclick="toggleTip('tipMantra')">?</span></div></div>
+      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode recognizes these automatically. Audio mode requires calibration for any word.</div>
+      <div id="mantraList" style="margin-bottom:8px">
+        <div class="mantra-item selected" onclick="selectMantra('maha_mantra')">
+          <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
+          <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे<br>हरे राम हरे राम राम राम हरे हरे</div>
+          <div class="mantra-info">16 words per round • Google: Auto-detect</div>
+        </div>
+        <div class="mantra-item" onclick="selectMantra('hare_krishna')">
+          <div class="mantra-name">🙏 Hare Krishna (Half)</div>
+          <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे</div>
+          <div class="mantra-info">8 words per round • Google: Auto-detect</div>
+        </div>
+        <div class="mantra-item" onclick="selectMantra('radhe_radhe')">
+          <div class="mantra-name">💕 Radhe Radhe</div>
+          <div class="mantra-text">राधे राधे राधे राधे</div>
+          <div class="mantra-info">1 word per count • Google: Auto-detect</div>
+        </div>
+        <div class="mantra-item" onclick="selectMantra('custom')">
+          <div class="mantra-name">✏️ Custom Word</div>
+          <div class="mantra-text" id="customMantraText">Use Audio mode with calibration</div>
+          <div class="mantra-info">Requires Step 1 & 2 calibration</div>
+        </div>
+      </div>
+      <div id="customWordInput" style="display:none;margin-top:8px">
+        <input type="text" id="inCustomWord" placeholder="Enter your word (e.g., Govinda)" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px">
+      </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="card step" id="calibrationStep1">
       <div class="step-header"><div class="step-num" id="s1n">1</div><div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div></div>
       <div id="tip1" class="tip-box">Stay completely quiet for 10 seconds. This learns background noise (fan, AC, traffic) for filtering.</div>
       <div style="margin-bottom:6px">
@@ -227,7 +265,7 @@
     </div>
 
     <!-- Step 2 -->
-    <div class="card step">
+    <div class="card step" id="calibrationStep2">
       <div class="step-header"><div class="step-num" id="s2n">2</div><div class="step-title">Teach Your Word <span class="tip" onclick="toggleTip('tip2')">?</span></div></div>
       <div id="tip2" class="tip-box">Say one word from your mantra 5 times with pauses. Same volume/distance as actual chanting.</div>
       <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Word ×5</button>
@@ -409,12 +447,61 @@ var noiseProfile=null,noiseEnergy=0,noiseReady=false;
 var wordSamples=[],wordFingerprint=null,wordReady=false,avgWordDuration=0;
 var detecting=false,cooldownUntil=0,SENSITIVITY=0.50;
 var G_m=0,G_w=0,G_t=0,G_chant=0,G_mala=0,G_totalC=0;
-var CFG={wpr:8,cpm:108,malas:16};
+var CFG={wpr:8,cpm:108,malas:16,mantra:'maha_mantra'};
 var beepCtx=null,sessionActive=false,sessionPaused=false,pausedSession=null;
 var sessionStartTime=0,sessionPausedTime=0,timerInterval=null,confirmCallback=null,ttsPauseUntil=0;
 var noiseRecalibTimer=null,dimMode=false;
 var SND={chantVol:0.3,chantVib:'short',mileVol:0.5,mileVib:'short',mile25:true,mile50:true,mile75:true,malaVol:0.7,malaVib:'medium',doneVol:1.0,doneVib:'celebration',voice:true};
 var VIB_PATTERNS={off:[],short:[50],medium:[150,50,150],long:[300,100,300,100,300],celebration:[400,150,400,150,400,150,600]};
+
+// Mantra definitions
+var MANTRAS={
+  maha_mantra:{name:'Hare Krishna Maha Mantra',wpr:16,google:true,words:['हरे','कृष्ण','राम']},
+  hare_krishna:{name:'Hare Krishna (Half)',wpr:8,google:true,words:['हरे','कृष्ण']},
+  radhe_radhe:{name:'Radhe Radhe',wpr:1,google:true,words:['राध','radhe','radha']},
+  custom:{name:'Custom',wpr:1,google:false,words:[]}
+};
+
+function selectMantra(id){
+  CFG.mantra=id;
+  var m=MANTRAS[id];
+  
+  // Update UI
+  document.querySelectorAll('.mantra-item').forEach(function(el){el.classList.remove('selected')});
+  event.currentTarget.classList.add('selected');
+  
+  // Set WPR
+  if(m.wpr){
+    CFG.wpr=m.wpr;
+    document.getElementById('inWPR').value=m.wpr;
+    pickWPR(m.wpr);
+  }
+  
+  // Show/hide calibration steps for custom mantra
+  var showCalib=(id==='custom'||!m.google);
+  document.getElementById('calibrationStep1').style.display=showCalib?'block':'none';
+  document.getElementById('calibrationStep2').style.display=showCalib?'block':'none';
+  document.getElementById('customWordInput').style.display=(id==='custom')?'block':'none';
+  
+  // For Google-supported mantras, no calibration needed
+  if(m.google&&id!=='custom'){
+    noiseReady=true;
+    wordReady=true;
+    checkReady();
+  }else{
+    // Reset calibration for custom
+    noiseReady=false;
+    wordReady=false;
+    wordFingerprint=null;
+    document.getElementById('s1n').classList.remove('done');
+    document.getElementById('s1n').textContent='1';
+    document.getElementById('s2n').classList.remove('done');
+    document.getElementById('s2n').textContent='2';
+    checkReady();
+  }
+  
+  D('Mantra: '+m.name+' (WPR:'+m.wpr+')','ok');
+}
 
 // =================== SPIRITUAL QUOTES ===================
 var QUOTES=[
@@ -1141,31 +1228,55 @@ function onTranscript(text,type){
   }
 }
 
-// Count mantra words in Hindi text
+// Count mantra words in Hindi text based on selected mantra
 function countMantraWords(text){
   if(!text)return 0;
   var count=0;
+  var m=MANTRAS[CFG.mantra];
   
-  // Count हरे (Hare)
-  var matches = text.match(/हरे/g);
-  if(matches)count+=matches.length;
-  
-  // Count कृष्णा or कृष्ण (Krishna)
-  matches = text.match(/कृष्ण/g);
-  if(matches)count+=matches.length;
-  
-  // Count राम (Rama) - but not double count रामा
-  matches = text.match(/राम/g);
-  if(matches)count+=matches.length;
-  
-  // Count राधे or राधा (Radha)
-  matches = text.match(/राध/g);
-  if(matches)count+=matches.length;
-  
-  // Also count English if present
-  var lower = text.toLowerCase();
-  var eng = lower.match(/\b(hare|hari|krishna|rama|ram|radha|radhe)\b/g);
-  if(eng)count+=eng.length;
+  // For Maha Mantra and Hare Krishna - count all standard words
+  if(CFG.mantra==='maha_mantra'||CFG.mantra==='hare_krishna'){
+    // Count हरे (Hare)
+    var matches = text.match(/हरे/g);
+    if(matches)count+=matches.length;
+    
+    // Count कृष्णा or कृष्ण (Krishna)
+    matches = text.match(/कृष्ण/g);
+    if(matches)count+=matches.length;
+    
+    // Count राम (Rama) - only for maha mantra
+    if(CFG.mantra==='maha_mantra'){
+      matches = text.match(/राम/g);
+      if(matches)count+=matches.length;
+    }
+    
+    // Also count English
+    var lower = text.toLowerCase();
+    var eng = lower.match(/\b(hare|hari|krishna|krsna)\b/g);
+    if(eng)count+=eng.length;
+    if(CFG.mantra==='maha_mantra'){
+      eng = lower.match(/\b(rama|ram)\b/g);
+      if(eng)count+=eng.length;
+    }
+  }
+  // For Radhe Radhe
+  else if(CFG.mantra==='radhe_radhe'){
+    var matches = text.match(/राध/g);
+    if(matches)count+=matches.length;
+    
+    var lower = text.toLowerCase();
+    var eng = lower.match(/\b(radhe|radha|radhey)\b/g);
+    if(eng)count+=eng.length;
+  }
+  // For custom - count based on custom word if set
+  else if(CFG.mantra==='custom'){
+    var customWord = document.getElementById('inCustomWord').value.trim().toLowerCase();
+    if(customWord){
+      var regex = new RegExp(customWord,'gi');
+      var matches = text.match(regex);
+      if(matches)count+=matches.length;
+    }
+  }
   
   return count;
 }
@@ -1248,6 +1359,13 @@ function restartGoogleSpeech(){
 
 // =================== AUDIO ENERGY DETECTION ===================
 function startAudioDetection(){
+  // Check if calibration is needed
+  if(CFG.mantra==='custom'&&!wordFingerprint){
+    D('⚠️ Audio mode requires calibration for custom word','warn');
+    document.getElementById('sLine').textContent='Please calibrate first (Steps 1 & 2)';
+    return;
+  }
+  
   audioDetectActive=true;
   var eM=8;
   
@@ -1274,12 +1392,12 @@ function startAudioDetection(){
         var dur=dWordBuf.length;
         var peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
         
-        // Filters
-        var minEnergy=wordFingerprint?wordFingerprint.minEnergy*0.25:5;
+        // Filters - use calibrated values if available
+        var minEnergy=wordFingerprint?wordFingerprint.minEnergy*0.25:8;
         if(peakE<minEnergy){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
-        var minDur=avgWordDuration?avgWordDuration*0.15:2;
-        var maxDur=avgWordDuration?avgWordDuration*5.0:50;
+        var minDur=avgWordDuration?avgWordDuration*0.15:3;
+        var maxDur=avgWordDuration?avgWordDuration*5.0:40;
         if(dur<minDur||dur>maxDur){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
         if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
@@ -1293,15 +1411,18 @@ function startAudioDetection(){
           dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
         }
         
-        // Calculate score
-        var score=0.5;
+        // Calculate match score - REQUIRE calibration for accurate matching
+        var score=0;
         if(wordFingerprint&&wordFingerprint.spectrum){
           var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));
           var sim=cosSim(segSpec,wordFingerprint.spectrum);
           var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;
           var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);
           var centScore=Math.max(0,1-centDiff*1.5);
-          score=sim*0.6+centScore*0.25+0.15;
+          score=sim*0.7+centScore*0.3;
+        }else{
+          // No calibration - can't match, only detect energy pulses for pre-defined mantras
+          score=0.6; // Base score for energy detection only
         }
         
         var matchTh=0.85-SENSITIVITY*0.5;
