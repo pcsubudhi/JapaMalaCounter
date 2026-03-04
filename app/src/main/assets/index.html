@@ -205,31 +205,43 @@
     <!-- Mantra Selection -->
     <div class="card step">
       <div class="step-header"><div class="step-num">🕉</div><div class="step-title">Select Mantra <span class="tip" onclick="toggleTip('tipMantra')">?</span></div></div>
-      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode recognizes these automatically. Audio mode requires calibration for any word.</div>
+      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Hybrid mode (Google + Audio calibration).</div>
       <div id="mantraList" style="margin-bottom:8px">
-        <div class="mantra-item selected" onclick="selectMantra('maha_mantra')">
+        <div class="mantra-item selected" data-id="maha_mantra" onclick="selectMantra('maha_mantra',this)">
           <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
-          <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे<br>हरे राम हरे राम राम राम हरे हरे</div>
-          <div class="mantra-info">16 words per round • Google: Auto-detect</div>
+          <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे • हरे राम हरे राम राम राम हरे हरे</div>
+          <div class="mantra-info">16 words = 1 round</div>
         </div>
-        <div class="mantra-item" onclick="selectMantra('hare_krishna')">
+        <div class="mantra-item" data-id="hare_krishna" onclick="selectMantra('hare_krishna',this)">
           <div class="mantra-name">🙏 Hare Krishna (Half)</div>
           <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे</div>
-          <div class="mantra-info">8 words per round • Google: Auto-detect</div>
+          <div class="mantra-info">8 words = 1 round</div>
         </div>
-        <div class="mantra-item" onclick="selectMantra('radhe_radhe')">
+        <div class="mantra-item" data-id="radhe_radhe" onclick="selectMantra('radhe_radhe',this)">
           <div class="mantra-name">💕 Radhe Radhe</div>
-          <div class="mantra-text">राधे राधे राधे राधे</div>
-          <div class="mantra-info">1 word per count • Google: Auto-detect</div>
+          <div class="mantra-text">राधे राधे</div>
+          <div class="mantra-info">1 word = 1 count • Google: राधे/Radhe</div>
         </div>
-        <div class="mantra-item" onclick="selectMantra('custom')">
-          <div class="mantra-name">✏️ Custom Word</div>
-          <div class="mantra-text" id="customMantraText">Use Audio mode with calibration</div>
-          <div class="mantra-info">Requires Step 1 & 2 calibration</div>
+        <div class="mantra-item" data-id="custom" onclick="selectMantra('custom',this)">
+          <div class="mantra-name">✏️ Custom Word/Mantra</div>
+          <div class="mantra-text" id="customMantraPreview">Add your own word or mantra</div>
+          <div class="mantra-info">Use Hybrid mode for best results</div>
         </div>
       </div>
-      <div id="customWordInput" style="display:none;margin-top:8px">
-        <input type="text" id="inCustomWord" placeholder="Enter your word (e.g., Govinda)" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px">
+      <div id="customWordSection" style="display:none;margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px">
+        <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">Enter custom word (Google will try to recognize it):</p>
+        <input type="text" id="inCustomWord" placeholder="e.g., Govinda, Narayana, Om" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;margin-bottom:6px">
+        <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">Words per round:</p>
+        <input type="number" id="inCustomWPR" value="1" min="1" max="100" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;margin-bottom:6px">
+        <div style="display:flex;gap:6px">
+          <button onclick="saveCustomMantra()" style="flex:1;padding:10px;border-radius:10px;background:var(--accent);color:var(--bg);font-size:14px;font-weight:700">💾 Save</button>
+          <button onclick="clearCustomMantra()" style="flex:1;padding:10px;border-radius:10px;background:var(--card);border:1px solid var(--card-border);color:var(--text-mid);font-size:14px;font-weight:600">Clear</button>
+        </div>
+        <div id="savedMantrasSection" style="margin-top:10px;display:none">
+          <p style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:600">Saved Custom Mantras:</p>
+          <div id="savedMantrasList"></div>
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.4">💡 Tip: For best accuracy with custom words, use <b>Hybrid mode</b> and complete calibration (Steps 1 & 2 below).</p>
       </div>
     </div>
 
@@ -459,48 +471,131 @@ var MANTRAS={
   maha_mantra:{name:'Hare Krishna Maha Mantra',wpr:16,google:true,words:['हरे','कृष्ण','राम']},
   hare_krishna:{name:'Hare Krishna (Half)',wpr:8,google:true,words:['हरे','कृष्ण']},
   radhe_radhe:{name:'Radhe Radhe',wpr:1,google:true,words:['राध','radhe','radha']},
-  custom:{name:'Custom',wpr:1,google:false,words:[]}
+  custom:{name:'Custom',wpr:1,google:true,words:[]}
 };
 
-function selectMantra(id){
+// Saved custom mantras
+var savedCustomMantras = [];
+
+function selectMantra(id,el){
   CFG.mantra=id;
   var m=MANTRAS[id];
   
   // Update UI
-  document.querySelectorAll('.mantra-item').forEach(function(el){el.classList.remove('selected')});
-  event.currentTarget.classList.add('selected');
+  document.querySelectorAll('.mantra-item').forEach(function(item){item.classList.remove('selected')});
+  if(el)el.classList.add('selected');
   
   // Set WPR
-  if(m.wpr){
+  if(m&&m.wpr){
     CFG.wpr=m.wpr;
     document.getElementById('inWPR').value=m.wpr;
     pickWPR(m.wpr);
   }
   
-  // Show/hide calibration steps for custom mantra
-  var showCalib=(id==='custom'||!m.google);
+  // Show/hide custom word section
+  document.getElementById('customWordSection').style.display=(id==='custom')?'block':'none';
+  
+  // Show/hide calibration steps
+  var showCalib=(id==='custom');
   document.getElementById('calibrationStep1').style.display=showCalib?'block':'none';
   document.getElementById('calibrationStep2').style.display=showCalib?'block':'none';
-  document.getElementById('customWordInput').style.display=(id==='custom')?'block':'none';
   
-  // For Google-supported mantras, no calibration needed
-  if(m.google&&id!=='custom'){
+  // For pre-defined mantras, mark as ready
+  if(id!=='custom'){
     noiseReady=true;
     wordReady=true;
-    checkReady();
-  }else{
-    // Reset calibration for custom
-    noiseReady=false;
-    wordReady=false;
-    wordFingerprint=null;
-    document.getElementById('s1n').classList.remove('done');
-    document.getElementById('s1n').textContent='1';
-    document.getElementById('s2n').classList.remove('done');
-    document.getElementById('s2n').textContent='2';
-    checkReady();
   }
   
-  D('Mantra: '+m.name+' (WPR:'+m.wpr+')','ok');
+  checkReady();
+  D('Mantra: '+(m?m.name:id)+' (WPR:'+CFG.wpr+')','ok');
+}
+
+function saveCustomMantra(){
+  var word = document.getElementById('inCustomWord').value.trim();
+  var wpr = parseInt(document.getElementById('inCustomWPR').value)||1;
+  
+  if(!word){
+    alert('Please enter a word or mantra');
+    return;
+  }
+  
+  // Update current custom mantra
+  MANTRAS.custom.words = [word.toLowerCase()];
+  MANTRAS.custom.wpr = wpr;
+  CFG.wpr = wpr;
+  document.getElementById('inWPR').value = wpr;
+  pickWPR(wpr);
+  
+  // Save to list
+  var exists = savedCustomMantras.find(function(m){return m.word===word});
+  if(!exists){
+    savedCustomMantras.push({word:word,wpr:wpr});
+    saveCustomMantrasToStorage();
+  }
+  
+  // Update preview
+  document.getElementById('customMantraPreview').textContent = word + ' (' + wpr + ' words/round)';
+  
+  // Show saved list
+  updateSavedMantrasList();
+  
+  D('Custom mantra saved: '+word+' (WPR:'+wpr+')','ok');
+}
+
+function clearCustomMantra(){
+  document.getElementById('inCustomWord').value = '';
+  document.getElementById('inCustomWPR').value = '1';
+  MANTRAS.custom.words = [];
+  MANTRAS.custom.wpr = 1;
+  document.getElementById('customMantraPreview').textContent = 'Add your own word or mantra';
+}
+
+function loadCustomMantra(word,wpr){
+  document.getElementById('inCustomWord').value = word;
+  document.getElementById('inCustomWPR').value = wpr;
+  MANTRAS.custom.words = [word.toLowerCase()];
+  MANTRAS.custom.wpr = wpr;
+  CFG.wpr = wpr;
+  document.getElementById('inWPR').value = wpr;
+  pickWPR(wpr);
+  document.getElementById('customMantraPreview').textContent = word + ' (' + wpr + ' words/round)';
+}
+
+function deleteCustomMantra(word){
+  savedCustomMantras = savedCustomMantras.filter(function(m){return m.word!==word});
+  saveCustomMantrasToStorage();
+  updateSavedMantrasList();
+}
+
+function updateSavedMantrasList(){
+  var container = document.getElementById('savedMantrasList');
+  var section = document.getElementById('savedMantrasSection');
+  
+  if(savedCustomMantras.length===0){
+    section.style.display='none';
+    return;
+  }
+  
+  section.style.display='block';
+  container.innerHTML = savedCustomMantras.map(function(m){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px;background:rgba(0,0,0,0.2);border-radius:6px;margin-bottom:4px">' +
+      '<span style="flex:1;font-size:13px;color:var(--text)">' + m.word + ' <span style="color:var(--text-mid)">(' + m.wpr + ')</span></span>' +
+      '<button onclick="loadCustomMantra(\'' + m.word + '\',' + m.wpr + ')" style="padding:4px 8px;border-radius:4px;background:var(--accent-dim);border:none;color:var(--accent);font-size:11px">Use</button>' +
+      '<button onclick="deleteCustomMantra(\'' + m.word + '\')" style="padding:4px 8px;border-radius:4px;background:rgba(248,113,113,0.2);border:none;color:#F87171;font-size:11px">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+function saveCustomMantrasToStorage(){
+  try{localStorage.setItem('japa_custom_mantras',JSON.stringify(savedCustomMantras))}catch(e){}
+}
+
+function loadCustomMantrasFromStorage(){
+  try{
+    var data=localStorage.getItem('japa_custom_mantras');
+    if(data)savedCustomMantras=JSON.parse(data);
+    updateSavedMantrasList();
+  }catch(e){}
 }
 
 // =================== SPIRITUAL QUOTES ===================
@@ -1232,7 +1327,6 @@ function onTranscript(text,type){
 function countMantraWords(text){
   if(!text)return 0;
   var count=0;
-  var m=MANTRAS[CFG.mantra];
   
   // For Maha Mantra and Hare Krishna - count all standard words
   if(CFG.mantra==='maha_mantra'||CFG.mantra==='hare_krishna'){
@@ -1265,16 +1359,32 @@ function countMantraWords(text){
     if(matches)count+=matches.length;
     
     var lower = text.toLowerCase();
-    var eng = lower.match(/\b(radhe|radha|radhey)\b/g);
+    var eng = lower.match(/\b(radhe|radha|radhey|राधे|राधा)\b/g);
     if(eng)count+=eng.length;
   }
-  // For custom - count based on custom word if set
+  // For custom - try to match custom word in both Hindi and English
   else if(CFG.mantra==='custom'){
-    var customWord = document.getElementById('inCustomWord').value.trim().toLowerCase();
+    var customWord = document.getElementById('inCustomWord').value.trim();
     if(customWord){
-      var regex = new RegExp(customWord,'gi');
+      // Try exact match (case insensitive)
+      var regex = new RegExp(customWord.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
       var matches = text.match(regex);
       if(matches)count+=matches.length;
+      
+      // Also try common variations
+      var lower = customWord.toLowerCase();
+      if(lower==='govinda'||lower==='गोविंद'){
+        matches = text.match(/गोविं?द|govind/gi);
+        if(matches)count+=matches.length;
+      }
+      if(lower==='narayana'||lower==='नारायण'){
+        matches = text.match(/नारायण|narayan/gi);
+        if(matches)count+=matches.length;
+      }
+      if(lower==='shiva'||lower==='शिव'){
+        matches = text.match(/शिव|shiv/gi);
+        if(matches)count+=matches.length;
+      }
     }
   }
   
@@ -1330,9 +1440,15 @@ function addOneWord(){
   document.getElementById('sLine').textContent='✓ Word '+G_w+'/'+CFG.wpr;
 }
 
+var lastSpeechReadyTime = 0;
 function onSpeechReady(){
-  D('🗣️ Google Speech READY','ok');
-  // IMPORTANT: Reset word count when speech recognition restarts
+  var now = Date.now();
+  // Only log once per second to reduce spam
+  if(now - lastSpeechReadyTime > 1000){
+    D('🗣️ Listening...','ok');
+    lastSpeechReadyTime = now;
+  }
+  // Reset word count for new listening session
   lastTranscriptWordCount = 0;
   lastTranscriptForCount = '';
   document.getElementById('sLine').textContent='Listening...';
@@ -1502,7 +1618,11 @@ document.addEventListener('keydown',function(e){if(!document.getElementById('cou
 
 // =================== INIT ===================
 function init(){
-  loadSettings();showWelcome();
+  loadSettings();showWelcome();loadCustomMantrasFromStorage();
+  // Hide calibration steps by default (Maha Mantra selected)
+  document.getElementById('calibrationStep1').style.display='none';
+  document.getElementById('calibrationStep2').style.display='none';
+  noiseReady=true;wordReady=true; // Pre-defined mantras don't need calibration
   // Show streak
   var streak=getStreak();if(streak>0){var b=document.getElementById('streakBadge');b.textContent='🔥 '+streak+' day streak!';b.style.display='inline-block'}
   // Show quote
@@ -1512,7 +1632,7 @@ function init(){
     // Override resumeSession to use saved data
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
   setupLongPress();setTimeout(function(){refreshMicList()},1500);
-  D('v12 loaded','ok');
+  D('v15 loaded','ok');
 }
 init();
 </script>
