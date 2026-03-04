@@ -943,15 +943,37 @@ async function startListen(){
   
   D('Starting mode: '+curMode,'ok');
   
-  // Start Google Speech for 'google' or 'both' modes
-  if(curMode==='google'||curMode==='both'){
+  // IMPORTANT: For Google mode, we must NOT use WebView audio (mic conflict)
+  if(curMode==='google'){
+    // Stop any WebView audio first
+    if(actx){
+      try{
+        if(stream)stream.getTracks().forEach(function(t){t.stop()});
+        actx.close();
+      }catch(e){}
+      actx=null;mic=null;analyser=null;stream=null;
+    }
+    // Only start Google Speech
     startGoogleSpeech();
+    document.getElementById('sLine').textContent='Listening (Google)...';
+    return;
   }
   
-  // Start Audio detection for 'voice' or 'both' modes
+  // For Audio or Hybrid modes, initialize WebView audio
   if(curMode==='voice'||curMode==='both'){
-    if(!(await initAudio()))return;
+    if(!(await initAudio())){
+      D('Audio init failed','err');
+      return;
+    }
     startAudioDetection();
+  }
+  
+  // Start Google Speech for 'both' mode (after audio init)
+  if(curMode==='both'){
+    // Small delay to let audio settle
+    setTimeout(function(){
+      startGoogleSpeech();
+    },500);
   }
   
   document.getElementById('sLine').textContent='Listening ('+curMode+')...';
@@ -1040,7 +1062,13 @@ function onTranscript(text,type){
 }
 
 function onSpeechReady(){D('🗣️ Google Speech READY','ok')}
-function onSpeechError(err){D('⚠️ Google Error: '+err,'warn')}
+function onSpeechError(err){
+  D('⚠️ Google: '+err,'warn');
+  // Show error on status line briefly
+  if(detecting&&curMode==='google'){
+    document.getElementById('sLine').textContent='Google: '+err+' (retrying...)';
+  }
+}
 
 // =================== AUDIO ENERGY DETECTION ===================
 function startAudioDetection(){

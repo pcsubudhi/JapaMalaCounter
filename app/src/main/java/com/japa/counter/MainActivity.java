@@ -248,10 +248,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: errorMsg = "No permission"; break;
                             case SpeechRecognizer.ERROR_NETWORK: errorMsg = "Network error"; break;
                             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: errorMsg = "Network timeout"; break;
-                            case SpeechRecognizer.ERROR_NO_MATCH: errorMsg = "No match"; break;
+                            case SpeechRecognizer.ERROR_NO_MATCH: errorMsg = "No match - speak louder/clearer"; break;
                             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: errorMsg = "Busy"; break;
                             case SpeechRecognizer.ERROR_SERVER: errorMsg = "Server error"; break;
-                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: errorMsg = "Speech timeout"; break;
+                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: errorMsg = "No speech heard"; break;
                         }
                         Log.d(TAG, "Speech error: " + error + " (" + errorMsg + ")");
                         callJS("onSpeechError('" + errorMsg + "')");
@@ -261,7 +261,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                             && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                             mainHandler.postDelayed(() -> {
                                 if (shouldContinueListening) restartListening();
-                            }, 300);
+                            }, 500);
                         }
                     }
 
@@ -293,13 +293,18 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-                speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000);
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+                // Longer listening time
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 15000);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000);
 
-                String lang = (language != null && !language.isEmpty()) ? language : "hi-IN";
+                // Try English India first - it often works better for "Hare Krishna"
+                String lang = (language != null && !language.isEmpty()) ? language : "en-IN";
                 speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang);
+                // Also allow other languages as fallback
+                speechIntent.putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false);
 
                 shouldContinueListening = true;
                 lastPartialResult = "";
