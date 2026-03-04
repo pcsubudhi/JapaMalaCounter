@@ -1405,41 +1405,48 @@ function countMantraWords(text){
     if(customWord){
       var customLower = customWord.toLowerCase();
       
-      // Direct match (case insensitive)
-      var escapedWord = customWord.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-      var regex = new RegExp(escapedWord,'gi');
-      var matches = text.match(regex);
-      if(matches)count+=matches.length;
-      
-      // Common spiritual words - add Hindi equivalents
-      if(customLower==='radha'||customLower==='radhe'||customLower==='राधा'){
-        matches = text.match(/राधा|राधे|राध/g);
+      // For Radha specifically - use comprehensive matching
+      if(customLower==='radha'||customLower==='radhe'||customLower==='राधा'||customLower==='राधे'){
+        // Hindi variations
+        var matches = text.match(/राधा|राधे|राध/g);
         if(matches)count+=matches.length;
+        // English variations
         matches = lowerText.match(/\b(radha|radhe|radhey|rada)\b/g);
         if(matches)count+=matches.length;
       }
-      else if(customLower==='govinda'||customLower==='गोविंद'){
-        matches = text.match(/गोविं?द|गोविन्द/g);
+      // For Govinda
+      else if(customLower==='govinda'||customLower==='गोविंद'||customLower==='govind'){
+        var matches = text.match(/गोविं?द|गोविन्द/g);
         if(matches)count+=matches.length;
         matches = lowerText.match(/\b(govinda|govind|gobinda)\b/g);
         if(matches)count+=matches.length;
       }
-      else if(customLower==='narayana'||customLower==='नारायण'){
-        matches = text.match(/नारायण/g);
+      // For Narayana
+      else if(customLower==='narayana'||customLower==='नारायण'||customLower==='narayan'){
+        var matches = text.match(/नारायण/g);
         if(matches)count+=matches.length;
-        matches = lowerText.match(/\b(narayana|narayan|nārāyaṇa)\b/g);
+        matches = lowerText.match(/\b(narayana|narayan)\b/g);
         if(matches)count+=matches.length;
       }
-      else if(customLower==='shiva'||customLower==='शिव'){
-        matches = text.match(/शिव|शंकर/g);
+      // For Shiva
+      else if(customLower==='shiva'||customLower==='शिव'||customLower==='shiv'){
+        var matches = text.match(/शिव|शंकर/g);
         if(matches)count+=matches.length;
         matches = lowerText.match(/\b(shiva|shiv|shankar)\b/g);
         if(matches)count+=matches.length;
       }
-      else if(customLower==='om'||customLower==='ॐ'){
-        matches = text.match(/ॐ|ओम/g);
+      // For Om
+      else if(customLower==='om'||customLower==='ॐ'||customLower==='aum'){
+        var matches = text.match(/ॐ|ओम/g);
         if(matches)count+=matches.length;
         matches = lowerText.match(/\b(om|aum|ohm)\b/g);
+        if(matches)count+=matches.length;
+      }
+      // For any other custom word - just direct match
+      else{
+        var escapedWord = customWord.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        var regex = new RegExp('\\b'+escapedWord+'\\b','gi');
+        var matches = text.match(regex);
         if(matches)count+=matches.length;
       }
     }
