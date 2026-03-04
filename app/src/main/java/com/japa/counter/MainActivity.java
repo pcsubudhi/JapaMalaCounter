@@ -36,6 +36,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+// Vosk imports for continuous offline speech recognition
+import org.vosk.Model;
+import org.vosk.Recognizer;
+import org.vosk.android.SpeechService;
+import org.vosk.android.SpeechStreamService;
+import org.vosk.android.StorageService;
+
+import org.json.JSONObject;
+import org.json.JSONException;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -47,7 +57,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
+public class MainActivity extends AppCompatActivity implements TextToSpeech.OnInitListener, org.vosk.android.RecognitionListener {
 
     private static final String TAG = "JapaCounter";
     private static final int MIC_PERMISSION_CODE = 100;
@@ -72,6 +82,14 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private long lastWordTime = 0;
     private int totalWordsDetected = 0;
     private String targetWord = "hare"; // Can be changed to "radha" etc.
+    
+    // Vosk - Continuous Offline Speech Recognition
+    private Model voskModel;
+    private SpeechService voskSpeechService;
+    private boolean voskReady = false;
+    private boolean voskListening = false;
+    private int voskLastWordCount = 0;
+    private String voskTargetWord = "radha";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -128,7 +146,105 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
         } else {
             loadPage();
+            initVosk(); // Initialize Vosk model
         }
+    }
+    
+    // ========= VOSK INITIALIZATION =========
+    private void initVosk() {
+        // Load Vosk model from assets in background
+        StorageService.unpack(this, "vosk-model-small-en-in", "model",
+            (model) -> {
+                voskModel = model;
+                voskReady = true;
+                Log.d(TAG, "Vosk model loaded successfully");
+                runOnUiThread(() -> {
+                    callJS("onVoskReady()");
+                });
+            },
+            (exception) -> {
+                Log.e(TAG, "Vosk model load failed: " + exception.getMessage());
+                runOnUiThread(() -> {
+                    callJS("onVoskError('Model load failed: " + exception.getMessage() + "')");
+                });
+            });
+    }
+    
+    // Vosk RecognitionListener callbacks
+    @Override
+    public void onPartialResult(String hypothesis) {
+        if (hypothesis == null || hypothesis.isEmpty()) return;
+        try {
+            JSONObject json = new JSONObject(hypothesis);
+            String partial = json.optString("partial", "");
+            if (!partial.isEmpty()) {
+                Log.d(TAG, "Vosk PARTIAL: " + partial);
+                processVoskTranscript(partial, false);
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Vosk JSON error: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public void onResult(String hypothesis) {
+        if (hypothesis == null || hypothesis.isEmpty()) return;
+        try {
+            JSONObject json = new JSONObject(hypothesis);
+            String text = json.optString("text", "");
+            if (!text.isEmpty()) {
+                Log.d(TAG, "Vosk FINAL: " + text);
+                processVoskTranscript(text, true);
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Vosk JSON error: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public void onFinalResult(String hypothesis) {
+        onResult(hypothesis);
+    }
+    
+    @Override
+    public void onError(Exception e) {
+        Log.e(TAG, "Vosk error: " + e.getMessage());
+        callJS("onVoskError('" + e.getMessage() + "')");
+    }
+    
+    @Override
+    public void onTimeout() {
+        Log.d(TAG, "Vosk timeout");
+    }
+    
+    private void processVoskTranscript(String text, boolean isFinal) {
+        // Count target words in transcript
+        String lowerText = text.toLowerCase();
+        String target = voskTargetWord.toLowerCase();
+        
+        int count = 0;
+        int index = 0;
+        while ((index = lowerText.indexOf(target, index)) != -1) {
+            count++;
+            index += target.length();
+        }
+        
+        // Only send new words to JS
+        if (count > voskLastWordCount) {
+            int newWords = count - voskLastWordCount;
+            Log.d(TAG, "Vosk: +" + newWords + " words (total: " + count + ")");
+            callJS("onVoskTranscript('" + escapeJS(text) + "', " + count + ", " + newWords + ", " + isFinal + ")");
+            voskLastWordCount = count;
+        }
+        
+        // Reset counter on final result
+        if (isFinal) {
+            voskLastWordCount = 0;
+        }
+    }
+    
+    private String escapeJS(String s) {
+        return s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "");
     }
 
     @Override
@@ -387,6 +503,74 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         }
 
         // =====================================================
+        // VOSK - CONTINUOUS OFFLINE SPEECH RECOGNITION
+        // =====================================================
+        
+        @JavascriptInterface
+        public boolean isVoskReady() {
+            return voskReady;
+        }
+        
+        @JavascriptInterface
+        public void startVoskRecognition(String word) {
+            if (!voskReady || voskModel == null) {
+                Log.e(TAG, "Vosk not ready");
+                callJS("onVoskError('Vosk model not loaded yet')");
+                return;
+            }
+            
+            voskTargetWord = (word != null && !word.isEmpty()) ? word.toLowerCase() : "radha";
+            voskLastWordCount = 0;
+            
+            Log.d(TAG, "Starting Vosk for: " + voskTargetWord);
+            
+            mainHandler.post(() -> {
+                try {
+                    // Stop any existing Vosk service
+                    if (voskSpeechService != null) {
+                        voskSpeechService.stop();
+                        voskSpeechService = null;
+                    }
+                    
+                    // Create recognizer - 16000 Hz sample rate
+                    Recognizer recognizer = new Recognizer(voskModel, 16000.0f);
+                    
+                    // Start speech service with continuous listening
+                    voskSpeechService = new SpeechService(recognizer, 16000.0f);
+                    voskSpeechService.startListening(MainActivity.this);
+                    voskListening = true;
+                    
+                    Log.d(TAG, "Vosk listening started");
+                    callJS("onVoskStarted()");
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "Vosk start error: " + e.getMessage());
+                    callJS("onVoskError('" + e.getMessage() + "')");
+                }
+            });
+        }
+        
+        @JavascriptInterface
+        public void stopVoskRecognition() {
+            Log.d(TAG, "Stopping Vosk");
+            mainHandler.post(() -> {
+                if (voskSpeechService != null) {
+                    voskSpeechService.stop();
+                    voskSpeechService = null;
+                }
+                voskListening = false;
+                voskLastWordCount = 0;
+                callJS("onVoskStopped()");
+            });
+        }
+        
+        @JavascriptInterface
+        public void setVoskTargetWord(String word) {
+            voskTargetWord = (word != null) ? word.toLowerCase() : "radha";
+            Log.d(TAG, "Vosk target word set to: " + voskTargetWord);
+        }
+
+        // =====================================================
         // BLUETOOTH SCO
         // =====================================================
 
@@ -641,6 +825,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_CODE) {
             loadPage();
+            initVosk(); // Initialize Vosk after permission granted
         }
     }
 
@@ -657,6 +842,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         if (speechRecognizer != null) {
             speechRecognizer.stopListening();
         }
+        // Pause Vosk too
+        if (voskSpeechService != null) {
+            voskSpeechService.stop();
+            voskListening = false;
+        }
     }
 
     @Override
@@ -664,6 +854,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         super.onDestroy();
         if (speechRecognizer != null) { speechRecognizer.destroy(); }
         if (tts != null) { tts.stop(); tts.shutdown(); }
+        // Cleanup Vosk
+        if (voskSpeechService != null) { voskSpeechService.stop(); }
+        if (voskModel != null) { voskModel.close(); }
         if (mediaPlayer != null) { mediaPlayer.release(); }
         try {
             audioManager.setBluetoothScoOn(false);
