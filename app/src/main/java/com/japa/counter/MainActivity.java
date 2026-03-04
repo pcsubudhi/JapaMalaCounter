@@ -489,34 +489,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         return count;
     }
     
-    // Process transcript and count COMPLETE mantras
+    // Process transcript - just send to JavaScript, let JS handle counting
     private void processTranscript(String text, boolean isFinal) {
         if (text == null || text.isEmpty()) return;
         
-        // Count total words in current transcript
-        int currentTotalWords = countTargetWords(text);
-        int previousTotalWords = countTargetWords(lastPartialResult);
-        
-        // Calculate how many NEW words were detected
-        int newWords = currentTotalWords - previousTotalWords;
-        
-        if (newWords > 0) {
-            long now = System.currentTimeMillis();
-            if (now - lastWordTime >= 40) {
-                // Send new word count to JavaScript
-                // JavaScript will handle mantra completion logic
-                for (int i = 0; i < newWords; i++) {
-                    totalWordsDetected++;
-                    callJS("onWordDetected('word')");
-                }
-                lastWordTime = now;
-                Log.d(TAG, "Detected " + newWords + " new words. Total: " + totalWordsDetected);
-            }
-        }
-        
-        lastPartialResult = text;
-        
-        // Send transcript to JS for display
+        // Send transcript to JS for processing
         String safeText = text.replace("'", "").replace("\\", "").replace("\n", " ");
         callJS("onTranscript('" + safeText + "','" + (isFinal ? "final" : "partial") + "')");
     }
