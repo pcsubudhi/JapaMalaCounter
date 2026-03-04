@@ -907,28 +907,114 @@ function undoCount(){
 // =================== MALA RING (with glow) ===================
 function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm,54),fc=CFG.cpm>0?Math.floor((G_chant/CFG.cpm)*bc):0,h='';for(var i=0;i<bc;i++){var a=(i/bc)*2*Math.PI-Math.PI/2,x=160+120*Math.cos(a),y=160+120*Math.sin(a),f=i<fc;var glow=f&&i===fc-1?'filter:drop-shadow(0 0 10px rgba(245,158,11,0.9))':'';h+='<circle cx="'+x+'" cy="'+y+'" r="7" fill="'+(f?'#F59E0B':'rgba(245,158,11,0.15)')+'" stroke="'+(f?'#D97706':'rgba(245,158,11,0.3)')+'" stroke-width="1.5" style="transition:all 0.3s;'+(f?'filter:drop-shadow(0 0 5px rgba(245,158,11,0.6));':'')+glow+'"/>';}h+='<circle cx="160" cy="42" r="10" fill="#B45309" stroke="#92400E" stroke-width="2"/>';s.innerHTML=h}
 
-// =================== DETECTION ===================
+// =================== DETECTION (v13 - reduced undercounting) ===================
 var detectAF=null,dInWord=false,dWordBuf=[],dSilCount=0;
+var adaptiveCooldown=150,lastDetectTime=0,recentGaps=[];
 function toggleListen(){detecting?stopListen():startListen()}
 async function startListen(){
   if(!(await initAudio()))return;detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
-  document.getElementById('btnListen').className='btn-listen on';document.getElementById('btnListen').textContent='Stop Listening';document.getElementById('sLine').textContent='Listening...';
-  var eM=10;
-  function tick(){if(!detecting)return;var energy=getEnergy(),spec=getSpectrum(),now=Date.now();SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';var cooldownMs=parseInt(document.getElementById('cSlider').value)||250;document.getElementById('cVal').textContent=cooldownMs+'ms';var th=noiseEnergy+eM;
-    if(energy>th){if(!dInWord){dInWord=true;dWordBuf=[]}dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});dSilCount=0}
-    else{dSilCount++;if(dInWord&&dSilCount>6){dInWord=false;var dur=dWordBuf.length,peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
-      if(peakE<wordFingerprint.minEnergy*0.4){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(dur<avgWordDuration*0.2||dur>avgWordDuration*4.0){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      if(now<cooldownUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
-      var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));var sim=cosSim(segSpec,wordFingerprint.spectrum);var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);var centScore=Math.max(0,1-centDiff*2);var score=sim*0.7+centScore*0.3;var matchTh=1.0-SENSITIVITY;
-      var fill=document.getElementById('mFill');fill.style.width=Math.min(score*100,100)+'%';fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
-      if(score>=matchTh){ADD(1);cooldownUntil=now+cooldownMs;document.getElementById('sLine').className='status-line hit';document.getElementById('sLine').textContent='✓ '+score.toFixed(2)+' (dur:'+dur+' peak:'+peakE.toFixed(0)+')';setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},400)}
-      else{document.getElementById('sLine').textContent='✗ '+score.toFixed(2)+'/'+matchTh.toFixed(2)+' d:'+dur+' p:'+peakE.toFixed(0)}
-      dWordBuf=[]}}
-    detectAF=requestAnimationFrame(tick)}detectAF=requestAnimationFrame(tick);
+  adaptiveCooldown=150;lastDetectTime=0;recentGaps=[];
+  document.getElementById('btnListen').className='btn-listen on';document.getElementById('btnListen').textContent='⏹ Stop';document.getElementById('sLine').textContent='Listening...';
+  var eM=8; // Reduced from 10 - more sensitive to quieter sounds
+  
+  function tick(){
+    if(!detecting)return;
+    var energy=getEnergy(),spec=getSpectrum(),now=Date.now();
+    SENSITIVITY=document.getElementById('sSlider').value/100;
+    document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
+    var baseCooldownMs=parseInt(document.getElementById('cSlider').value)||180;
+    document.getElementById('cVal').textContent=baseCooldownMs+'ms';
+    
+    // More sensitive threshold
+    var th=noiseEnergy+eM;
+    
+    // Word boundary detection
+    if(energy>th){
+      if(!dInWord){dInWord=true;dWordBuf=[]}
+      dWordBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:getCentroid()});
+      dSilCount=0;
+    }else{
+      dSilCount++;
+      // Reduced silence frames from 6 to 4 - faster word boundary detection
+      if(dInWord&&dSilCount>4){
+        dInWord=false;
+        var dur=dWordBuf.length;
+        var peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
+        
+        // RELAXED FILTERS - catch more words
+        // 1. Energy filter - reduced from 0.4 to 0.25
+        var minEnergy=wordFingerprint?wordFingerprint.minEnergy*0.25:5;
+        if(peakE<minEnergy){
+          D('✗ quiet '+peakE.toFixed(0),'info');
+          dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
+        }
+        
+        // 2. Duration filter - more permissive for fast chanting
+        var minDur=avgWordDuration?avgWordDuration*0.15:2; // Reduced from 0.2
+        var maxDur=avgWordDuration?avgWordDuration*5.0:50; // Increased from 4.0
+        if(dur<minDur||dur>maxDur){
+          D('✗ dur:'+dur+' ('+minDur.toFixed(0)+'-'+maxDur.toFixed(0)+')','info');
+          dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
+        }
+        
+        // 3. TTS pause check
+        if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+        
+        // 4. Adaptive cooldown - adjusts to chanting speed
+        var effectiveCooldown=Math.min(baseCooldownMs,adaptiveCooldown);
+        if(now-lastDetectTime<effectiveCooldown){
+          D('✗ cooldown','info');
+          dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
+        }
+        
+        // Calculate match score
+        var score=0.5; // Default score if no fingerprint
+        if(wordFingerprint&&wordFingerprint.spectrum){
+          var segSpec=avgArrays(dWordBuf.map(function(f){return f.spec}));
+          var sim=cosSim(segSpec,wordFingerprint.spectrum);
+          var segCent=dWordBuf.reduce(function(a,f){return a+f.centroid},0)/dWordBuf.length;
+          var centDiff=Math.abs(segCent-wordFingerprint.centroid)/(wordFingerprint.centroid+1);
+          var centScore=Math.max(0,1-centDiff*1.5); // Relaxed from 2
+          score=sim*0.6+centScore*0.25+0.15; // Added base 0.15 boost
+        }
+        
+        // Relaxed threshold - SENSITIVITY now has more effect
+        var matchTh=0.85-SENSITIVITY*0.5; // Range: 0.35 to 0.85 (was 0.5 to 1.0)
+        
+        // Update UI
+        var fill=document.getElementById('mFill');
+        fill.style.width=Math.min(score*100,100)+'%';
+        fill.style.background=score>=matchTh?'var(--accent)':'var(--card-border)';
+        
+        if(score>=matchTh){
+          // SUCCESS - count the word
+          ADD(1);
+          
+          // Update adaptive cooldown based on chanting speed
+          var gap=now-lastDetectTime;
+          if(lastDetectTime>0&&gap>50&&gap<1000){
+            recentGaps.push(gap);
+            if(recentGaps.length>8)recentGaps.shift();
+            // Adaptive cooldown = 50% of average gap (allows faster detection)
+            var avgGap=recentGaps.reduce(function(a,b){return a+b},0)/recentGaps.length;
+            adaptiveCooldown=Math.max(80,Math.min(250,avgGap*0.5));
+          }
+          lastDetectTime=now;
+          
+          document.getElementById('sLine').className='status-line hit';
+          document.getElementById('sLine').textContent='✓ '+score.toFixed(2)+' d:'+dur+' g:'+gap;
+          setTimeout(function(){if(detecting){document.getElementById('sLine').className='status-line';document.getElementById('sLine').textContent='Listening...'}},300);
+        }else{
+          document.getElementById('sLine').textContent='✗ '+score.toFixed(2)+'/'+matchTh.toFixed(2)+' d:'+dur+' p:'+peakE.toFixed(0);
+        }
+        dWordBuf=[];
+      }
+    }
+    detectAF=requestAnimationFrame(tick);
+  }
+  detectAF=requestAnimationFrame(tick);
 }
-function stopListen(){detecting=false;if(detectAF)cancelAnimationFrame(detectAF);document.getElementById('btnListen').className='btn-listen off';document.getElementById('btnListen').textContent='🎤 Start Listening';document.getElementById('sLine').textContent='Stopped'}
+function stopListen(){detecting=false;if(detectAF)cancelAnimationFrame(detectAF);document.getElementById('btnListen').className='btn-listen off';document.getElementById('btnListen').textContent='🎤 Start Listening';document.getElementById('sLine').textContent='Stopped';D('Adaptive cooldown was: '+adaptiveCooldown.toFixed(0)+'ms','info')}
 
 // =================== SOUNDS ===================
 function playSound(type,vol){try{if(!beepCtx)beepCtx=new(window.AudioContext||window.webkitAudioContext)();if(beepCtx.state==='suspended')beepCtx.resume();var now=beepCtx.currentTime,v=vol||0.5;
