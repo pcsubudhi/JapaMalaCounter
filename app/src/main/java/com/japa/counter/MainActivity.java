@@ -314,13 +314,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     public void onResults(Bundle results) {
                         ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                         if (matches != null && !matches.isEmpty()) {
+                            Log.d(TAG, "FINAL: \"" + matches.get(0) + "\"");
                             processTranscript(matches.get(0), true);
                         }
                         isListening = false;
+                        // Restart IMMEDIATELY to minimize word loss
                         if (shouldContinueListening) {
-                            mainHandler.postDelayed(() -> {
-                                if (shouldContinueListening) restartListening();
-                            }, 50);
+                            restartListening();
                         }
                     }
 
@@ -344,11 +344,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
                 
-                // MAXIMUM listening time - like Google Search
-                // Let it listen as long as possible without restarting
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 60000); // 60 seconds minimum
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 10000); // 10 sec silence before stopping
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 5000); // 5 sec = maybe done
+                // MAXIMUM timeouts to prevent premature finalization
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300000); // 5 minutes
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 30000); // 30 sec silence
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 15000); // 15 sec
 
                 // Language based on mantra
                 String lang = (language != null && !language.isEmpty()) ? language : "en-IN";
