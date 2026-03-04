@@ -242,20 +242,51 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     @Override
                     public void onError(int error) {
                         String errorMsg = "Unknown";
-                        switch(error) {
-                            case SpeechRecognizer.ERROR_AUDIO: errorMsg = "Audio error"; break;
-                            case SpeechRecognizer.ERROR_CLIENT: errorMsg = "Restarting..."; break;
-                            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: errorMsg = "No permission"; break;
-                            case SpeechRecognizer.ERROR_NETWORK: errorMsg = "Network error - retrying"; break;
-                            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: errorMsg = "Network timeout - retrying"; break;
-                            case SpeechRecognizer.ERROR_NO_MATCH: errorMsg = "No speech detected"; break;
-                            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: errorMsg = "Busy - retrying"; break;
-                            case SpeechRecognizer.ERROR_SERVER: errorMsg = "Server error - retrying"; break;
-                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: errorMsg = "Silence - listening again"; break;
-                        }
-                        Log.d(TAG, "Speech error: " + error + " (" + errorMsg + ")");
+                        boolean shouldRestart = true;
+                        int delay = 300;
                         
-                        // Only show non-routine errors
+                        switch(error) {
+                            case SpeechRecognizer.ERROR_AUDIO: 
+                                errorMsg = "Audio error"; 
+                                delay = 500;
+                                break;
+                            case SpeechRecognizer.ERROR_CLIENT: 
+                                errorMsg = "Restarting..."; 
+                                delay = 100;
+                                break;
+                            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: 
+                                errorMsg = "No mic permission"; 
+                                shouldRestart = false;
+                                break;
+                            case SpeechRecognizer.ERROR_NETWORK: 
+                                errorMsg = "Network - retrying"; 
+                                delay = 1000;
+                                break;
+                            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: 
+                                errorMsg = "Timeout - retrying"; 
+                                delay = 500;
+                                break;
+                            case SpeechRecognizer.ERROR_NO_MATCH: 
+                                errorMsg = "Listening..."; 
+                                delay = 100;
+                                break;
+                            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: 
+                                errorMsg = "Busy - waiting"; 
+                                delay = 500;
+                                break;
+                            case SpeechRecognizer.ERROR_SERVER: 
+                                errorMsg = "Server error"; 
+                                delay = 1000;
+                                break;
+                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: 
+                                errorMsg = "Listening..."; 
+                                delay = 100;
+                                break;
+                        }
+                        
+                        Log.d(TAG, "Speech error: " + error + " - " + errorMsg + " (restart in " + delay + "ms)");
+                        
+                        // Only show important errors, not routine ones
                         if (error != SpeechRecognizer.ERROR_NO_MATCH && 
                             error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT &&
                             error != SpeechRecognizer.ERROR_CLIENT) {
@@ -264,12 +295,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         
                         isListening = false;
                         
-                        // Always restart except for permission errors
-                        if (shouldContinueListening && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                            int delay = (error == SpeechRecognizer.ERROR_NETWORK || 
-                                        error == SpeechRecognizer.ERROR_SERVER) ? 1000 : 300;
+                        // Restart if we should continue
+                        if (shouldContinueListening && shouldRestart) {
                             mainHandler.postDelayed(() -> {
-                                if (shouldContinueListening) restartListening();
+                                if (shouldContinueListening) {
+                                    Log.d(TAG, "Restarting speech recognition...");
+                                    restartListening();
+                                }
                             }, delay);
                         }
                     }
@@ -431,14 +463,48 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     // =====================================================
 
     private void restartListening() {
-        if (speechRecognizer != null && speechIntent != null) {
+        if (speechRecognizer != null && speechIntent != null && shouldContinueListening) {
             try {
+                // Cancel any pending recognition first
+                speechRecognizer.cancel();
                 lastPartialResult = "";
-                speechRecognizer.startListening(speechIntent);
+                
+                // Small delay then restart
+                mainHandler.postDelayed(() -> {
+                    if (shouldContinueListening && speechRecognizer != null) {
+                        try {
+                            speechRecognizer.startListening(speechIntent);
+                            Log.d(TAG, "Speech recognition restarted");
+                        } catch (Exception e) {
+                            Log.e(TAG, "Start error: " + e.getMessage());
+                            // Try recreating the recognizer
+                            recreateSpeechRecognizer();
+                        }
+                    }
+                }, 50);
             } catch (Exception e) {
                 Log.e(TAG, "Restart error: " + e.getMessage());
+                recreateSpeechRecognizer();
             }
         }
+    }
+    
+    private void recreateSpeechRecognizer() {
+        Log.d(TAG, "Recreating speech recognizer...");
+        mainHandler.post(() -> {
+            try {
+                if (speechRecognizer != null) {
+                    speechRecognizer.destroy();
+                    speechRecognizer = null;
+                }
+                // Restart via JS bridge call
+                if (shouldContinueListening) {
+                    callJS("restartGoogleSpeech()");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Recreate error: " + e.getMessage());
+            }
+        });
     }
 
     // Mantra patterns - count words per complete mantra
