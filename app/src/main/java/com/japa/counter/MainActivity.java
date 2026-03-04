@@ -340,10 +340,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
                 
-                // Very short timeouts for single-word mantras
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000); // Min 1 sec listen
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 500); // 0.5 sec silence = done
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300); // 0.3 sec = maybe done
+                // LONGER listening window - don't restart too quickly
+                // This allows capturing multiple "Radha" words in one session
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000); // Listen for at least 10 sec
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000); // 2 sec silence = done
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500); // 1.5 sec = maybe done
 
                 // Language based on mantra
                 String lang = (language != null && !language.isEmpty()) ? language : "en-IN";
