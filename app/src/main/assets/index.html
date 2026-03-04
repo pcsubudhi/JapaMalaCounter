@@ -1000,8 +1000,16 @@ function stopGoogleSpeech(){
 
 // Called by native Android when Google detects a word
 function onWordDetected(word){
-  if(!detecting||sessionPaused)return;
-  if(!document.getElementById('counterScreen').classList.contains('active'))return;
+  D('🗣️ onWordDetected called: '+word,'ok');
+  
+  if(!detecting||sessionPaused){
+    D('Skip: detecting='+detecting+' paused='+sessionPaused,'warn');
+    return;
+  }
+  if(!document.getElementById('counterScreen').classList.contains('active')){
+    D('Skip: counter screen not active','warn');
+    return;
+  }
   
   var now=Date.now();
   
@@ -1015,7 +1023,7 @@ function onWordDetected(word){
   lastDetectTime=now;
   
   ADD(1);
-  D('🗣️ Google: '+word,'ok');
+  D('✅ Google counted: '+word,'ok');
   
   document.getElementById('sLine').className='status-line hit';
   document.getElementById('sLine').textContent='✓ Google: '+word;
@@ -1028,13 +1036,11 @@ function onWordDetected(word){
 }
 
 function onTranscript(text,type){
-  if(type==='final'){
-    D('📝 '+text.substring(0,50),'info');
-  }
+  D('📝 ['+type+'] '+text.substring(0,40),'info');
 }
 
-function onSpeechReady(){D('🗣️ Google ready','ok')}
-function onSpeechError(err){D('Google: '+err,'warn')}
+function onSpeechReady(){D('🗣️ Google Speech READY','ok')}
+function onSpeechError(err){D('⚠️ Google Error: '+err,'warn')}
 
 // =================== AUDIO ENERGY DETECTION ===================
 function startAudioDetection(){

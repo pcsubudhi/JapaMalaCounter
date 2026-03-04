@@ -241,11 +241,27 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
                     @Override
                     public void onError(int error) {
+                        String errorMsg = "Unknown";
+                        switch(error) {
+                            case SpeechRecognizer.ERROR_AUDIO: errorMsg = "Audio error"; break;
+                            case SpeechRecognizer.ERROR_CLIENT: errorMsg = "Client error"; break;
+                            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: errorMsg = "No permission"; break;
+                            case SpeechRecognizer.ERROR_NETWORK: errorMsg = "Network error"; break;
+                            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: errorMsg = "Network timeout"; break;
+                            case SpeechRecognizer.ERROR_NO_MATCH: errorMsg = "No match"; break;
+                            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: errorMsg = "Busy"; break;
+                            case SpeechRecognizer.ERROR_SERVER: errorMsg = "Server error"; break;
+                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: errorMsg = "Speech timeout"; break;
+                        }
+                        Log.d(TAG, "Speech error: " + error + " (" + errorMsg + ")");
+                        callJS("onSpeechError('" + errorMsg + "')");
                         isListening = false;
-                        if (shouldContinueListening && error != SpeechRecognizer.ERROR_CLIENT) {
+                        // Auto-restart on most errors
+                        if (shouldContinueListening && error != SpeechRecognizer.ERROR_CLIENT 
+                            && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                             mainHandler.postDelayed(() -> {
                                 if (shouldContinueListening) restartListening();
-                            }, 100);
+                            }, 300);
                         }
                     }
 
@@ -499,9 +515,15 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private void callJS(String script) {
         mainHandler.post(() -> {
             if (webView != null) {
-                webView.evaluateJavascript("javascript:" + script, null);
+                Log.d(TAG, "CallJS: " + script);
+                webView.evaluateJavascript("javascript:try{" + script + "}catch(e){console.log('JS Error:'+e)}", null);
             }
         });
+    }
+
+    // Debug helper - call from JS
+    public void logFromJS(String msg) {
+        Log.d(TAG, "FromJS: " + msg);
     }
 
     // ========= PERMISSIONS =========
