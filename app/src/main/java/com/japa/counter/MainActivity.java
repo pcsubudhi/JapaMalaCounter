@@ -432,88 +432,93 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         }
     }
 
+    // Mantra patterns - count words per complete mantra
+    private int wordsPerMantra = 16; // Default: Full Maha Mantra (16 words)
+    private String mantraType = "maha_mantra"; // maha_mantra, hare_krishna, hare_rama, radhe, custom
+    
+    private int countTargetWords(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        
+        int totalWords = 0;
+        
+        // Count Hindi/Devanagari words
+        
+        // Count HARE - हरे (and variations)
+        totalWords += countOccurrences(text, "हरे");
+        totalWords += countOccurrences(text, "हर ");
+        
+        // Count KRISHNA - कृष्णा or कृष्ण
+        totalWords += countOccurrences(text, "कृष्णा");
+        totalWords += countOccurrences(text, "कृष्ण ");
+        
+        // Count RAMA - राम or रामा  
+        totalWords += countOccurrences(text, "रामा");
+        totalWords += countOccurrences(text, "राम ");
+        totalWords += countOccurrences(text, "राम,");
+        // Avoid double-counting राम in रामा
+        int ramaCount = countOccurrences(text, "राम");
+        int ramaACount = countOccurrences(text, "रामा");
+        totalWords += (ramaCount - ramaACount); // Only count राम not followed by ा
+        
+        // Count RADHA - राधा or राधे
+        totalWords += countOccurrences(text, "राधे");
+        totalWords += countOccurrences(text, "राधा");
+        
+        // Also check English transliterations
+        String lowerText = text.toLowerCase();
+        String[] words = lowerText.split("[\\s,]+");
+        for (String word : words) {
+            word = word.replaceAll("[^a-zA-Z]", "");
+            if (word.isEmpty()) continue;
+            if (matchesTarget(word)) {
+                totalWords++;
+            }
+        }
+        
+        Log.d(TAG, "Total words found: " + totalWords + " in: " + text.substring(0, Math.min(text.length(), 60)));
+        return totalWords;
+    }
+    
+    private int countOccurrences(String text, String pattern) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = text.indexOf(pattern, idx)) != -1) {
+            count++;
+            idx += pattern.length();
+        }
+        return count;
+    }
+    
+    // Process transcript and count COMPLETE mantras
     private void processTranscript(String text, boolean isFinal) {
         if (text == null || text.isEmpty()) return;
         
-        String lowerText = text.toLowerCase();
+        // Count total words in current transcript
+        int currentTotalWords = countTargetWords(text);
+        int previousTotalWords = countTargetWords(lastPartialResult);
         
-        int currentCount = countTargetWords(lowerText);
-        int previousCount = countTargetWords(lastPartialResult.toLowerCase());
-        int newWords = currentCount - previousCount;
+        // Calculate how many NEW words were detected
+        int newWords = currentTotalWords - previousTotalWords;
         
         if (newWords > 0) {
             long now = System.currentTimeMillis();
-            if (now - lastWordTime >= 40) { // 40ms minimum gap
+            if (now - lastWordTime >= 40) {
+                // Send new word count to JavaScript
+                // JavaScript will handle mantra completion logic
                 for (int i = 0; i < newWords; i++) {
                     totalWordsDetected++;
-                    callJS("onWordDetected('" + targetWord + "')");
-                    Log.d(TAG, "WORD #" + totalWordsDetected + ": " + targetWord);
+                    callJS("onWordDetected('word')");
                 }
                 lastWordTime = now;
+                Log.d(TAG, "Detected " + newWords + " new words. Total: " + totalWordsDetected);
             }
         }
         
         lastPartialResult = text;
         
+        // Send transcript to JS for display
         String safeText = text.replace("'", "").replace("\\", "").replace("\n", " ");
         callJS("onTranscript('" + safeText + "','" + (isFinal ? "final" : "partial") + "')");
-    }
-
-    private int countTargetWords(String text) {
-        if (text == null) return 0;
-        
-        int count = 0;
-        String lowerText = text.toLowerCase();
-        
-        // Count Hindi/Devanagari words directly
-        // हरे (Hare), कृष्णा/कृष्ण (Krishna), राम/रामा (Rama), राधा/राधे (Radha)
-        
-        // Count HARE - हरे
-        int idx = 0;
-        while ((idx = text.indexOf("हरे", idx)) != -1) {
-            count++;
-            idx += 2;
-        }
-        // Also count हर (partial)
-        idx = 0;
-        while ((idx = text.indexOf("हर ", idx)) != -1) {
-            count++;
-            idx += 2;
-        }
-        
-        // Count KRISHNA - कृष्णा or कृष्ण
-        idx = 0;
-        while ((idx = text.indexOf("कृष्ण", idx)) != -1) {
-            count++;
-            idx += 4;
-        }
-        
-        // Count RAMA - राम or रामा
-        idx = 0;
-        while ((idx = text.indexOf("राम", idx)) != -1) {
-            count++;
-            idx += 3;
-        }
-        
-        // Count RADHA - राधा or राधे
-        idx = 0;
-        while ((idx = text.indexOf("राध", idx)) != -1) {
-            count++;
-            idx += 3;
-        }
-        
-        // Also check English transliterations
-        String[] words = lowerText.split("[\\s,]+");
-        for (String word : words) {
-            word = word.replaceAll("[^a-zA-Z]", "").toLowerCase();
-            if (word.isEmpty()) continue;
-            if (matchesTarget(word)) {
-                count++;
-            }
-        }
-        
-        Log.d(TAG, "Counted " + count + " words in: " + text.substring(0, Math.min(text.length(), 50)));
-        return count;
     }
 
     private boolean matchesTarget(String word) {

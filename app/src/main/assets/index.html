@@ -1022,7 +1022,7 @@ function stopGoogleSpeech(){
 
 // Called by native Android when Google detects a word
 function onWordDetected(word){
-  D('🗣️ onWordDetected called: '+word,'ok');
+  D('🗣️ onWordDetected called','ok');
   
   if(!detecting||sessionPaused){
     D('Skip: detecting='+detecting+' paused='+sessionPaused,'warn');
@@ -1044,17 +1044,71 @@ function onWordDetected(word){
   lastGoogleWordTime=now;
   lastDetectTime=now;
   
-  ADD(1);
-  D('✅ Google counted: '+word,'ok');
+  // Add ONE word (not one chant)
+  // The ADD function handles words -> chants conversion based on CFG.wpr
+  G_t++; // Total words
+  G_w++; // Words in current chant
+  
+  // Check if chant is complete (based on Words Per Round setting)
+  if(G_w>=CFG.wpr){
+    G_w=0;
+    G_chant++;
+    G_totalC++;
+    
+    if(SND.chantVol>0)playSound('chant',SND.chantVol);
+    doVibrate(VIB_PATTERNS[SND.chantVib]);
+    
+    D('✅ Chant #'+G_chant+' complete!','ok');
+    
+    // Check for mala complete
+    if(G_chant>=CFG.cpm){
+      G_chant=0;
+      G_mala++;
+      saveSessionProgress();
+      
+      if(G_mala>=CFG.malas){
+        // All malas complete!
+        setTimeout(function(){
+          if(SND.doneVol>0)playSound('alldone',SND.doneVol);
+          doVibrate(VIB_PATTERNS[SND.doneVib]);
+          if(SND.voice)speak('Target '+CFG.malas+' Malas complete! Hare Krishna!');
+          document.getElementById('doneCount').textContent=G_mala;
+          document.getElementById('doneTotalC').textContent=G_totalC;
+          document.getElementById('doneTime').textContent='Time: '+getElapsedStr();
+          var sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';
+          document.getElementById('doneSpeed').textContent='Speed: '+sp+' chants/min';
+          document.getElementById('doneOv').classList.add('active');
+          showParticles();
+        },300);
+      }else{
+        // Mala complete
+        setTimeout(function(){
+          if(SND.malaVol>0)playSound('mala',SND.malaVol);
+          doVibrate(VIB_PATTERNS[SND.malaVib]);
+          if(SND.voice)speak('Mala '+G_mala+' complete');
+          document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
+          document.getElementById('malaOvDone').textContent=G_mala;
+          document.getElementById('malaOvTotal').textContent=CFG.malas;
+          showMalaOvAutoClose();
+        },300);
+      }
+    }
+  }else{
+    // Word added, not a complete chant yet
+    doVibrate(VIB_PATTERNS['short']);
+  }
+  
+  refreshUI();
+  drawMala();
   
   document.getElementById('sLine').className='status-line hit';
-  document.getElementById('sLine').textContent='✓ Google: '+word;
+  document.getElementById('sLine').textContent='✓ Word '+G_w+'/'+CFG.wpr;
   setTimeout(function(){
     if(detecting){
       document.getElementById('sLine').className='status-line';
       document.getElementById('sLine').textContent='Listening...';
     }
-  },300);
+  },200);
 }
 
 function onTranscript(text,type){
