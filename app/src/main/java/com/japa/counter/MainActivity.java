@@ -152,22 +152,48 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     
     // ========= VOSK INITIALIZATION =========
     private void initVosk() {
+        Log.d(TAG, "Starting Vosk initialization...");
+        callJS("D('Vosk: Starting init...','info')");
+        
+        // Check if model folder exists in assets
+        try {
+            String[] assetFiles = getAssets().list("vosk-model-small-en-in");
+            if (assetFiles == null || assetFiles.length == 0) {
+                Log.e(TAG, "Vosk model not found in assets!");
+                callJS("onVoskError('Model not found in assets')");
+                return;
+            }
+            Log.d(TAG, "Vosk model found in assets, files: " + assetFiles.length);
+            callJS("D('Vosk: Model found ("+assetFiles.length+" items)','info')");
+        } catch (IOException e) {
+            Log.e(TAG, "Error checking assets: " + e.getMessage());
+            callJS("onVoskError('Cannot read assets: " + e.getMessage() + "')");
+            return;
+        }
+        
         // Load Vosk model from assets in background
         StorageService.unpack(this, "vosk-model-small-en-in", "model",
             (model) -> {
                 voskModel = model;
                 voskReady = true;
-                Log.d(TAG, "Vosk model loaded successfully");
+                Log.d(TAG, "Vosk model loaded successfully!");
                 runOnUiThread(() -> {
                     callJS("onVoskReady()");
+                    Toast.makeText(MainActivity.this, "Vosk ready!", Toast.LENGTH_SHORT).show();
                 });
             },
             (exception) -> {
-                Log.e(TAG, "Vosk model load failed: " + exception.getMessage());
+                String errMsg = exception != null ? exception.getMessage() : "Unknown error";
+                Log.e(TAG, "Vosk model load failed: " + errMsg);
+                if (exception != null) {
+                    exception.printStackTrace();
+                }
                 runOnUiThread(() -> {
-                    callJS("onVoskError('Model load failed: " + exception.getMessage() + "')");
+                    callJS("onVoskError('Load failed: " + errMsg + "')");
                 });
             });
+        
+        callJS("D('Vosk: Unpacking model...','info')");
     }
     
     // Vosk RecognitionListener callbacks
