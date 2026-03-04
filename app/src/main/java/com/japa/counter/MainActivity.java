@@ -205,12 +205,18 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     // Vosk RecognitionListener callbacks
     @Override
     public void onPartialResult(String hypothesis) {
+        Log.d(TAG, "Vosk onPartialResult: " + hypothesis);
         if (hypothesis == null || hypothesis.isEmpty()) return;
         try {
             JSONObject json = new JSONObject(hypothesis);
             String partial = json.optString("partial", "");
             if (!partial.isEmpty()) {
-                Log.d(TAG, "Vosk PARTIAL: " + partial);
+                Log.d(TAG, "=== VOSK HEARD: \"" + partial + "\" ===");
+                final String p = partial;
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "🎙️ " + p, Toast.LENGTH_SHORT).show();
+                    callJS("D('🎙️ Vosk heard: " + escapeJS(p) + "','ok')");
+                });
                 processVoskTranscript(partial, false);
             }
         } catch (JSONException e) {
@@ -220,12 +226,18 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     
     @Override
     public void onResult(String hypothesis) {
+        Log.d(TAG, "Vosk onResult: " + hypothesis);
         if (hypothesis == null || hypothesis.isEmpty()) return;
         try {
             JSONObject json = new JSONObject(hypothesis);
             String text = json.optString("text", "");
             if (!text.isEmpty()) {
-                Log.d(TAG, "Vosk FINAL: " + text);
+                Log.d(TAG, "=== VOSK FINAL: \"" + text + "\" ===");
+                final String t = text;
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "✅ " + t, Toast.LENGTH_SHORT).show();
+                    callJS("D('✅ Vosk final: " + escapeJS(t) + "','ok')");
+                });
                 processVoskTranscript(text, true);
             }
         } catch (JSONException e) {
@@ -235,18 +247,27 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     
     @Override
     public void onFinalResult(String hypothesis) {
+        Log.d(TAG, "Vosk onFinalResult: " + hypothesis);
         onResult(hypothesis);
     }
     
     @Override
     public void onError(Exception e) {
-        Log.e(TAG, "Vosk error: " + e.getMessage());
-        callJS("onVoskError('" + e.getMessage() + "')");
+        Log.e(TAG, "Vosk error: " + (e != null ? e.getMessage() : "null"));
+        if (e != null) e.printStackTrace();
+        runOnUiThread(() -> {
+            String err = e != null ? e.getMessage() : "Unknown error";
+            callJS("onVoskError('" + err + "')");
+            Toast.makeText(MainActivity.this, "Vosk Error: " + err, Toast.LENGTH_LONG).show();
+        });
     }
     
     @Override
     public void onTimeout() {
         Log.d(TAG, "Vosk timeout");
+        runOnUiThread(() -> {
+            callJS("D('Vosk timeout','warn')");
+        });
     }
     
     private void processVoskTranscript(String text, boolean isFinal) {
@@ -546,37 +567,48 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         @JavascriptInterface
         public void startVoskRecognition(String word) {
             if (!voskReady || voskModel == null) {
-                Log.e(TAG, "Vosk not ready");
+                Log.e(TAG, "Vosk not ready! voskReady=" + voskReady + ", model=" + (voskModel != null));
                 callJS("onVoskError('Vosk model not loaded yet')");
+                Toast.makeText(MainActivity.this, "Vosk not ready!", Toast.LENGTH_SHORT).show();
                 return;
             }
             
             voskTargetWord = (word != null && !word.isEmpty()) ? word.toLowerCase() : "radha";
             voskLastWordCount = 0;
             
-            Log.d(TAG, "Starting Vosk for: " + voskTargetWord);
+            Log.d(TAG, "=== STARTING VOSK for: " + voskTargetWord + " ===");
+            Toast.makeText(MainActivity.this, "Vosk starting for: " + voskTargetWord, Toast.LENGTH_SHORT).show();
             
             mainHandler.post(() -> {
                 try {
                     // Stop any existing Vosk service
                     if (voskSpeechService != null) {
+                        Log.d(TAG, "Stopping existing Vosk service");
                         voskSpeechService.stop();
                         voskSpeechService = null;
                     }
                     
                     // Create recognizer - 16000 Hz sample rate
+                    Log.d(TAG, "Creating Vosk recognizer...");
                     Recognizer recognizer = new Recognizer(voskModel, 16000.0f);
                     
                     // Start speech service with continuous listening
+                    Log.d(TAG, "Creating SpeechService...");
                     voskSpeechService = new SpeechService(recognizer, 16000.0f);
+                    
+                    Log.d(TAG, "Starting listening...");
                     voskSpeechService.startListening(MainActivity.this);
                     voskListening = true;
                     
-                    Log.d(TAG, "Vosk listening started");
+                    Log.d(TAG, "=== VOSK LISTENING STARTED ===");
+                    Toast.makeText(MainActivity.this, "Vosk LISTENING!", Toast.LENGTH_SHORT).show();
                     callJS("onVoskStarted()");
+                    callJS("D('🎙️ Vosk listening for: " + voskTargetWord + "','ok')");
                     
                 } catch (Exception e) {
                     Log.e(TAG, "Vosk start error: " + e.getMessage());
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "Vosk error: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     callJS("onVoskError('" + e.getMessage() + "')");
                 }
             });
