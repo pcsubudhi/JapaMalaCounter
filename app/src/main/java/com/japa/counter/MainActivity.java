@@ -328,7 +328,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     public void onPartialResults(Bundle partialResults) {
                         ArrayList<String> matches = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                         if (matches != null && !matches.isEmpty()) {
-                            processTranscript(matches.get(0), false);
+                            String transcript = matches.get(0);
+                            Log.d(TAG, "PARTIAL: \"" + transcript + "\"");
+                            processTranscript(transcript, false);
+                        } else {
+                            Log.d(TAG, "PARTIAL: empty or null");
                         }
                     }
 
@@ -340,11 +344,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
                 
-                // LONGER listening window - don't restart too quickly
-                // This allows capturing multiple "Radha" words in one session
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000); // Listen for at least 10 sec
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000); // 2 sec silence = done
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500); // 1.5 sec = maybe done
+                // MAXIMUM listening time - like Google Search
+                // Let it listen as long as possible without restarting
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 60000); // 60 seconds minimum
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 10000); // 10 sec silence before stopping
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 5000); // 5 sec = maybe done
 
                 // Language based on mantra
                 String lang = (language != null && !language.isEmpty()) ? language : "en-IN";
