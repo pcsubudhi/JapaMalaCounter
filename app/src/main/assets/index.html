@@ -1,675 +1,1341 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Japa Mala Counter - Hybrid</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-            color: #fff;
-            padding: 15px;
-            overflow-x: hidden;
-        }
-        .container { max-width: 400px; margin: 0 auto; }
-        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 20px; color: #ffd700; }
-        
-        /* Counter Display */
-        .counter-section {
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .mala-count { font-size: 4rem; font-weight: bold; color: #ffd700; }
-        .word-count { font-size: 1.5rem; color: #aaa; margin-top: 5px; }
-        .mantra-progress {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        .bead {
-            width: 20px; height: 20px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            transition: all 0.3s;
-        }
-        .bead.active { background: #ffd700; box-shadow: 0 0 10px #ffd700; }
-        
-        /* Audio Level Indicator */
-        .audio-level {
-            height: 8px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-        .audio-level-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
-            width: 0%;
-            transition: width 0.1s;
-        }
-        
-        /* Status */
-        .status-box {
-            padding: 10px 15px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 0.9rem;
-        }
-        .status-box.listening { background: rgba(0,255,0,0.2); border: 1px solid #0f0; }
-        .status-box.stopped { background: rgba(255,0,0,0.2); border: 1px solid #f00; }
-        .status-box.info { background: rgba(0,150,255,0.2); border: 1px solid #09f; }
-        
-        /* Transcript Display */
-        .transcript-box {
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            min-height: 60px;
-            font-size: 0.85rem;
-            color: #ccc;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-        .transcript-word { display: inline; }
-        .transcript-word.target { color: #ffd700; font-weight: bold; }
-        
-        /* Settings */
-        .settings-section {
-            background: rgba(255,255,255,0.05);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .setting-row:last-child { border-bottom: none; }
-        .setting-label { font-size: 0.9rem; }
-        input[type="text"], input[type="number"], select {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 8px;
-            padding: 8px 12px;
-            color: #fff;
-            font-size: 0.9rem;
-            width: 120px;
-        }
-        
-        /* Buttons */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 18px;
-            border: none;
-            border-radius: 15px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 10px;
-            transition: all 0.3s;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #ffd700, #ff8c00);
-            color: #000;
-        }
-        .btn-primary:hover { transform: scale(1.02); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .btn-danger {
-            background: linear-gradient(135deg, #ff4444, #cc0000);
-            color: #fff;
-        }
-        
-        /* Detection Mode Toggle */
-        .mode-toggle {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .mode-btn {
-            flex: 1;
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.3s;
-        }
-        .mode-btn.active {
-            background: rgba(255,215,0,0.3);
-            border: 2px solid #ffd700;
-        }
-        .mode-btn:not(.active) {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid transparent;
-        }
-        
-        /* Debug Log */
-        .debug-section {
-            background: rgba(0,0,0,0.5);
-            border-radius: 10px;
-            padding: 10px;
-            margin-top: 15px;
-            max-height: 150px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: #0f0;
-        }
-        .debug-line { margin: 2px 0; }
-        .debug-line.error { color: #f00; }
-        .debug-line.word { color: #ffd700; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1A0F0A">
+<title>📿 Japa Mala Counter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#140B07;--bg2:#0A0503;--card:#231812;--card-border:#3A2A1E;--accent:#FBBF24;--accent-dim:rgba(251,191,36,0.12);--text:#FFF8E7;--text-mid:#D4B896;--text-dim:#B89B78;--success:#34D399;--danger:#F87171}
+  body{font-family:'Nunito Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;padding-top:env(safe-area-inset-top,0px);letter-spacing:0.01em}
+  body.dim-mode{filter:brightness(0.35)}
+  .app{max-width:480px;margin:0 auto;height:100vh;display:flex;flex-direction:column;padding-top:28px}
+  .screen{padding:6px 16px;display:none;flex:1;overflow-y:auto}.screen.active{display:flex;flex-direction:column}
+  .counter-screen{overflow:hidden!important}
+  .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px 16px;margin-bottom:6px}
+  button{font-family:'Nunito Sans','Segoe UI',sans-serif;cursor:pointer;border:none;outline:none}
+  .btn-primary{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:17px;font-weight:700;box-shadow:0 4px 20px rgba(251,191,36,0.35);letter-spacing:0.02em}
+  .btn-primary:disabled{opacity:0.35}
+  input[type="number"]{width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;font-family:'Nunito Sans',sans-serif;outline:none}
+  input:focus{border-color:var(--accent)}
+  .home-title{text-align:center;margin-bottom:6px}
+  .home-title h1{font-family:'Playfair Display',serif;font-size:26px;color:var(--accent);letter-spacing:0.02em}
+  .home-title p{color:var(--text-mid);font-size:13px;margin-top:2px}
+  .streak-badge{display:inline-block;background:linear-gradient(135deg,#EF4444,#FBBF24);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:700;color:white;margin-top:5px}
+  .quote-box{text-align:center;padding:6px 14px;font-style:italic;font-size:13px;color:var(--text-mid);line-height:1.5;margin-bottom:6px}
+  .quote-box .author{font-style:normal;color:var(--accent);font-size:12px;margin-top:3px;font-weight:600}
+  .step{margin-bottom:1px}
+  .step-header{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+  .step-num.done{background:var(--success)}
+  .step-title{font-size:15px;font-weight:700;color:var(--text)}
+  .btn-rec{width:100%;padding:12px;border-radius:12px;font-size:15px;font-weight:700;transition:all 0.2s}
+  .btn-rec.idle{background:linear-gradient(135deg,#059669,#047857);color:white}
+  .btn-rec.busy{background:linear-gradient(135deg,#DC2626,#991B1B);color:white;animation:pulse 1s infinite}
+  .btn-rec.ok{background:var(--accent-dim);color:var(--accent);border:1.5px solid var(--accent)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
+  .viz{height:36px;background:rgba(0,0,0,0.35);border-radius:8px;margin:4px 0;display:flex;align-items:flex-end;gap:1px;padding:3px;overflow:hidden}
+  .viz div{flex:1;background:var(--accent);border-radius:1px;min-height:2px;transition:height 0.05s}
+  .targets-row{display:flex;gap:5px;margin-bottom:6px}
+  .target-btn{flex:1;padding:9px;border-radius:8px;background:transparent;border:1.5px solid var(--card-border);color:var(--text-mid);font-size:14px;font-weight:600}
+  .target-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+  .wpr-row{display:flex;gap:5px;margin-bottom:6px}
+  .wpr-btn{flex:1;padding:9px;border-radius:8px;background:transparent;border:1.5px solid var(--card-border);color:var(--text-mid);font-size:14px;font-weight:600}
+  .wpr-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+  .tip{display:inline-flex;width:18px;height:18px;border-radius:50%;background:rgba(251,191,36,0.15);color:var(--accent);font-size:13px;align-items:center;justify-content:center;cursor:pointer;margin-left:4px;vertical-align:middle;border:1px solid rgba(251,191,36,0.35)}
+  .tip-box{display:none;background:#1C130D;border:1px solid var(--accent);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);margin-top:5px;line-height:1.5}
+  .tip-box.show{display:block}
+  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px;border-bottom:1px solid var(--card-border);margin-bottom:3px}
+  .top-bar-right{display:flex;align-items:center;gap:5px}
+  .tb-btn{background:var(--card);border:1.5px solid var(--accent);border-radius:8px;padding:6px 11px;color:var(--accent);font-size:12px;font-weight:700}
+  .tb-btn:active{background:var(--accent);color:var(--bg)}
+  .tb-back{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);font-size:12px;font-weight:700;padding:6px 11px;border-radius:8px}
+  .tb-back:active{background:var(--danger);color:white}
+  .pause-banner{display:none;background:rgba(248,113,113,0.15);border:2px solid var(--danger);border-radius:10px;padding:8px;text-align:center;margin-bottom:3px}
+  .pause-banner.show{display:block}
+  .pause-banner span{color:var(--danger);font-weight:700;font-size:15px}
+  .info-row{display:flex;justify-content:space-between;align-items:center;padding:2px 2px}
+  .timer{font-family:'Playfair Display',serif;font-size:15px;color:var(--accent);font-weight:600}
+  .mala-info{font-family:'Playfair Display',serif;font-size:15px;color:var(--success);font-weight:700}
+  .pbar-mala{background:var(--card-border);border-radius:6px;height:5px;margin:2px 0 3px;overflow:hidden}
+  .pfill-mala{height:100%;border-radius:6px;background:linear-gradient(90deg,#059669,var(--success));transition:width 0.4s;width:0%}
+  .mala-container{position:relative;display:flex;justify-content:center;margin:1px 0}
+  .mala-svg{width:100%;max-width:155px;max-height:155px}
+  .mala-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+  .mala-count{font-family:'Playfair Display',serif;font-size:42px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 24px rgba(251,191,36,0.5);transition:transform 0.15s}
+  .mala-count.pop{transform:scale(1.15)}
+  .mala-target{font-size:13px;color:var(--text-mid)}
+  .progress-bar{background:var(--card-border);border-radius:6px;height:5px;margin:2px 0 3px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#B45309,var(--accent));transition:width 0.4s;width:0%}
+  .stats-line{display:flex;justify-content:space-around;padding:3px 0;font-size:13px;color:var(--text-mid);font-weight:500}
+  .stats-line b{color:var(--accent);font-size:15px;font-weight:700}
+  .stats-line .gr b{color:var(--success)}
+  .mode-tabs{display:flex;border:1.5px solid var(--card-border);border-radius:10px;overflow:hidden;margin:3px 0}
+  .mtab{flex:1;padding:8px;background:transparent;color:var(--text-mid);font-size:13px;font-weight:600;border-right:1px solid var(--card-border)}
+  .mtab:last-child{border-right:none}
+  .mtab.act{background:var(--accent-dim);color:var(--accent);font-weight:700}
+  .btn-listen{width:100%;padding:11px;border-radius:12px;color:white;font-size:15px;font-weight:700}
+  .btn-listen.off{background:linear-gradient(135deg,#059669,#047857)}
+  .btn-listen.on{background:linear-gradient(135deg,#DC2626,#991B1B)}
+  .match-bar{height:6px;border-radius:3px;margin:4px 0;background:rgba(0,0,0,0.35);overflow:hidden}
+  .match-fill{height:100%;border-radius:3px;width:0%;transition:width 0.1s,background 0.15s}
+  .status-line{text-align:center;font-size:13px;color:var(--text-mid);padding:2px 0;font-weight:500}
+  .status-line.hit{color:var(--accent);font-weight:700;font-size:15px}
+  .slider-row{display:flex;align-items:center;gap:6px;margin:3px 0}
+  .slider-row label{font-size:12px;color:var(--text-mid);min-width:40px;font-weight:500}
+  .slider-row input[type=range]{flex:1;accent-color:var(--accent);height:18px}
+  .slider-row .val{font-size:12px;color:var(--accent);min-width:34px;text-align:right;font-weight:600}
+  .tap-area{width:100%;padding:14px 12px;border-radius:16px;background:var(--card);border:2px solid var(--card-border);color:var(--text);text-align:center;transition:all 0.15s;margin:3px 0}
+  .tap-area:active{background:linear-gradient(135deg,#D97706,#B45309);border-color:var(--accent)}
+  .vol-hint{text-align:center;font-size:13px;color:var(--text-mid);padding:2px 0}
+  .snd-panel{display:none;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px;margin-bottom:3px;max-height:60vh;overflow-y:auto}
+  .snd-panel.show{display:block}
+  .snd-hint{text-align:center;font-size:12px;color:var(--accent);padding:3px 0;font-weight:600}
+  .snd-section{margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.06)}
+  .snd-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+  .snd-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+  .snd-ctrl{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .snd-ctrl label{font-size:12px;color:var(--text-mid);min-width:34px;font-weight:500}
+  .snd-ctrl input[type=range]{flex:1;accent-color:var(--accent);height:16px}
+  .snd-ctrl .sval{font-size:12px;color:var(--accent);min-width:28px;text-align:right;font-weight:600}
+  .vib-select{background:var(--bg);border:1px solid var(--card-border);border-radius:6px;color:var(--text);font-size:13px;padding:5px 8px;font-family:'Nunito Sans',sans-serif}
+  .ov{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
+  .ov.active{display:flex}
+  .ov-bg{position:absolute;inset:0;background:rgba(0,0,0,0.92)}
+  .ov-box{position:relative;z-index:1;border-radius:18px;padding:24px;text-align:center;max-width:320px;width:100%}
+  .mala-done-box{background:var(--card);border:2px solid var(--success);box-shadow:0 0 40px rgba(52,211,153,0.25)}
+  .mala-done-box h2{font-family:'Playfair Display',serif;color:var(--success);font-size:20px;margin:6px 0}
+  .all-done-box{background:linear-gradient(135deg,#231812,#140B07);border:3px solid var(--accent);box-shadow:0 0 60px rgba(251,191,36,0.35);animation:celeb 1.5s infinite}
+  @keyframes celeb{0%,100%{box-shadow:0 0 30px rgba(251,191,36,0.25)}50%{box-shadow:0 0 60px rgba(251,191,36,0.5)}}
+  .all-done-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:22px;margin:6px 0}
+  .ov-btn{display:block;width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;margin-top:8px;font-family:'Nunito Sans',sans-serif}
+  .confirm-ov{position:fixed;inset:0;z-index:1002;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.88)}
+  .confirm-ov.show{display:flex}
+  .confirm-box{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:22px;text-align:center;max-width:280px;width:100%}
+  .confirm-box h3{color:var(--text);font-size:17px;margin-bottom:6px;font-weight:700}
+  .confirm-box p{color:var(--text-mid);font-size:14px;margin-bottom:14px}
+  .confirm-btns{display:flex;gap:8px}
+  .confirm-btns button{flex:1;padding:11px;border-radius:8px;font-size:14px;font-weight:700}
+  .dbg-toggle{text-align:center;font-size:12px;color:var(--text-mid);padding:2px;cursor:pointer;opacity:0.4}
+  .debug{display:none;background:#000;border:1px solid #222;border-radius:8px;padding:3px;font-family:monospace;font-size:8px;max-height:60px;overflow-y:auto}
+  .debug.show{display:block}
+  .debug div{padding:0;border-bottom:1px solid #111}
+  .debug .ok{color:#4ade80}.debug .warn{color:#fbbf24}.debug .err{color:#f87171}.debug .info{color:#60a5fa}
+  .ad-banner{background:rgba(0,0,0,0.3);border:1px dashed var(--card-border);border-radius:8px;padding:14px;text-align:center;margin-top:auto;margin-bottom:8px;min-height:50px;display:flex;align-items:center;justify-content:center}
+  .ad-banner span{font-size:13px;color:var(--text-mid)}
+  .resume-banner{display:none;text-align:center;border-color:var(--success)!important;margin-bottom:6px}
+  .resume-banner.show{display:block}
+  .welcome-ov{position:fixed;inset:0;z-index:1003;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.96)}
+  .welcome-ov.show{display:flex}
+  .welcome-box{background:var(--card);border:2px solid var(--accent);border-radius:18px;padding:28px 24px;text-align:center;max-width:320px;width:100%}
+  .welcome-box h2{font-family:'Playfair Display',serif;color:var(--accent);font-size:22px;margin:8px 0}
+  .welcome-step{color:var(--text-mid);font-size:14px;margin:10px 0;line-height:1.6}
+  .welcome-step b{color:var(--text)}
+  .welcome-dots{display:flex;justify-content:center;gap:8px;margin:12px 0}
+  .welcome-dots span{width:8px;height:8px;border-radius:50%;background:var(--card-border)}
+  .welcome-dots span.active{background:var(--accent)}
+  .battery-warn{display:none;background:rgba(248,113,113,0.12);border:1px solid var(--danger);border-radius:8px;padding:5px 8px;text-align:center;font-size:12px;color:var(--danger);margin-bottom:3px;font-weight:600}
+  .battery-warn.show{display:block}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1000;display:none}
+  .undo-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--card);border:1.5px solid var(--accent);border-radius:10px;padding:10px 20px;font-size:14px;color:var(--accent);display:none;z-index:999;font-weight:700}
+  .undo-toast.show{display:block;animation:fadeout 2s ease-in forwards}
+  @keyframes fadeout{0%,70%{opacity:1}100%{opacity:0}}
+  .chk-row{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .chk-row label{font-size:14px;color:var(--text);font-weight:500}
+  .chk-row input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
+  /* Mic list */
+  .mic-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:4px 0;border-radius:10px;background:rgba(0,0,0,0.25);border:1.5px solid var(--card-border);cursor:pointer;transition:all 0.2s}
+  .mic-item:active{transform:scale(0.98)}
+  .mic-item.selected{border-color:var(--accent);background:var(--accent-dim)}
+  .mic-item .mic-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--card-border);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .mic-item.selected .mic-radio{border-color:var(--accent)}
+  .mic-item.selected .mic-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  .mic-item .mic-name{font-size:13px;color:var(--text);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mic-item .mic-type{font-size:11px;color:var(--text-mid);background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:10px;flex-shrink:0}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>🙏 Japa Mala Counter</h1>
-        
-        <!-- Counter Display -->
-        <div class="counter-section">
-            <div class="mala-count" id="malaCount">0</div>
-            <div class="word-count"><span id="wordCount">0</span> / <span id="wordsPerMala">8</span> words</div>
-            <div class="mantra-progress" id="beadProgress"></div>
-            <div class="audio-level">
-                <div class="audio-level-bar" id="audioLevel"></div>
-            </div>
-        </div>
-        
-        <!-- Status -->
-        <div class="status-box info" id="statusBox">Ready to start</div>
-        
-        <!-- Transcript -->
-        <div class="transcript-box" id="transcript">Speech will appear here...</div>
-        
-        <!-- Detection Mode -->
-        <div class="mode-toggle">
-            <div class="mode-btn active" id="modeHybrid" onclick="setMode('hybrid')">🔀 Hybrid<br><small>Speech + Audio</small></div>
-            <div class="mode-btn" id="modeSpeech" onclick="setMode('speech')">🎤 Speech Only<br><small>Google STT</small></div>
-            <div class="mode-btn" id="modeAudio" onclick="setMode('audio')">📊 Audio Only<br><small>Energy Detection</small></div>
-        </div>
-        
-        <!-- Settings -->
-        <div class="settings-section">
-            <div class="setting-row">
-                <span class="setting-label">Target Word</span>
-                <input type="text" id="targetWord" value="hare" placeholder="hare">
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Words per Mala</span>
-                <input type="number" id="wordsPerMalaInput" value="8" min="1" max="108">
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Language</span>
-                <select id="language">
-                    <option value="hi-IN">Hindi</option>
-                    <option value="sa-IN">Sanskrit</option>
-                    <option value="en-IN">English (India)</option>
-                    <option value="en-US">English (US)</option>
-                </select>
-            </div>
-            <div class="setting-row">
-                <span class="setting-label">Alarm at Mala #</span>
-                <input type="number" id="alarmAt" value="16" min="1">
-            </div>
-        </div>
-        
-        <!-- Control Buttons -->
-        <button class="btn btn-primary" id="startBtn" onclick="startCounting()">▶️ Start Counting</button>
-        <button class="btn btn-danger" id="stopBtn" onclick="stopCounting()" style="display:none;">⏹️ Stop</button>
-        <button class="btn btn-secondary" onclick="resetCounter()">🔄 Reset Counter</button>
-        <button class="btn btn-secondary" onclick="manualCount()">👆 Manual Count (+1 word)</button>
-        
-        <!-- Debug Log -->
-        <div class="debug-section" id="debugLog"></div>
+<div class="app">
+
+  <!-- WELCOME TUTORIAL -->
+  <div id="welcomeOv" class="welcome-ov">
+    <div class="welcome-box">
+      <div style="font-size:50px">📿</div>
+      <h2>Welcome to Japa Counter</h2>
+      <div id="welcomeContent">
+        <div class="welcome-step">Step <b>1</b>: Capture your room's silence so we can filter background noise</div>
+        <div class="welcome-step">Step <b>2</b>: Teach the app one word from your mantra by saying it 5 times</div>
+        <div class="welcome-step">Step <b>3</b>: Configure your mantra settings and start chanting!</div>
+        <div class="welcome-step" style="color:var(--accent)">The app auto-counts your chanting using voice recognition 🎤</div>
+      </div>
+      <div class="welcome-dots"><span class="active"></span></div>
+      <button class="ov-btn" onclick="closeWelcome()" style="background:var(--accent);color:var(--bg)">Got it! Let's begin 🙏</button>
+    </div>
+  </div>
+
+  <!-- SETUP SCREEN -->
+  <div id="setupScreen" class="screen active">
+    <div class="home-title">
+      <div style="font-size:36px;margin-bottom:2px">📿</div>
+      <h1>Japa Counter</h1>
+      <p>Calibrated voice recognition</p>
+      <div id="streakBadge" class="streak-badge" style="display:none"></div>
     </div>
 
-    <script>
-        // ============================================
-        // STATE VARIABLES
-        // ============================================
-        let isRunning = false;
-        let malaCount = 0;
-        let wordCount = 0;
-        let wordsPerMala = 8;
-        let targetWord = 'hare';
-        let detectionMode = 'hybrid'; // hybrid, speech, audio
-        
-        // Audio detection state
-        let audioContext = null;
-        let analyser = null;
-        let mediaStream = null;
-        let audioDetectionInterval = null;
-        let lastAudioPeakTime = 0;
-        let energyHistory = [];
-        const ENERGY_HISTORY_SIZE = 20;
-        let noiseFloor = 0;
-        let adaptiveThreshold = 0;
-        
-        // Speech recognition state
-        let speechActive = false;
-        let speechWordCount = 0;
-        let audioWordCount = 0;
-        
-        // Deduplication
-        let lastCountTime = 0;
-        const DEBOUNCE_MS = 200;
-        
-        // ============================================
-        // INITIALIZATION
-        // ============================================
-        document.addEventListener('DOMContentLoaded', () => {
-            initBeadProgress();
-            loadSettings();
-            log('App initialized - Hybrid detection ready');
-        });
-        
-        function initBeadProgress() {
-            const container = document.getElementById('beadProgress');
-            container.innerHTML = '';
-            for (let i = 0; i < wordsPerMala; i++) {
-                const bead = document.createElement('div');
-                bead.className = 'bead';
-                bead.id = 'bead' + i;
-                container.appendChild(bead);
-            }
+    <!-- Spiritual quote -->
+    <div class="quote-box" id="quoteBox"></div>
+
+    <!-- Resume banner -->
+    <div id="resumeBanner" class="card resume-banner">
+      <p style="color:var(--success);font-weight:600;margin-bottom:6px">Paused Session</p>
+      <p style="color:var(--text-mid);font-size:12px;margin-bottom:8px">Mala <span id="rMala">0</span>/<span id="rMalaT">16</span> | Chant <span id="rChant">0</span>/<span id="rCPM">108</span></p>
+      <button onclick="resumeSession()" style="width:100%;padding:10px;border-radius:10px;background:var(--success);color:white;font-size:14px;font-weight:600">Resume Chanting</button>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="card step">
+      <div class="step-header"><div class="step-num" id="s1n">1</div><div class="step-title">Capture Silence <span class="tip" onclick="toggleTip('tip1')">?</span></div></div>
+      <div id="tip1" class="tip-box">Stay completely quiet for 10 seconds. This learns background noise (fan, AC, traffic) for filtering.</div>
+      <div style="margin-bottom:6px">
+        <label style="font-size:14px;color:var(--text);font-weight:600">🎙 Microphone <span class="tip" onclick="toggleTip('tipMic')">?</span></label>
+        <div id="tipMic" class="tip-box">Shows all detected mics. Bluetooth earbuds appear here when connected. Use "Test" to verify a mic works before calibrating.</div>
+        <!-- Hidden select for programmatic use -->
+        <select id="micSelect" style="display:none" onchange="selectedMicId=this.value"><option value="">Default</option></select>
+        <!-- Visual mic list -->
+        <div id="micList" style="margin-top:6px">
+          <div style="text-align:center;color:var(--text-mid);font-size:13px;padding:10px">Scanning for microphones...</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button onclick="refreshMicList()" style="flex:1;background:var(--card);border:1.5px solid var(--accent);border-radius:8px;padding:9px 12px;color:var(--accent);font-size:13px;font-weight:700">🔄 Refresh</button>
+          <button id="btnTestMic" onclick="testMic()" style="flex:1;background:var(--accent-dim);border:1.5px solid var(--success);border-radius:8px;padding:9px 12px;color:var(--success);font-size:13px;font-weight:700">🎤 Test Mic</button>
+        </div>
+        <div id="micTestArea" style="display:none;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <div style="flex:1;background:rgba(0,0,0,0.35);border-radius:6px;height:20px;overflow:hidden"><div id="micTestBar" style="height:100%;width:0%;background:var(--success);border-radius:6px;transition:width 0.1s"></div></div>
+            <span id="micTestLabel" style="font-size:12px;color:var(--text-mid);min-width:60px;text-align:right">Testing...</span>
+          </div>
+          <div id="micTestCountdown" style="text-align:center;font-size:13px;color:var(--accent);font-weight:600;display:none"></div>
+          <button id="btnPlayTest" onclick="playTestRecording()" style="display:none;width:100%;padding:10px;border-radius:10px;background:var(--accent-dim);border:1.5px solid var(--accent);color:var(--accent);font-size:14px;font-weight:700;margin-top:4px">▶ Play Recording</button>
+        </div>
+      </div>
+      <button id="btnNoise" class="btn-rec idle" onclick="captureNoise()">🔇 Capture Silence</button>
+      <div id="noiseViz" class="viz" style="display:none"></div>
+      <div id="noiseStatus" style="font-size:12px;color:var(--text-mid);margin-top:2px;text-align:center"></div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="card step">
+      <div class="step-header"><div class="step-num" id="s2n">2</div><div class="step-title">Teach Your Word <span class="tip" onclick="toggleTip('tip2')">?</span></div></div>
+      <div id="tip2" class="tip-box">Say one word from your mantra 5 times with pauses. Same volume/distance as actual chanting.</div>
+      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Word ×5</button>
+      <div id="wordViz" class="viz" style="display:none"></div>
+      <div id="wordStatus" style="font-size:12px;color:var(--text-mid);margin-top:2px;text-align:center"></div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="card step">
+      <div class="step-header"><div class="step-num">3</div><div class="step-title">Settings</div></div>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Words per chant: <span class="tip" onclick="toggleTip('tip3')">?</span></p>
+      <div id="tip3" class="tip-box">"Hare Krishna Hare Krishna Krishna Krishna Hare Hare" = 8 words. "Om Namah Shivaya" = 3.</div>
+      <div class="wpr-row">
+        <button class="wpr-btn" onclick="pickWPR(1)">1</button>
+        <button class="wpr-btn" onclick="pickWPR(4)">4</button>
+        <button class="wpr-btn selected" onclick="pickWPR(8)">8</button>
+        <button class="wpr-btn" onclick="pickWPR(16)">16</button>
+      </div>
+      <input type="number" id="inWPR" value="8" min="1" style="margin-bottom:8px">
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Chants per Mala: <span class="tip" onclick="toggleTip('tip4')">?</span></p>
+      <div id="tip4" class="tip-box">Traditional = 108 beads. Some use 54 (half) or 216 (double).</div>
+      <div class="targets-row">
+        <button class="target-btn" onclick="pickCPM(54)">54</button>
+        <button class="target-btn selected" onclick="pickCPM(108)">108</button>
+        <button class="target-btn" onclick="pickCPM(216)">216</button>
+      </div>
+      <input type="number" id="inCPM" value="108" min="1" style="margin-bottom:8px">
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Total Malas: <span class="tip" onclick="toggleTip('tip5')">?</span></p>
+      <div id="tip5" class="tip-box">ISKCON recommends 16 rounds daily.</div>
+      <div class="targets-row">
+        <button class="target-btn" onclick="pickMalas(4)">4</button>
+        <button class="target-btn" onclick="pickMalas(8)">8</button>
+        <button class="target-btn selected" onclick="pickMalas(16)">16</button>
+        <button class="target-btn" onclick="pickMalas(32)">32</button>
+        <button class="target-btn" onclick="pickMalas(64)">64</button>
+      </div>
+      <input type="number" id="inMalas" value="16" min="1">
+      <div class="chk-row" style="margin-top:8px">
+        <input type="checkbox" id="chkAutoListen" checked>
+        <label>Auto-start listening when session begins <span class="tip" onclick="toggleTip('tipAL')">?</span></label>
+      </div>
+      <div id="tipAL" class="tip-box">If ON, voice detection starts automatically. Turn OFF if you want to start manually or use Tap-only mode.</div>
+    </div>
+
+    <button id="btnGo" class="btn-primary" onclick="startSession()" disabled>Complete Steps 1 & 2 First</button>
+    <div class="ad-banner" id="setupAdBanner"><span>Ad Space — AdMob Banner</span></div>
+  </div>
+
+  <!-- COUNTER SCREEN -->
+  <div id="counterScreen" class="screen counter-screen">
+    <div class="top-bar">
+      <button class="tb-back" onclick="confirmBack()">&#9664; Back</button>
+      <div class="top-bar-right">
+        <button class="tb-btn" id="btnPause" onclick="togglePause()">Pause</button>
+        <button class="tb-btn" id="btnSndToggle" onclick="toggleSoundPanel()">Sound</button>
+        <button class="tb-btn" id="btnDim" onclick="toggleDim()">Dim</button>
+        <button class="tb-btn" onclick="confirmReset()">Reset</button>
+      </div>
+    </div>
+    <div id="batteryWarn" class="battery-warn">🔋 Low battery — plug in to avoid interruption</div>
+    <div id="pauseBanner" class="pause-banner"><span>PAUSED</span> — tap Resume</div>
+
+    <!-- Sound panel -->
+    <div id="sndPanel" class="snd-panel">
+      <div class="snd-hint" id="sndHint">Tap "Sound" again to close this panel</div>
+      <div class="snd-section">
+        <div class="snd-title">🔔 Each Chant</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volChant" min="0" max="100" value="30" oninput="SND.chantVol=this.value/100;document.getElementById('vvChant').textContent=this.value+'%'"><span class="sval" id="vvChant">30%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibChant" onchange="SND.chantVib=this.value"><option value="off">Off</option><option value="short" selected>Short</option><option value="medium">Medium</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">📊 Milestones <span class="tip" onclick="toggleTip('tipMile')">?</span></div>
+        <div id="tipMile" class="tip-box">Announces number at quarter points. Says just "27" briefly.</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volMile" min="0" max="100" value="50" oninput="SND.mileVol=this.value/100;document.getElementById('vvMile').textContent=this.value+'%'"><span class="sval" id="vvMile">50%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibMile" onchange="SND.mileVib=this.value"><option value="off">Off</option><option value="short" selected>Short</option><option value="medium">Medium</option></select></div>
+        <div class="snd-ctrl"><label>At</label>
+          <label style="min-width:auto;font-size:13px;color:var(--text)"><input type="checkbox" id="mile25" checked onchange="updateMilestones()"> 25%</label>
+          <label style="min-width:auto;font-size:13px;color:var(--text)"><input type="checkbox" id="mile50" checked onchange="updateMilestones()"> 50%</label>
+          <label style="min-width:auto;font-size:13px;color:var(--text)"><input type="checkbox" id="mile75" checked onchange="updateMilestones()"> 75%</label>
+        </div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">📿 Mala Complete</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volMala" min="0" max="100" value="70" oninput="SND.malaVol=this.value/100;document.getElementById('vvMala').textContent=this.value+'%'"><span class="sval" id="vvMala">70%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibMala" onchange="SND.malaVib=this.value"><option value="off">Off</option><option value="short">Short</option><option value="medium" selected>Medium</option><option value="long">Long</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">🎉 All Done</div>
+        <div class="snd-ctrl"><label>Vol</label><input type="range" id="volDone" min="0" max="100" value="100" oninput="SND.doneVol=this.value/100;document.getElementById('vvDone').textContent=this.value+'%'"><span class="sval" id="vvDone">100%</span></div>
+        <div class="snd-ctrl"><label>Vib</label><select class="vib-select" id="vibDone" onchange="SND.doneVib=this.value"><option value="off">Off</option><option value="medium">Medium</option><option value="long">Long</option><option value="celebration" selected>Celebration</option></select></div>
+      </div>
+      <div class="snd-section">
+        <div class="snd-title">🗣 Voice</div>
+        <div class="snd-ctrl"><label>Voice</label><select class="vib-select" id="voiceToggle" onchange="SND.voice=(this.value==='on')"><option value="on" selected>On</option><option value="off">Off</option></select></div>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="timer" id="timerDisplay">00:00:00</div>
+      <div style="font-size:12px;color:var(--text-mid)" id="speedDisplay"></div>
+      <div class="mala-info">Mala <span id="dMala">0</span>/<span id="dMalaTarget">16</span></div>
+    </div>
+    <div class="pbar-mala"><div id="pMala" class="pfill-mala"></div></div>
+
+    <div class="mala-container">
+      <svg id="malaSvg" class="mala-svg" viewBox="0 0 320 320"></svg>
+      <div class="mala-center"><div class="mala-count" id="dChant">0</div><div class="mala-target">of <span id="dCPM">108</span></div></div>
+    </div>
+    <div class="progress-bar"><div id="dProgress" class="progress-fill"></div></div>
+
+    <div class="stats-line">
+      <span>Word: <b id="dWord">0</b>/<span id="dWPR">8</span></span>
+      <span>Words: <b id="dTotalW">0</b></span>
+      <span class="gr">Chants: <b id="dTotalC">0</b></span>
+      <span class="gr">Malas: <b id="dMala2">0</b></span>
+    </div>
+    <div class="vol-hint">Volume buttons count | Tap anywhere | Long-press to undo</div>
+
+    <div class="mode-tabs">
+      <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Voice</button>
+      <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap</button>
+      <button class="mtab act" id="tabBoth" onclick="setMode('both')">🎤+👆 Both</button>
+    </div>
+
+    <div id="voiceSec">
+      <button id="btnListen" class="btn-listen off" onclick="toggleListen()">🎤 Start Listening</button>
+      <div class="match-bar"><div id="mFill" class="match-fill"></div></div>
+      <div id="sLine" class="status-line">Tap to start voice detection</div>
+      <div class="slider-row"><label>Sens</label><input type="range" id="sSlider" min="20" max="80" value="50" oninput="updateSens()"><div class="val" id="sVal">50%</div></div>
+      <div class="slider-row"><label>Gap</label><input type="range" id="cSlider" min="200" max="1500" value="250" step="50" oninput="document.getElementById('cVal').textContent=this.value+'ms'"><div class="val" id="cVal">250ms</div></div>
+    </div>
+    <div id="tapSec">
+      <button class="tap-area" id="tapBtn" onclick="tapCount()"><div style="font-size:24px">🙏</div><div style="font-size:15px;font-weight:600">Tap to Count</div></button>
+    </div>
+    <div class="dbg-toggle" onclick="document.getElementById('dbg').classList.toggle('show')">▼ debug</div>
+    <div class="debug" id="dbg"></div>
+  </div>
+
+  <!-- OVERLAYS -->
+  <div id="malaOv" class="ov"><div class="ov-bg" onclick="dismissMalaOv()"></div>
+    <div class="ov-box mala-done-box"><div style="font-size:40px">📿</div><h2 id="malaOvTitle">Mala 1 Complete!</h2><p style="color:var(--text-mid);font-size:14px"><span id="malaOvDone" style="color:var(--success);font-weight:700;font-size:18px">1</span> of <span id="malaOvTotal">16</span></p><p style="color:var(--success);font-size:12px;margin-top:6px">Auto-continuing in <span id="malaCountdown">4</span>s...</p><button class="ov-btn" onclick="dismissMalaOv()" style="background:var(--success);color:white">Continue Now</button></div>
+  </div>
+
+  <div id="doneOv" class="ov"><div class="ov-bg"></div>
+    <div class="ov-box all-done-box"><div style="font-size:46px">🎉</div><h2>All Malas Complete!</h2>
+      <p style="color:var(--text-mid);font-size:14px"><span id="doneCount" style="color:var(--accent);font-weight:700;font-size:20px">16</span> Malas | <span id="doneTotalC" style="color:var(--accent)">1728</span> chants</p>
+      <p id="doneTime" style="color:var(--text-mid);font-size:12px"></p>
+      <p id="doneSpeed" style="color:var(--text-mid);font-size:13px"></p>
+      <p style="margin-top:6px;color:var(--text);font-size:14px">🙏 Hare Krishna 🙏</p>
+      <button class="ov-btn" onclick="shareAchievement()" style="background:var(--success);color:white">📤 Share Achievement</button>
+      <button class="ov-btn" onclick="closeDone(false)" style="background:var(--accent);color:var(--bg)">Finish</button>
+      <button class="ov-btn" onclick="closeDone(true)" style="background:var(--card-border);color:var(--text)">Continue Beyond</button>
+    </div>
+  </div>
+
+  <!-- End Session Summary -->
+  <div id="summaryOv" class="ov"><div class="ov-bg"></div>
+    <div class="ov-box" style="background:var(--card);border:2px solid var(--accent)">
+      <div style="font-size:36px">📊</div>
+      <h2 style="font-family:'Playfair Display',serif;color:var(--accent);font-size:18px;margin:6px 0">Session Summary</h2>
+      <div id="summaryContent" style="color:var(--text-mid);font-size:13px;line-height:1.8;text-align:left;padding:8px"></div>
+      <button class="ov-btn" onclick="shareAchievement()" style="background:var(--success);color:white">📤 Share</button>
+      <button class="ov-btn" onclick="closeSummary()" style="background:var(--accent);color:var(--bg)">Done</button>
+    </div>
+  </div>
+
+  <div id="confirmOv" class="confirm-ov"><div class="confirm-box"><h3 id="confirmTitle">Sure?</h3><p id="confirmMsg"></p><div class="confirm-btns"><button onclick="confirmCancel()" style="background:var(--card-border);color:var(--text)">Cancel</button><button onclick="confirmOk()" style="background:var(--danger);color:white">Yes</button></div></div></div>
+  <div id="interstitialAd" class="ov"><div class="ov-bg"></div><div class="ov-box" style="background:var(--card);border:2px dashed var(--card-border)"><p style="color:var(--text-mid);font-size:12px;margin-bottom:16px">Advertisement</p><div style="height:200px;background:rgba(0,0,0,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px"><span style="color:var(--text-mid);font-size:13px">AdMob Interstitial</span></div><button class="ov-btn" onclick="closeInterstitialAd()" style="background:var(--accent);color:var(--bg)">Close Ad</button></div></div>
+
+  <canvas id="particles"></canvas>
+  <div class="undo-toast" id="undoToast">↩ Undo 1 count</div>
+</div>
+
+<script>
+// =================== JAPA COUNTER v12 ===================
+var actx=null,mic=null,analyser=null,stream=null,BANDS=24,selectedMicId='';
+var noiseProfile=null,noiseEnergy=0,noiseReady=false;
+var wordSamples=[],wordFingerprint=null,wordReady=false,avgWordDuration=0;
+var detecting=false,cooldownUntil=0,SENSITIVITY=0.50;
+var G_m=0,G_w=0,G_t=0,G_chant=0,G_mala=0,G_totalC=0;
+var CFG={wpr:8,cpm:108,malas:16};
+var beepCtx=null,sessionActive=false,sessionPaused=false,pausedSession=null;
+var sessionStartTime=0,sessionPausedTime=0,timerInterval=null,confirmCallback=null,ttsPauseUntil=0;
+var noiseRecalibTimer=null,dimMode=false;
+var SND={chantVol:0.3,chantVib:'short',mileVol:0.5,mileVib:'short',mile25:true,mile50:true,mile75:true,malaVol:0.7,malaVib:'medium',doneVol:1.0,doneVib:'celebration',voice:true};
+var VIB_PATTERNS={off:[],short:[50],medium:[150,50,150],long:[300,100,300,100,300],celebration:[400,150,400,150,400,150,600]};
+
+// =================== SPIRITUAL QUOTES ===================
+var QUOTES=[
+  {t:"Chant and be happy.",a:"Srila Prabhupada"},
+  {t:"The holy name of Krishna is the most powerful mantra.",a:"Chaitanya Mahaprabhu"},
+  {t:"In this age of Kali, the holy name is the only way.",a:"Brhan-naradiya Purana"},
+  {t:"There is no vow like chanting the holy name.",a:"Padma Purana"},
+  {t:"One who chants the holy name always lives in Vrindavan.",a:"Srila Prabhupada"},
+  {t:"The more you chant, the more your heart becomes cleansed.",a:"Srila Prabhupada"},
+  {t:"Meditation on the divine name purifies the soul.",a:"Bhagavata Purana"},
+  {t:"The holy name is not different from the Lord Himself.",a:"Padma Purana"},
+  {t:"Chanting is the easiest process of self-realization.",a:"Srila Prabhupada"},
+  {t:"He who chants My name is the greatest yogi.",a:"Bhagavad Gita 6.47"}
+];
+
+function D(m,c){var e=document.getElementById('dbg');if(!e)return;var d=document.createElement('div');d.className=c||'info';d.textContent=new Date().toTimeString().slice(0,8)+' '+m;e.insertBefore(d,e.firstChild);while(e.children.length>30)e.removeChild(e.lastChild)}
+function toggleTip(id){var el=document.getElementById(id);if(el)el.classList.toggle('show')}
+function doVibrate(p){if(navigator.vibrate&&p&&p.length)navigator.vibrate(p)}
+
+// =================== LOCALSTORAGE ===================
+function saveSettings(){
+  try{localStorage.setItem('japa_settings',JSON.stringify({wpr:document.getElementById('inWPR').value,cpm:document.getElementById('inCPM').value,malas:document.getElementById('inMalas').value,autoListen:document.getElementById('chkAutoListen').checked,sens:document.getElementById('sSlider').value,cool:document.getElementById('cSlider').value,snd:SND}))}catch(e){}
+}
+function loadSettings(){
+  try{var s=JSON.parse(localStorage.getItem('japa_settings'));if(!s)return;
+    document.getElementById('inWPR').value=s.wpr||8;pickWPR(parseInt(s.wpr)||8);
+    document.getElementById('inCPM').value=s.cpm||108;pickCPM(parseInt(s.cpm)||108);
+    document.getElementById('inMalas').value=s.malas||16;pickMalas(parseInt(s.malas)||16);
+    if(s.autoListen!==undefined)document.getElementById('chkAutoListen').checked=s.autoListen;
+    if(s.sens)document.getElementById('sSlider').value=s.sens;
+    if(s.cool)document.getElementById('cSlider').value=s.cool;
+    if(s.snd)Object.assign(SND,s.snd);
+    D('Settings loaded','ok');
+  }catch(e){}
+}
+function saveSessionProgress(){
+  try{localStorage.setItem('japa_session',JSON.stringify({G_w:G_w,G_t:G_t,G_chant:G_chant,G_mala:G_mala,G_totalC:G_totalC,CFG:CFG,startTime:sessionStartTime,pausedTime:sessionPausedTime}))}catch(e){}
+}
+function loadSessionProgress(){
+  try{var s=JSON.parse(localStorage.getItem('japa_session'));if(!s||!s.G_totalC)return null;return s}catch(e){return null}
+}
+function clearSessionProgress(){try{localStorage.removeItem('japa_session')}catch(e){}}
+
+// =================== STREAK ===================
+function updateStreak(){
+  try{
+    var today=new Date().toISOString().slice(0,10);
+    var data=JSON.parse(localStorage.getItem('japa_streak')||'{}');
+    if(!data.lastDate){data={lastDate:today,count:1};localStorage.setItem('japa_streak',JSON.stringify(data));return data.count}
+    if(data.lastDate===today)return data.count;
+    var yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if(data.lastDate===yesterday){data.count++;data.lastDate=today}
+    else{data.count=1;data.lastDate=today}
+    localStorage.setItem('japa_streak',JSON.stringify(data));return data.count;
+  }catch(e){return 0}
+}
+function getStreak(){try{var d=JSON.parse(localStorage.getItem('japa_streak')||'{}');var today=new Date().toISOString().slice(0,10);var yest=new Date(Date.now()-86400000).toISOString().slice(0,10);if(d.lastDate===today||d.lastDate===yest)return d.count||0;return 0}catch(e){return 0}}
+
+// =================== WELCOME ===================
+function showWelcome(){if(!localStorage.getItem('japa_welcomed')){document.getElementById('welcomeOv').classList.add('show')}}
+function closeWelcome(){document.getElementById('welcomeOv').classList.remove('show');localStorage.setItem('japa_welcomed','1')}
+
+// =================== MIC LIST ===================
+var detectedMics=[];
+async function refreshMicList(){
+  try{
+    var ts=await navigator.mediaDevices.getUserMedia({audio:true});
+    var devs=await navigator.mediaDevices.enumerateDevices();
+    ts.getTracks().forEach(function(t){t.stop()});
+    detectedMics=devs.filter(function(d){return d.kind==='audioinput'});
+    // Update hidden select
+    var sel=document.getElementById('micSelect'),cv=sel.value;
+    sel.innerHTML='<option value="">Default Microphone</option>';
+    detectedMics.forEach(function(d,i){var o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('Mic '+(i+1));sel.appendChild(o)});
+    if(cv){sel.value=cv;if(!sel.value)sel.value=''}
+    // Build visual list
+    renderMicList();
+    D('Found '+detectedMics.length+' mic(s)','ok');
+  }catch(e){
+    D('Mic err:'+e.message,'err');
+    document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--accent);font-size:13px;padding:10px">Tap Refresh to detect microphones</div>';
+  }
+}
+function renderMicList(){
+  var list=document.getElementById('micList');
+  var curId=document.getElementById('micSelect').value;
+  if(detectedMics.length===0){list.innerHTML='<div style="text-align:center;color:var(--text-mid);font-size:13px;padding:10px">No microphones found</div>';return}
+  var html='';
+  // Default mic option
+  html+='<div class="mic-item'+(curId===''?' selected':'')+'" onclick="selectMic(\'\')"><div class="mic-radio"></div><div class="mic-name">Default Microphone</div><div class="mic-type">Auto</div></div>';
+  detectedMics.forEach(function(d,i){
+    var label=d.label||('Microphone '+(i+1));
+    var type='Built-in';
+    var ll=label.toLowerCase();
+    if(ll.indexOf('bluetooth')>=0||ll.indexOf('bt ')>=0)type='Bluetooth';
+    else if(ll.indexOf('headset')>=0||ll.indexOf('headphone')>=0||ll.indexOf('earphone')>=0||ll.indexOf('earpiece')>=0)type='Headset';
+    else if(ll.indexOf('usb')>=0)type='USB';
+    else if(ll.indexOf('speakerphone')>=0)type='Speaker';
+    else if(ll.indexOf('camera')>=0||ll.indexOf('webcam')>=0)type='Camera';
+    var sel=curId===d.deviceId?' selected':'';
+    html+='<div class="mic-item'+sel+'" onclick="selectMic(\''+d.deviceId+'\')"><div class="mic-radio"></div><div class="mic-name">'+label+'</div><div class="mic-type">'+type+'</div></div>';
+  });
+  html+='<div id="btHint" style="text-align:center;font-size:12px;color:var(--accent);padding:4px 0"></div>';
+  list.innerHTML=html;
+  // Get REAL device names from native Android API
+  getNativeDeviceNames();
+}
+function getNativeDeviceNames(){
+  try{
+    if(!window.NativeApp||typeof NativeApp.getAudioDevices!=='function')return;
+    var json=NativeApp.getAudioDevices();
+    var devices=JSON.parse(json);
+    if(!devices||!devices.length)return;
+    var hint=document.getElementById('btHint');
+    // Find Bluetooth devices with real names
+    var btDevices=devices.filter(function(d){return d.type==='Bluetooth'&&d.name});
+    if(btDevices.length>0){
+      // Get unique names
+      var names=[];btDevices.forEach(function(d){if(names.indexOf(d.name)<0)names.push(d.name)});
+      if(hint)hint.innerHTML='🔗 <b>'+names.join(', ')+'</b> connected via Bluetooth';
+    }
+    // Also check if any mic item says "Bluetooth headset" and we can improve its label
+    var micItems=document.querySelectorAll('.mic-item .mic-name');
+    micItems.forEach(function(el){
+      if(el.textContent.toLowerCase().indexOf('bluetooth')>=0&&btDevices.length>0){
+        var realName=btDevices[0].name;
+        if(realName&&realName!=='Bluetooth'&&realName.length>1){
+          el.textContent=realName+' (BT Mic)';
         }
+      }
+    });
+    D('Native devices: '+devices.length+', BT: '+btDevices.length,'ok');
+  }catch(e){D('Native dev err: '+e.message,'warn')}
+}
+function selectMic(id){
+  selectedMicId=id;
+  document.getElementById('micSelect').value=id;
+  // If audio was already initialized, force re-init on next use
+  if(actx){if(stream)stream.getTracks().forEach(function(t){t.stop()});mic.disconnect();actx=null;mic=null;analyser=null;stream=null}
+  renderMicList();
+  D('Selected mic: '+(id?id.substring(0,12)+'...':'Default'),'ok');
+}
+
+// =================== MIC TEST (Record + Native Playback) ===================
+var micTestStream=null,micTestCtx=null,micTestAnalyser=null,micTestAF=null,micTesting=false;
+var micRecordedPCM=null,micRecordedSampleRate=0;
+var MIC_TEST_DURATION=8;
+
+async function testMic(){
+  if(micTesting){stopMicTest();return}
+  micRecordedPCM=null;
+  var testArea=document.getElementById('micTestArea');
+  var bar=document.getElementById('micTestBar');
+  var label=document.getElementById('micTestLabel');
+  var btn=document.getElementById('btnTestMic');
+  var playBtn=document.getElementById('btnPlayTest');
+  var cdEl=document.getElementById('micTestCountdown');
+  testArea.style.display='block';
+  playBtn.style.display='none';
+  cdEl.style.display='block';
+  label.textContent='Starting...';label.style.color='var(--text-mid)';
+  bar.style.width='0%';bar.style.background='var(--success)';
+  btn.textContent='⏹ Stop';btn.style.borderColor='var(--danger)';btn.style.color='var(--danger)';
+  try{
+    var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};
+    var mid=document.getElementById('micSelect').value;
+    if(mid)ac.deviceId={exact:mid};
+    // Activate BT SCO if bluetooth mic is selected
+    var isBtMic=false;
+    if(window.NativeApp&&typeof NativeApp.startBtSco==='function'){
+      var selEl=document.querySelector('.mic-item.selected .mic-name');
+      var selLabel=selEl?selEl.textContent.toLowerCase():'';
+      if(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0){
+        NativeApp.startBtSco();isBtMic=true;
+        label.textContent='🔗 Connecting BT mic...';
+        await new Promise(function(r){setTimeout(r,2000)});
+      }
+    }
+    micTestStream=await navigator.mediaDevices.getUserMedia({audio:ac});
+    micTestCtx=new(window.AudioContext||window.webkitAudioContext)();
+    var src=micTestCtx.createMediaStreamSource(micTestStream);
+    micTestAnalyser=micTestCtx.createAnalyser();micTestAnalyser.fftSize=2048;micTestAnalyser.smoothingTimeConstant=0.4;
+    src.connect(micTestAnalyser);
+    // Record raw PCM using ScriptProcessorNode
+    var bufferSize=4096;
+    var recorder=micTestCtx.createScriptProcessor(bufferSize,1,1);
+    var pcmChunks=[];
+    recorder.onaudioprocess=function(e){if(micTesting){pcmChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)))}};
+    src.connect(recorder);
+    recorder.connect(micTestCtx.destination);
+    micTesting=true;
+    var maxE=0,hasAudio=false,secLeft=MIC_TEST_DURATION;
+    label.textContent='🔴 Recording...';
+    cdEl.textContent='Speak now! '+secLeft+'s';
+    var cdInterval=setInterval(function(){secLeft--;if(secLeft>0){cdEl.textContent='Speak now! '+secLeft+'s'}else{cdEl.textContent='Done!';clearInterval(cdInterval)}},1000);
+    var autoStop=setTimeout(function(){
+      if(micTesting){
+        // Merge PCM chunks
+        var totalLen=0;pcmChunks.forEach(function(c){totalLen+=c.length});
+        var merged=new Float32Array(totalLen);var off=0;
+        pcmChunks.forEach(function(c){merged.set(c,off);off+=c.length});
+        micRecordedPCM=merged;
+        micRecordedSampleRate=micTestCtx.sampleRate;
+        recorder.disconnect();
+        D('Recorded '+merged.length+' samples @ '+micRecordedSampleRate+'Hz','ok');
+        finishMicTest(maxE,hasAudio);
+      }
+    },MIC_TEST_DURATION*1000);
+    function tick(){
+      if(!micTesting)return;
+      var buf=new Uint8Array(micTestAnalyser.frequencyBinCount);micTestAnalyser.getByteFrequencyData(buf);
+      var e=0;for(var i=0;i<buf.length;i++)e+=buf[i];e/=buf.length;
+      if(e>maxE)maxE=e;if(e>3)hasAudio=true;
+      var pct=Math.min(e/50*100,100);
+      bar.style.width=pct+'%';
+      bar.style.background=e>15?'var(--accent)':e>3?'var(--success)':'var(--card-border)';
+      micTestAF=requestAnimationFrame(tick);
+    }
+    micTestAF=requestAnimationFrame(tick);
+  }catch(e){
+    label.textContent='❌ Cannot access mic: '+e.message;label.style.color='var(--danger)';
+    cdEl.style.display='none';
+    btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
+  }
+}
+function finishMicTest(maxE,hasAudio){
+  stopMicTest();
+  var label=document.getElementById('micTestLabel');
+  var playBtn=document.getElementById('btnPlayTest');
+  var cdEl=document.getElementById('micTestCountdown');
+  cdEl.style.display='none';
+  if(hasAudio&&maxE>5){
+    label.textContent='✅ Mic working! (level: '+maxE.toFixed(0)+')';label.style.color='var(--success)';
+    playBtn.style.display='block';playBtn.textContent='▶ Play Recording';
+  }else{
+    label.textContent='❌ No audio detected. Try another mic.';label.style.color='var(--danger)';
+    playBtn.style.display='none';
+  }
+}
+function stopMicTest(){
+  micTesting=false;
+  if(micTestAF)cancelAnimationFrame(micTestAF);
+  if(micTestStream)micTestStream.getTracks().forEach(function(t){t.stop()});
+  if(micTestCtx)try{micTestCtx.close()}catch(e){}
+  // Stop BT SCO if it was activated
+  if(window.NativeApp&&typeof NativeApp.stopBtSco==='function')try{NativeApp.stopBtSco()}catch(e){}
+  micTestStream=null;micTestCtx=null;micTestAnalyser=null;
+  var btn=document.getElementById('btnTestMic');
+  btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
+}
+// Encode PCM Float32 to WAV base64 for native playback
+function pcmToWavBase64(pcm,sampleRate){
+  var numCh=1,bitsPerSample=16;
+  var byteRate=sampleRate*numCh*bitsPerSample/8;
+  var blockAlign=numCh*bitsPerSample/8;
+  var dataSize=pcm.length*blockAlign;
+  var buffer=new ArrayBuffer(44+dataSize);
+  var view=new DataView(buffer);
+  // RIFF header
+  writeStr(view,0,'RIFF');view.setUint32(4,36+dataSize,true);writeStr(view,8,'WAVE');
+  writeStr(view,12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);
+  view.setUint16(22,numCh,true);view.setUint32(24,sampleRate,true);
+  view.setUint32(28,byteRate,true);view.setUint16(32,blockAlign,true);
+  view.setUint16(34,bitsPerSample,true);writeStr(view,36,'data');view.setUint32(40,dataSize,true);
+  // PCM data
+  var offset=44;
+  for(var i=0;i<pcm.length;i++){
+    var s=Math.max(-1,Math.min(1,pcm[i]));
+    view.setInt16(offset,s<0?s*0x8000:s*0x7FFF,true);
+    offset+=2;
+  }
+  // Convert to base64
+  var bytes=new Uint8Array(buffer);
+  var binary='';for(var i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+function writeStr(view,offset,str){for(var i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i))}
+
+// Called from native when playback finishes
+function onNativePlaybackDone(){
+  var playBtn=document.getElementById('btnPlayTest');
+  if(playBtn){playBtn.textContent='▶ Play Again'}
+  D('Playback done','ok');
+}
+function playTestRecording(){
+  if(!micRecordedPCM||!micRecordedPCM.length){D('No recording','warn');return}
+  var playBtn=document.getElementById('btnPlayTest');
+  playBtn.textContent='🔊 Playing via speaker...';
+  // Method 1: Native MediaPlayer via phone speaker (best for BT recordings)
+  if(window.NativeApp&&typeof NativeApp.playBase64Audio==='function'){
+    try{
+      var wavB64=pcmToWavBase64(micRecordedPCM,micRecordedSampleRate);
+      D('Playing WAV ('+wavB64.length+' chars) via native speaker','ok');
+      NativeApp.playBase64Audio(wavB64);
+    }catch(e){playBtn.textContent='❌ '+e.message;D('Native play err: '+e.message,'err')}
+    return;
+  }
+  // Method 2: Web Audio API fallback
+  try{
+    var pCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(pCtx.state==='suspended')pCtx.resume();
+    var aBuf=pCtx.createBuffer(1,micRecordedPCM.length,micRecordedSampleRate);
+    aBuf.getChannelData(0).set(micRecordedPCM);
+    var src=pCtx.createBufferSource();src.buffer=aBuf;
+    src.connect(pCtx.destination);
+    src.onended=function(){playBtn.textContent='▶ Play Again';try{pCtx.close()}catch(e){}};
+    src.start(0);
+    D('Web Audio playback started','ok');
+  }catch(e){playBtn.textContent='❌ '+e.message;D('Play err:'+e.message,'err')}
+}
+
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',function(){D('Audio device changed — tap Refresh','warn');document.getElementById('micList').innerHTML='<div style="text-align:center;color:var(--accent);font-size:13px;padding:10px">Device changed! Tap Refresh to update mic list</div>'});
+
+// =================== AUDIO ===================
+async function initAudio(){
+  if(actx){var nid=document.getElementById('micSelect').value;if(nid!==selectedMicId){if(stream)stream.getTracks().forEach(function(t){t.stop()});mic.disconnect();actx=null;mic=null;analyser=null;stream=null;selectedMicId=nid}else return true}
+  try{var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};var mid=document.getElementById('micSelect').value;
+    if(mid){ac.deviceId={exact:mid}}
+    // Activate BT SCO if bluetooth mic selected for capture/counting
+    if(window.NativeApp&&typeof NativeApp.startBtSco==='function'){
+      var selEl=document.querySelector('.mic-item.selected .mic-name');
+      var selLabel=selEl?selEl.textContent.toLowerCase():'';
+      if(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0){
+        NativeApp.startBtSco();
+        await new Promise(function(r){setTimeout(r,2000)});
+      }
+    }
+    stream=await navigator.mediaDevices.getUserMedia({audio:ac});actx=new(window.AudioContext||window.webkitAudioContext)();mic=actx.createMediaStreamSource(stream);analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.4;mic.connect(analyser);selectedMicId=mid;
+    var tr=stream.getAudioTracks();if(tr.length>0)document.getElementById('noiseStatus').textContent='Mic: '+(tr[0].label||'Active');
+    return true;
+  }catch(e){D('Mic err:'+e.message,'err');document.getElementById('noiseStatus').innerHTML='<span style="color:var(--danger)">❌ Mic access failed. Tap Refresh in mic section above.</span>';return false}
+}
+
+function getSpectrum(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var bs=Math.floor(buf.length/BANDS),bands=[];for(var b=0;b<BANDS;b++){var s=0;for(var i=b*bs;i<(b+1)*bs&&i<buf.length;i++)s+=buf[i];bands.push(s/bs)}return bands}
+function getEnergy(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var s=0;for(var i=0;i<buf.length;i++)s+=buf[i];return s/buf.length}
+function getCentroid(){var buf=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(buf);var w=0,s=0;for(var i=0;i<buf.length;i++){w+=i*buf[i];s+=buf[i]}return s>0?w/s:0}
+function denoiseSpectrum(spec){if(!noiseProfile)return spec;return spec.map(function(v,i){return Math.max(0,v-noiseProfile[i]*0.8)})}
+function cosSim(a,b){if(!a||!b||a.length!==b.length)return 0;var d=0,ma=0,mb=0;for(var i=0;i<a.length;i++){d+=a[i]*b[i];ma+=a[i]*a[i];mb+=b[i]*b[i]}ma=Math.sqrt(ma);mb=Math.sqrt(mb);return(ma>0&&mb>0)?d/(ma*mb):0}
+function avgArrays(arr){if(!arr.length)return null;var l=arr[0].length,r=new Array(l).fill(0);for(var s=0;s<arr.length;s++)for(var i=0;i<l;i++)r[i]+=arr[s][i];for(var i=0;i<l;i++)r[i]/=arr.length;return r}
+function initViz(id){var v=document.getElementById(id);v.style.display='flex';v.innerHTML='';for(var i=0;i<BANDS;i++){var b=document.createElement('div');b.style.height='2px';v.appendChild(b)}return v}
+function updateViz(v){var spec=getSpectrum();var bars=v.children;for(var i=0;i<bars.length&&i<spec.length;i++){var p=spec[i]/255*100;bars[i].style.height=Math.max(2,p)+'%';bars[i].style.background=p>20?'var(--accent)':'rgba(245,158,11,0.2)'}}
+
+// =================== CALIBRATION ===================
+async function captureNoise(){
+  if(!(await initAudio()))return;var btn=document.getElementById('btnNoise');btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet for 10s...';
+  var viz=initViz('noiseViz');document.getElementById('noiseStatus').textContent='Capturing...';var specS=[],enS=[],fr=0,mx=600;
+  function tick(){if(fr>=mx){noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;btn.className='btn-rec ok';btn.textContent='✅ Noise captured';document.getElementById('noiseStatus').textContent='Level: '+noiseEnergy.toFixed(1);document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';document.getElementById('btnWord').disabled=false;checkReady();return}updateViz(viz);specS.push(getSpectrum());enS.push(getEnergy());fr++;requestAnimationFrame(tick)}requestAnimationFrame(tick);
+}
+async function captureWord(){
+  if(!(await initAudio()))return;var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Say word 5 times...';
+  var viz=initViz('wordViz');wordSamples=[];document.getElementById('wordStatus').textContent='Speak now...';
+  var inW=false,wBuf=[],silC=0,eTh=noiseEnergy+10,timeout=setTimeout(function(){finish()},12000);
+  function finish(){clearTimeout(timeout);if(wordSamples.length>=2){var allS=wordSamples.map(function(s){return s.spectrum});wordFingerprint={spectrum:avgArrays(allS),centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length};avgWordDuration=wordFingerprint.avgDuration;wordReady=true;btn.className='btn-rec ok';btn.textContent='✅ '+wordSamples.length+' samples';document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓'}else{btn.className='btn-rec idle';btn.textContent='🎤 Record Word ×5 (retry)'}checkReady()}
+  function tick(){if(wordSamples.length>=5){finish();return}updateViz(viz);var energy=getEnergy(),spec=getSpectrum(),centroid=getCentroid();if(energy>eTh){if(!inW){inW=true;wBuf=[]}wBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});silC=0}else{silC++;if(inW&&silC>10){inW=false;if(wBuf.length>=4){var aS=avgArrays(wBuf.map(function(f){return f.spec}));var aC=wBuf.reduce(function(a,f){return a+f.centroid},0)/wBuf.length;var pE=Math.max.apply(null,wBuf.map(function(f){return f.energy}));wordSamples.push({spectrum:aS,centroid:aC,peakEnergy:pE,duration:wBuf.length});document.getElementById('wordStatus').textContent=wordSamples.length+'/5...'}wBuf=[]}}requestAnimationFrame(tick)}requestAnimationFrame(tick);
+}
+
+// =================== ADAPTIVE NOISE RECALIBRATION ===================
+function startNoiseRecalib(){
+  if(noiseRecalibTimer)clearInterval(noiseRecalibTimer);
+  noiseRecalibTimer=setInterval(function(){
+    if(!detecting||sessionPaused||!analyser)return;
+    // Sample 30 frames of current noise when energy is low
+    var samples=[],count=0;
+    function sample(){
+      if(count>=30){
+        if(samples.length>10){var avg=avgArrays(samples);var avgE=samples.reduce(function(a,s){var e=0;for(var i=0;i<s.length;i++)e+=s[i];return a+e/s.length},0)/samples.length;
+          // Only update if similar to original (not speech)
+          if(avgE<noiseEnergy*1.5){noiseProfile=avg;noiseEnergy=avgE;D('Noise recalib: '+avgE.toFixed(1),'info')}}
+        return}
+      var e=getEnergy();
+      if(e<noiseEnergy*1.3){samples.push(getSpectrum())}
+      count++;setTimeout(sample,16);
+    }
+    sample();
+  },120000); // Every 2 minutes
+}
+function stopNoiseRecalib(){if(noiseRecalibTimer){clearInterval(noiseRecalibTimer);noiseRecalibTimer=null}}
+
+function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
+function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
+function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
+function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
+function updateSens(){SENSITIVITY=document.getElementById('sSlider').value/100;document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%'}
+function updateMilestones(){SND.mile25=document.getElementById('mile25').checked;SND.mile50=document.getElementById('mile50').checked;SND.mile75=document.getElementById('mile75').checked}
+
+// =================== CONFIRM / SOUND PANEL ===================
+function showConfirm(t,m,cb){document.getElementById('confirmTitle').textContent=t;document.getElementById('confirmMsg').textContent=m;confirmCallback=cb;document.getElementById('confirmOv').classList.add('show')}
+function confirmOk(){document.getElementById('confirmOv').classList.remove('show');if(confirmCallback)confirmCallback()}
+function confirmCancel(){document.getElementById('confirmOv').classList.remove('show');confirmCallback=null}
+function confirmReset(){showConfirm('Reset Counter?','All progress will be reset to zero.',function(){resetCounter()})}
+function confirmBack(){if(G_totalC>0){showConfirm('Pause & Go Back?','Progress will be saved.',function(){pauseAndGoBack()})}else{endSession()}}
+function toggleSoundPanel(){var p=document.getElementById('sndPanel');p.classList.toggle('show');var h=document.getElementById('sndHint');if(p.classList.contains('show')&&h){h.style.display='block';setTimeout(function(){h.style.display='none'},3000)}}
+
+// =================== DIM MODE ===================
+function toggleDim(){dimMode=!dimMode;document.body.classList.toggle('dim-mode',dimMode);document.getElementById('btnDim').style.background=dimMode?'var(--accent)':'var(--card)';document.getElementById('btnDim').style.color=dimMode?'var(--bg)':'var(--accent)'}
+
+// =================== BATTERY ===================
+function checkBattery(){if(!navigator.getBattery)return;navigator.getBattery().then(function(b){function upd(){document.getElementById('batteryWarn').classList.toggle('show',b.level<0.15&&!b.charging)}b.addEventListener('levelchange',upd);b.addEventListener('chargingchange',upd);upd()})}
+
+// =================== TIMER / SPEED ===================
+function startTimer(){sessionStartTime=Date.now();sessionPausedTime=0;timerInterval=setInterval(function(){updateTimer();updateSpeed()},1000);updateTimer()}
+function updateTimer(){if(sessionPaused)return;var e=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);document.getElementById('timerDisplay').textContent=pad(Math.floor(e/3600))+':'+pad(Math.floor((e%3600)/60))+':'+pad(e%60)}
+function pad(n){return n<10?'0'+n:n}
+function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null}}
+function getElapsed(){return Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000)}
+function getElapsedStr(){var e=getElapsed();return pad(Math.floor(e/3600))+':'+pad(Math.floor((e%3600)/60))+':'+pad(e%60)}
+function updateSpeed(){var e=getElapsed();if(e>10&&G_totalC>0){var cpm=(G_totalC/e*60).toFixed(1);document.getElementById('speedDisplay').textContent=cpm+' chants/min'}}
+
+// =================== PAUSE/RESUME ===================
+var pauseStartTime=0;
+function togglePause(){sessionPaused?resumeFromPause():pauseSession()}
+function pauseSession(){sessionPaused=true;pauseStartTime=Date.now();if(detecting)stopListen();document.getElementById('pauseBanner').classList.add('show');document.getElementById('btnPause').textContent='Resume';document.getElementById('btnPause').style.background='var(--success)';document.getElementById('btnPause').style.color='white'}
+function resumeFromPause(){sessionPaused=false;sessionPausedTime+=(Date.now()-pauseStartTime);document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)'}
+function pauseAndGoBack(){pauseSession();pausedSession={G_m:G_m,G_w:G_w,G_t:G_t,G_chant:G_chant,G_mala:G_mala,G_totalC:G_totalC,CFG:JSON.parse(JSON.stringify(CFG)),startTime:sessionStartTime,pausedTime:sessionPausedTime+(Date.now()-pauseStartTime)};stopTimer();stopNoiseRecalib();document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active');document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=G_mala;document.getElementById('rMalaT').textContent=CFG.malas;document.getElementById('rChant').textContent=G_chant;document.getElementById('rCPM').textContent=CFG.cpm;saveSettings();showInterstitialAd()}
+function resumeSession(){if(!pausedSession)return;G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;CFG=pausedSession.CFG;sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;sessionPaused=false;document.getElementById('resumeBanner').classList.remove('show');document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;refreshUI();drawMala();timerInterval=setInterval(function(){updateTimer();updateSpeed()},1000);updateTimer();startNoiseRecalib();pausedSession=null}
+
+var curMode='both';
+function setMode(m){curMode=m;document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});document.getElementById('tab'+m.charAt(0).toUpperCase()+m.slice(1)).classList.add('act');document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';document.getElementById('tapSec').style.display=(m==='voice')?'none':'block';if(m==='tap'&&detecting)stopListen()}
+
+// =================== SESSION ===================
+function startSession(){
+  CFG.wpr=parseInt(document.getElementById('inWPR').value)||1;CFG.cpm=parseInt(document.getElementById('inCPM').value)||108;CFG.malas=parseInt(document.getElementById('inMalas').value)||16;
+  SENSITIVITY=document.getElementById('sSlider').value/100;
+  G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;sessionPaused=false;pausedSession=null;dimMode=false;document.body.classList.remove('dim-mode');
+  document.getElementById('resumeBanner').classList.remove('show');document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;
+  document.getElementById('pauseBanner').classList.remove('show');document.getElementById('sndPanel').classList.remove('show');document.getElementById('speedDisplay').textContent='';
+  document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';
+  document.getElementById('btnDim').style.background='var(--card)';document.getElementById('btnDim').style.color='var(--accent)';
+  document.getElementById('dbg').innerHTML='';refreshUI();drawMala();startTimer();startNoiseRecalib();checkBattery();
+  document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');
+  sessionActive=true;saveSettings();clearSessionProgress();
+  // Auto-start listening
+  if(document.getElementById('chkAutoListen').checked&&curMode!=='tap'){setTimeout(function(){if(!detecting)startListen()},500)}
+  D('Session started','ok');
+}
+function endSession(){
+  stopListen();stopTimer();stopNoiseRecalib();sessionActive=false;
+  // Show summary if any chanting was done
+  if(G_totalC>0){showSessionSummary();updateStreak()}
+  else{document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active')}
+  pausedSession=null;document.getElementById('resumeBanner').classList.remove('show');clearSessionProgress();saveSettings();
+}
+function showSessionSummary(){
+  var el=getElapsedStr(),sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';
+  document.getElementById('summaryContent').innerHTML='<b>Time:</b> '+el+'<br><b>Malas:</b> '+G_mala+' / '+CFG.malas+'<br><b>Chants:</b> '+G_totalC+'<br><b>Words detected:</b> '+G_t+'<br><b>Speed:</b> '+sp+' chants/min';
+  document.getElementById('summaryOv').classList.add('active');
+}
+function closeSummary(){document.getElementById('summaryOv').classList.remove('active');document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active');showInterstitialAd()}
+function closeDone(cont){document.getElementById('doneOv').classList.remove('active');if(!cont){updateStreak();endSession()}else{hideParticles()}}
+function resetCounter(){G_m=0;G_w=0;G_t=0;G_chant=0;G_mala=0;G_totalC=0;refreshUI();drawMala();sessionStartTime=Date.now();sessionPausedTime=0;updateTimer();document.getElementById('speedDisplay').textContent='';clearSessionProgress()}
+function refreshUI(){document.getElementById('dChant').textContent=G_chant;document.getElementById('dWord').textContent=G_w;document.getElementById('dTotalW').textContent=G_t;document.getElementById('dTotalC').textContent=G_totalC;document.getElementById('dMala').textContent=G_mala;document.getElementById('dMala2').textContent=G_mala;document.getElementById('dProgress').style.width=(CFG.cpm>0?Math.min(G_chant/CFG.cpm,1)*100:0)+'%';document.getElementById('pMala').style.width=(CFG.malas>0?Math.min(G_mala/CFG.malas,1)*100:0)+'%'}
+
+// =================== COUNTER ===================
+function ADD(n){
+  if(n<=0||sessionPaused)return;
+  for(var i=0;i<n;i++){G_t++;G_w++;
+    if(G_w>=CFG.wpr){G_w=0;G_chant++;G_totalC++;
+      if(SND.chantVol>0)playSound('chant',SND.chantVol);doVibrate(VIB_PATTERNS[SND.chantVib]);
+      // Milestones
+      if(G_chant>0&&G_chant<CFG.cpm&&CFG.cpm>=8){var q25=Math.floor(CFG.cpm/4),q50=Math.floor(CFG.cpm/2),q75=Math.floor(CFG.cpm*3/4);
+        var isMile=(SND.mile25&&G_chant===q25)||(SND.mile50&&G_chant===q50)||(SND.mile75&&G_chant===q75);
+        if(isMile){if(SND.mileVol>0)playSound('chant',SND.mileVol);doVibrate(VIB_PATTERNS[SND.mileVib]);pauseDetectionForTTS(2000);if(SND.voice)speak(''+G_chant)}}
+      // MALA COMPLETE
+      if(G_chant>=CFG.cpm){document.getElementById('dChant').textContent=G_chant;document.getElementById('dProgress').style.width='100%';drawMala();
+        G_chant=0;G_mala++;saveSessionProgress();
+        if(G_mala>=CFG.malas){setTimeout(function(){if(SND.doneVol>0)playSound('alldone',SND.doneVol);doVibrate(VIB_PATTERNS[SND.doneVib]);pauseDetectionForTTS(8000);if(SND.voice)speak('Target '+CFG.malas+' Malas complete! Hare Krishna!');document.getElementById('doneCount').textContent=G_mala;document.getElementById('doneTotalC').textContent=G_totalC;document.getElementById('doneTime').textContent='Time: '+getElapsedStr();var sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';document.getElementById('doneSpeed').textContent='Speed: '+sp+' chants/min';document.getElementById('doneOv').classList.add('active');showParticles()},300)}
+        else{setTimeout(function(){if(SND.malaVol>0)playSound('mala',SND.malaVol);doVibrate(VIB_PATTERNS[SND.malaVib]);pauseDetectionForTTS(6000);if(SND.voice)speak('Mala '+G_mala+' of '+CFG.malas+' complete');document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';document.getElementById('malaOvDone').textContent=G_mala;document.getElementById('malaOvTotal').textContent=CFG.malas;showMalaOvAutoClose()},300)}}
+    }else{doVibrate(VIB_PATTERNS[SND.chantVib])}}
+  refreshUI();var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);drawMala();
+}
+function tapCount(){if(!sessionPaused){D('TAP','info');ADD(1)}}
+
+// =================== UNDO (long-press) ===================
+var longPressTimer=null;
+function setupLongPress(){
+  var el=document.getElementById('tapBtn');if(!el)return;
+  el.addEventListener('touchstart',function(e){longPressTimer=setTimeout(function(){undoCount();e.preventDefault()},800)},{passive:false});
+  el.addEventListener('touchend',function(){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}});
+  el.addEventListener('touchmove',function(){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}});
+}
+function undoCount(){
+  if(G_totalC<=0)return;
+  G_totalC--;G_t--;
+  if(G_chant>0){G_chant--}else if(G_mala>0){G_mala--;G_chant=CFG.cpm-1}
+  if(G_w>0){G_w--}else{G_w=CFG.wpr-1}
+  refreshUI();drawMala();
+  var toast=document.getElementById('undoToast');toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');setTimeout(function(){toast.classList.remove('show')},2000);
+  D('Undo','warn');
+}
+
+// =================== MALA RING (with glow) ===================
+function drawMala(){var s=document.getElementById('malaSvg'),bc=Math.min(CFG.cpm,54),fc=CFG.cpm>0?Math.floor((G_chant/CFG.cpm)*bc):0,h='';for(var i=0;i<bc;i++){var a=(i/bc)*2*Math.PI-Math.PI/2,x=160+120*Math.cos(a),y=160+120*Math.sin(a),f=i<fc;var glow=f&&i===fc-1?'filter:drop-shadow(0 0 10px rgba(245,158,11,0.9))':'';h+='<circle cx="'+x+'" cy="'+y+'" r="7" fill="'+(f?'#F59E0B':'rgba(245,158,11,0.15)')+'" stroke="'+(f?'#D97706':'rgba(245,158,11,0.3)')+'" stroke-width="1.5" style="transition:all 0.3s;'+(f?'filter:drop-shadow(0 0 5px rgba(245,158,11,0.6));':'')+glow+'"/>';}h+='<circle cx="160" cy="42" r="10" fill="#B45309" stroke="#92400E" stroke-width="2"/>';s.innerHTML=h}
+
+// =================== ADVANCED HYBRID DETECTION v3 ===================
+// Multi-stage detection: Spectral Flux + Energy Derivative + ZCR + Pattern Enforcement
+var detectAF=null,dInWord=false,dWordBuf=[],dSilCount=0;
+
+// Advanced detection state
+var fluxHistory=[],energyHistory=[],prevEnergy=0,prevFlux=0;
+var adaptiveNoise=0,adaptiveCooldown=180;
+var lastDetectTime=0,detectionEvents=[];
+var isBluetooth=false,syllableCount=0;
+
+// Pattern tracking for 16-word mantra cycle
+var patternPos=0,patternWindow=[],patternWindowStart=0;
+var MANTRA_WORDS=16; // Hare Krishna mantra = 16 words
+
+// Deduplication window
+var DEDUP_WINDOW_MS=150;
+
+// Get time-domain samples for ZCR calculation
+function getTimeDomainData(){
+  var buf=new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  return buf;
+}
+
+// Zero-Crossing Rate - distinguishes voiced speech from noise
+function getZCR(samples){
+  if(!samples||samples.length<2)return 0;
+  var crossings=0;
+  for(var i=1;i<samples.length;i++){
+    if((samples[i]>=0)!==(samples[i-1]>=0))crossings++;
+  }
+  return crossings/samples.length;
+}
+
+// Spectral Flux - detects onsets/attacks
+function getSpectralFlux(currentSpec,prevSpec){
+  if(!prevSpec||!currentSpec)return 0;
+  var flux=0;
+  for(var i=0;i<currentSpec.length;i++){
+    var diff=currentSpec[i]-(prevSpec[i]||0);
+    if(diff>0)flux+=diff; // Only positive flux (onsets)
+  }
+  return flux;
+}
+
+// Median filter for smoothing
+function median(arr){
+  if(!arr||arr.length===0)return 0;
+  var sorted=arr.slice().sort(function(a,b){return a-b});
+  var mid=Math.floor(sorted.length/2);
+  return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+}
+
+// Energy derivative (attack detection)
+function getEnergyDerivative(current,prev){
+  return current-prev;
+}
+
+// Spectral Flatness - distinguishes tonal (voice) from noise
+function getSpectralFlatness(spec){
+  if(!spec||spec.length===0)return 0;
+  var sum=0,logSum=0,count=0;
+  for(var i=0;i<spec.length;i++){
+    var v=Math.max(spec[i],0.0001);
+    sum+=v;
+    logSum+=Math.log(v);
+    count++;
+  }
+  if(count===0||sum===0)return 0;
+  var geoMean=Math.exp(logSum/count);
+  var ariMean=sum/count;
+  return geoMean/ariMean;
+}
+
+// Register detection with deduplication
+function registerDetection(source,confidence,now){
+  // Check for recent detections in dedup window
+  var dominated=false;
+  for(var i=detectionEvents.length-1;i>=0;i--){
+    if(now-detectionEvents[i].time<DEDUP_WINDOW_MS){
+      // Already detected in this window
+      dominated=true;
+      // Update if higher confidence
+      if(confidence>detectionEvents[i].confidence){
+        detectionEvents[i].source=source;
+        detectionEvents[i].confidence=confidence;
+      }
+      break;
+    }
+  }
+  
+  if(!dominated){
+    detectionEvents.push({time:now,source:source,confidence:confidence});
+    // Cleanup old events
+    while(detectionEvents.length>0&&now-detectionEvents[0].time>2000){
+      detectionEvents.shift();
+    }
+    return true; // New detection
+  }
+  return false; // Duplicate
+}
+
+// Pattern enforcement - correct systematic errors
+function enforcePattern(detectedInWindow,expectedWords,windowDuration){
+  // If we detected close to expected (within 15%), trust it
+  var ratio=detectedInWindow/expectedWords;
+  if(ratio>=0.85&&ratio<=1.15)return 0; // No correction
+  
+  // Calculate expected based on timing
+  var avgWordTime=windowDuration/detectedInWindow;
+  var expectedByTiming=Math.round(windowDuration/(avgWordTime*1.1)); // Slightly faster
+  
+  // If undercounting significantly, add correction
+  if(ratio<0.85){
+    var missing=Math.round(expectedWords-detectedInWindow);
+    return Math.min(missing,3); // Max 3 corrections per window
+  }
+  return 0;
+}
+
+function toggleListen(){detecting?stopListen():startListen()}
+
+async function startListen(){
+  if(!(await initAudio()))return;
+  detecting=true;dInWord=false;dWordBuf=[];dSilCount=0;cooldownUntil=0;
+  
+  // Reset advanced state
+  fluxHistory=[];energyHistory=[];prevEnergy=0;prevFlux=0;
+  adaptiveNoise=noiseEnergy||10;adaptiveCooldown=180;
+  lastDetectTime=0;detectionEvents=[];
+  patternPos=0;patternWindow=[];patternWindowStart=Date.now();
+  syllableCount=0;
+  
+  // Detect if using Bluetooth
+  try{
+    var selEl=document.querySelector('.mic-item.selected .mic-name');
+    var selLabel=selEl?selEl.textContent.toLowerCase():'';
+    isBluetooth=(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0||selLabel.indexOf('airpod')>=0||selLabel.indexOf('buds')>=0);
+    if(isBluetooth)D('BT mode: relaxed thresholds','info');
+  }catch(e){isBluetooth=false}
+  
+  document.getElementById('btnListen').className='btn-listen on';
+  document.getElementById('btnListen').textContent='⏹ Stop Listening';
+  document.getElementById('sLine').textContent='Listening...';
+  
+  // Also start native speech recognition as backup
+  startHybridSpeech();
+  
+  var prevSpec=null;
+  var frameCount=0;
+  var lastPatternCheck=Date.now();
+  
+  function tick(){
+    if(!detecting)return;
+    
+    var now=Date.now();
+    var energy=getEnergy();
+    var spec=getSpectrum();
+    var timeDomain=getTimeDomainData();
+    var zcr=getZCR(timeDomain);
+    var centroid=getCentroid();
+    var flatness=getSpectralFlatness(spec);
+    
+    // Calculate flux
+    var flux=getSpectralFlux(spec,prevSpec);
+    prevSpec=spec.slice();
+    
+    // Energy derivative
+    var energyDeriv=getEnergyDerivative(energy,prevEnergy);
+    prevEnergy=energy;
+    
+    // Update history for smoothing
+    fluxHistory.push(flux);
+    if(fluxHistory.length>5)fluxHistory.shift();
+    energyHistory.push(energy);
+    if(energyHistory.length>10)energyHistory.shift();
+    
+    // Smoothed values
+    var smoothedFlux=median(fluxHistory);
+    var avgEnergy=energyHistory.reduce(function(a,b){return a+b},0)/energyHistory.length;
+    
+    // Adaptive noise floor (slower adaptation)
+    adaptiveNoise=adaptiveNoise*0.997+avgEnergy*0.003;
+    
+    // Get UI values
+    SENSITIVITY=document.getElementById('sSlider').value/100;
+    document.getElementById('sVal').textContent=Math.round(SENSITIVITY*100)+'%';
+    var baseCooldownMs=parseInt(document.getElementById('cSlider').value)||200;
+    document.getElementById('cVal').textContent=baseCooldownMs+'ms';
+    
+    // Dynamic thresholds - relax for Bluetooth
+    var btMult=isBluetooth?1.3:1.0;
+    var energyThreshold=(adaptiveNoise+8)*btMult;
+    var fluxThreshold=(adaptiveNoise*0.8+15)*btMult;
+    var attackThreshold=(adaptiveNoise*0.3)*btMult;
+    
+    // Multi-condition detection
+    var hasEnergy=energy>energyThreshold;
+    var hasFlux=smoothedFlux>fluxThreshold;
+    var hasAttack=energyDeriv>attackThreshold;
+    var isVoiced=zcr<0.18; // Low ZCR = voiced speech
+    var isTonal=flatness<0.4; // Low flatness = tonal (voice)
+    var cooldownOk=now-lastDetectTime>adaptiveCooldown;
+    var ttsPauseOk=now>=ttsPauseUntil;
+    
+    // Score calculation - multiple signals
+    var signalScore=0;
+    if(hasEnergy)signalScore+=0.25;
+    if(hasFlux)signalScore+=0.25;
+    if(hasAttack)signalScore+=0.20;
+    if(isVoiced)signalScore+=0.15;
+    if(isTonal)signalScore+=0.15;
+    
+    // Also check spectral similarity to calibrated word
+    var specSim=0;
+    if(wordFingerprint&&wordFingerprint.spectrum){
+      var denoised=denoiseSpectrum(spec);
+      specSim=cosSim(denoised,wordFingerprint.spectrum);
+    }
+    
+    // Combine scores
+    var totalScore=signalScore*0.6+specSim*0.4;
+    var matchThreshold=0.45-SENSITIVITY*0.25; // Range 0.20 to 0.45
+    
+    // Update UI
+    var fill=document.getElementById('mFill');
+    fill.style.width=Math.min(totalScore*100,100)+'%';
+    fill.style.background=totalScore>=matchThreshold?'var(--accent)':'var(--card-border)';
+    
+    // Word boundary detection using energy envelope
+    if(hasEnergy&&hasFlux){
+      if(!dInWord){
+        dInWord=true;
+        dWordBuf=[];
+      }
+      dWordBuf.push({energy:energy,flux:flux,centroid:centroid});
+      dSilCount=0;
+    }else{
+      dSilCount++;
+      if(dInWord&&dSilCount>5){
+        dInWord=false;
         
-        function loadSettings() {
-            wordsPerMala = parseInt(localStorage.getItem('wordsPerMala') || '8');
-            targetWord = localStorage.getItem('targetWord') || 'hare';
-            document.getElementById('wordsPerMalaInput').value = wordsPerMala;
-            document.getElementById('wordsPerMala').textContent = wordsPerMala;
-            document.getElementById('targetWord').value = targetWord;
-            initBeadProgress();
-        }
-        
-        function saveSettings() {
-            wordsPerMala = parseInt(document.getElementById('wordsPerMalaInput').value) || 8;
-            targetWord = document.getElementById('targetWord').value.toLowerCase().trim() || 'hare';
-            localStorage.setItem('wordsPerMala', wordsPerMala);
-            localStorage.setItem('targetWord', targetWord);
-            document.getElementById('wordsPerMala').textContent = wordsPerMala;
-            initBeadProgress();
-        }
-        
-        // ============================================
-        // MODE SELECTION
-        // ============================================
-        function setMode(mode) {
-            detectionMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
-            log('Detection mode: ' + mode);
-        }
-        
-        // ============================================
-        // START/STOP COUNTING
-        // ============================================
-        async function startCounting() {
-            saveSettings();
-            isRunning = true;
-            speechWordCount = 0;
-            audioWordCount = 0;
-            
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'block';
-            setStatus('Starting...', 'info');
-            
-            try {
-                // Start based on mode
-                if (detectionMode === 'hybrid' || detectionMode === 'speech') {
-                    startSpeechRecognition();
+        // Analyze the word segment
+        if(dWordBuf.length>=3&&cooldownOk&&ttsPauseOk){
+          var peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
+          var dur=dWordBuf.length;
+          
+          // Validate: not too short, not too long, has enough energy
+          var minDur=isBluetooth?2:3;
+          var maxDur=isBluetooth?40:30;
+          var minPeak=adaptiveNoise*1.3;
+          
+          if(dur>=minDur&&dur<=maxDur&&peakE>minPeak&&totalScore>=matchThreshold){
+            // Register detection with deduplication
+            if(registerDetection('hybrid',totalScore,now)){
+              ADD(1);
+              syllableCount++;
+              patternWindow.push(now);
+              
+              // Update adaptive cooldown based on chanting speed
+              var gap=now-lastDetectTime;
+              if(gap>50&&gap<800){
+                adaptiveCooldown=Math.max(100,Math.min(280,gap*0.55));
+              }
+              lastDetectTime=now;
+              
+              // Visual feedback
+              document.getElementById('sLine').className='status-line hit';
+              document.getElementById('sLine').textContent='✓ '+totalScore.toFixed(2)+' E:'+energy.toFixed(0)+' F:'+smoothedFlux.toFixed(0);
+              setTimeout(function(){
+                if(detecting){
+                  document.getElementById('sLine').className='status-line';
+                  document.getElementById('sLine').textContent='Listening...';
                 }
-                if (detectionMode === 'hybrid' || detectionMode === 'audio') {
-                    await startAudioDetection();
-                }
-                
-                setStatus('🎧 Listening for "' + targetWord + '"...', 'listening');
-                log('Counting started in ' + detectionMode + ' mode');
-            } catch (err) {
-                log('Error starting: ' + err.message, 'error');
-                setStatus('Error: ' + err.message, 'stopped');
-                stopCounting();
+              },350);
             }
+          }else{
+            // Show why rejected
+            var reason=dur<minDur?'short':dur>maxDur?'long':peakE<=minPeak?'quiet':'low';
+            document.getElementById('sLine').textContent='✗ '+reason+' d:'+dur+' p:'+peakE.toFixed(0)+' s:'+totalScore.toFixed(2);
+          }
         }
-        
-        function stopCounting() {
-            isRunning = false;
-            
-            // Stop speech recognition
-            if (typeof NativeApp !== 'undefined' && NativeApp.stopSpeechRecognition) {
-                NativeApp.stopSpeechRecognition();
-            }
-            
-            // Stop audio detection
-            stopAudioDetection();
-            
-            document.getElementById('startBtn').style.display = 'block';
-            document.getElementById('stopBtn').style.display = 'none';
-            setStatus('Stopped', 'stopped');
-            log('Counting stopped');
-        }
-        
-        // ============================================
-        // SPEECH RECOGNITION (Native Android)
-        // ============================================
-        function startSpeechRecognition() {
-            const language = document.getElementById('language').value;
-            
-            if (typeof NativeApp !== 'undefined' && NativeApp.startSpeechRecognition) {
-                NativeApp.startSpeechRecognition(targetWord, language);
-                speechActive = true;
-                log('Speech recognition started (lang: ' + language + ')');
-            } else {
-                log('Native speech recognition not available', 'error');
-            }
-        }
-        
-        // Callbacks from Native Android
-        function onSpeechReady() {
-            log('Speech recognizer ready');
-        }
-        
-        function onSpeechError(error) {
-            log('Speech error: ' + error, 'error');
-        }
-        
-        function onWordDetected(word) {
-            if (!isRunning) return;
-            
-            // Debounce
-            const now = Date.now();
-            if (now - lastCountTime < DEBOUNCE_MS) {
-                log('Debounced word (too fast)');
-                return;
-            }
-            
-            lastCountTime = now;
-            speechWordCount++;
-            incrementWordCount('speech');
-            log('✓ WORD DETECTED (speech): ' + word, 'word');
-        }
-        
-        function onTranscript(data) {
-            const [text, type] = data.split('|');
-            const transcriptEl = document.getElementById('transcript');
-            
-            // Highlight target words
-            const highlighted = text.split(/\s+/).map(word => {
-                const clean = word.toLowerCase().replace(/[^a-z]/g, '');
-                if (isTargetWord(clean)) {
-                    return '<span class="transcript-word target">' + word + '</span>';
-                }
-                return '<span class="transcript-word">' + word + '</span>';
-            }).join(' ');
-            
-            transcriptEl.innerHTML = highlighted;
-            transcriptEl.scrollTop = transcriptEl.scrollHeight;
-        }
-        
-        function onAudioLevel(level) {
-            const normalized = Math.min(100, Math.max(0, (parseFloat(level) + 2) * 10));
-            document.getElementById('audioLevel').style.width = normalized + '%';
-        }
-        
-        function isTargetWord(word) {
-            if (word === targetWord) return true;
-            
-            // Variations
-            if (targetWord === 'hare') {
-                return ['hare', 'haray', 'hari', 'harey', 'hary', 'harry', 'hurry', 'are', 'har'].includes(word);
-            }
-            if (targetWord === 'krishna') {
-                return ['krishna', 'krishn', 'krsna', 'krishan', 'krushna'].includes(word);
-            }
-            if (targetWord === 'rama') {
-                return ['rama', 'ram', 'raam'].includes(word);
-            }
-            return false;
-        }
-        
-        // ============================================
-        // AUDIO ENERGY DETECTION (Backup/Hybrid)
-        // ============================================
-        async function startAudioDetection() {
-            try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { 
-                        echoCancellation: false,
-                        noiseSuppression: false,
-                        autoGainControl: false
-                    } 
-                });
-                
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(mediaStream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512;
-                analyser.smoothingTimeConstant = 0.3;
-                source.connect(analyser);
-                
-                // Reset detection state
-                energyHistory = [];
-                noiseFloor = 0;
-                adaptiveThreshold = 0;
-                
-                // Start detection loop
-                audioDetectionInterval = setInterval(detectAudioPeaks, 50);
-                log('Audio detection started');
-            } catch (err) {
-                log('Audio detection error: ' + err.message, 'error');
-                throw err;
-            }
-        }
-        
-        function stopAudioDetection() {
-            if (audioDetectionInterval) {
-                clearInterval(audioDetectionInterval);
-                audioDetectionInterval = null;
-            }
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(t => t.stop());
-                mediaStream = null;
-            }
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-        }
-        
-        function detectAudioPeaks() {
-            if (!analyser || !isRunning) return;
-            
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(dataArray);
-            
-            // Calculate energy in speech frequency range (300Hz - 3000Hz)
-            const sampleRate = audioContext.sampleRate;
-            const binSize = sampleRate / analyser.fftSize;
-            const lowBin = Math.floor(300 / binSize);
-            const highBin = Math.min(Math.floor(3000 / binSize), dataArray.length);
-            
-            let energy = 0;
-            for (let i = lowBin; i < highBin; i++) {
-                energy += dataArray[i] * dataArray[i];
-            }
-            energy = Math.sqrt(energy / (highBin - lowBin));
-            
-            // Update energy history
-            energyHistory.push(energy);
-            if (energyHistory.length > ENERGY_HISTORY_SIZE) {
-                energyHistory.shift();
-            }
-            
-            // Calculate adaptive threshold
-            if (energyHistory.length >= 5) {
-                const sorted = [...energyHistory].sort((a, b) => a - b);
-                noiseFloor = sorted[Math.floor(sorted.length * 0.2)]; // 20th percentile
-                const peak = sorted[Math.floor(sorted.length * 0.9)]; // 90th percentile
-                adaptiveThreshold = noiseFloor + (peak - noiseFloor) * 0.5;
-            }
-            
-            // Detect peak (word onset)
-            const now = Date.now();
-            const MIN_WORD_GAP = 180; // Minimum ms between words
-            
-            if (energy > adaptiveThreshold && energy > noiseFloor * 1.5) {
-                if (now - lastAudioPeakTime > MIN_WORD_GAP) {
-                    lastAudioPeakTime = now;
-                    
-                    // Only count if in audio-only mode, or if speech hasnt counted recently
-                    if (detectionMode === 'audio') {
-                        // In audio-only mode, always count
-                        incrementWordCount('audio');
-                        audioWordCount++;
-                        log('✓ WORD DETECTED (audio energy)', 'word');
-                    } else if (detectionMode === 'hybrid') {
-                        // In hybrid mode, only count if speech didnt catch it
-                        // Use a longer debounce window for hybrid
-                        if (now - lastCountTime > DEBOUNCE_MS * 2) {
-                            // Speech might have missed this one
-                            // Dont count - let speech handle it primarily
-                            // This prevents double-counting
-                        }
-                    }
-                }
-            }
-        }
-        
-        // ============================================
-        // WORD COUNTING LOGIC
-        // ============================================
-        function incrementWordCount(source) {
-            wordCount++;
-            updateDisplay();
-            
-            // Vibrate
-            if (typeof NativeApp !== 'undefined' && NativeApp.vibrate) {
-                NativeApp.vibrate(50);
-            }
-            
-            // Check mala completion
-            if (wordCount >= wordsPerMala) {
-                completeMala();
-            }
-        }
-        
-        function completeMala() {
-            malaCount++;
-            wordCount = 0;
-            updateDisplay();
-            
-            // Longer vibration for mala completion
-            if (typeof NativeApp !== 'undefined' && NativeApp.vibrate) {
-                NativeApp.vibrate(300);
-            }
-            
-            log('🔔 MALA ' + malaCount + ' COMPLETE!', 'word');
-            
-            // Check alarm
-            const alarmAt = parseInt(document.getElementById('alarmAt').value);
-            if (malaCount >= alarmAt) {
-                playAlarm();
-            }
-        }
-        
-        function updateDisplay() {
-            document.getElementById('malaCount').textContent = malaCount;
-            document.getElementById('wordCount').textContent = wordCount;
-            
-            // Update beads
-            for (let i = 0; i < wordsPerMala; i++) {
-                const bead = document.getElementById('bead' + i);
-                if (bead) {
-                    bead.classList.toggle('active', i < wordCount);
-                }
-            }
-        }
-        
-        function manualCount() {
-            if (!isRunning) {
-                // Allow manual counting even when not running
-            }
-            incrementWordCount('manual');
-            log('Manual count added');
-        }
-        
-        function resetCounter() {
-            malaCount = 0;
-            wordCount = 0;
-            speechWordCount = 0;
-            audioWordCount = 0;
-            updateDisplay();
-            log('Counter reset');
-        }
-        
-        // ============================================
-        // ALARM
-        // ============================================
-        function playAlarm() {
-            log('🎉 ALARM! Target malas reached!', 'word');
-            if (typeof NativeApp !== 'undefined' && NativeApp.showToast) {
-                NativeApp.showToast('🎉 Congratulations! You completed ' + malaCount + ' malas!');
-            }
-            // Multiple vibrations
-            if (typeof NativeApp !== 'undefined' && NativeApp.vibrate) {
-                for (let i = 0; i < 3; i++) {
-                    setTimeout(() => NativeApp.vibrate(500), i * 700);
-                }
-            }
-        }
-        
-        // ============================================
-        // UTILITY FUNCTIONS
-        // ============================================
-        function setStatus(text, type) {
-            const el = document.getElementById('statusBox');
-            el.textContent = text;
-            el.className = 'status-box ' + type;
-        }
-        
-        function log(message, type = '') {
-            console.log('[JapaMala] ' + message);
-            const debugLog = document.getElementById('debugLog');
-            const line = document.createElement('div');
-            line.className = 'debug-line ' + type;
-            line.textContent = new Date().toLocaleTimeString() + ' - ' + message;
-            debugLog.appendChild(line);
-            debugLog.scrollTop = debugLog.scrollHeight;
-            
-            // Keep log size manageable
-            while (debugLog.children.length > 50) {
-                debugLog.removeChild(debugLog.firstChild);
-            }
-            
-            if (typeof NativeApp !== 'undefined' && NativeApp.log) {
-                NativeApp.log(message);
-            }
-        }
-        
-        // Bluetooth callbacks
-        function onBtScoConnected() { log('Bluetooth SCO connected'); }
-        function onBtScoDisconnected() { log('Bluetooth SCO disconnected'); }
-        function onNativePlaybackComplete() { log('Playback complete'); }
-        function onNativePlaybackError(err) { log('Playback error: ' + err, 'error'); }
-    </script>
+        dWordBuf=[];
+      }
+    }
+    
+    // Pattern enforcement every 10 seconds
+    if(now-lastPatternCheck>10000&&patternWindow.length>0){
+      var windowDuration=now-patternWindowStart;
+      var detectedWords=patternWindow.length;
+      var expectedWords=Math.round(windowDuration/300); // ~3.3 words/sec typical
+      
+      var correction=enforcePattern(detectedWords,expectedWords,windowDuration);
+      if(correction>0){
+        D('Pattern +'+correction+' (det:'+detectedWords+' exp:'+expectedWords+')','warn');
+        // Don't auto-add, just log for now
+      }
+      
+      // Reset window
+      patternWindow=[];
+      patternWindowStart=now;
+      lastPatternCheck=now;
+    }
+    
+    frameCount++;
+    detectAF=requestAnimationFrame(tick);
+  }
+  
+  detectAF=requestAnimationFrame(tick);
+}
+
+function stopListen(){
+  detecting=false;
+  if(detectAF)cancelAnimationFrame(detectAF);
+  stopHybridSpeech();
+  document.getElementById('btnListen').className='btn-listen off';
+  document.getElementById('btnListen').textContent='🎤 Start Listening';
+  document.getElementById('sLine').textContent='Stopped';
+  D('Detection stopped. Syllables: '+syllableCount,'info');
+}
+
+// =================== HYBRID SPEECH RECOGNITION (Google STT Backup) ===================
+var hybridEnabled=false,lastSpeechWordTime=0,speechDebounceMs=180;
+
+// Called by native Android when Google Speech-to-Text detects a word
+function onWordDetected(word){
+  if(sessionPaused)return;
+  if(!document.getElementById('counterScreen').classList.contains('active'))return;
+  
+  var now=Date.now();
+  // Dedup with existing detection
+  if(now-lastSpeechWordTime<speechDebounceMs)return;
+  if(now-lastDetectTime<DEDUP_WINDOW_MS)return; // Already counted by primary
+  
+  lastSpeechWordTime=now;
+  
+  // Register as backup detection
+  if(registerDetection('speech',0.9,now)){
+    D('🗣 Speech: '+word,'ok');
+    ADD(1);
+    syllableCount++;
+    lastDetectTime=now;
+  }
+}
+
+function onTranscript(data){
+  // Log transcript for debugging
+  var parts=data.split('|');
+  var text=parts[0]||'';
+  var type=parts[1]||'partial';
+  if(type==='final'&&text.length>0){
+    D('📝 '+text.substring(0,40),'info');
+  }
+}
+
+function onAudioLevel(level){}
+function onSpeechReady(){D('🎤 Speech ready','ok')}
+function onSpeechError(err){D('Speech: '+err,'warn')}
+
+function startHybridSpeech(){
+  if(typeof NativeApp!=='undefined'&&typeof NativeApp.startSpeechRecognition==='function'){
+    var lang='hi-IN';
+    NativeApp.startSpeechRecognition('hare',lang);
+    hybridEnabled=true;
+    D('Hybrid speech ON','ok');
+  }
+}
+
+function stopHybridSpeech(){
+  if(typeof NativeApp!=='undefined'&&typeof NativeApp.stopSpeechRecognition==='function'){
+    NativeApp.stopSpeechRecognition();
+    hybridEnabled=false;
+  }
+}
+
+// Native callbacks
+function onBtScoConnected(){D('BT SCO connected','ok');isBluetooth=true}
+function onBtScoDisconnected(){D('BT SCO disconnected','info')}
+function onNativePlaybackComplete(){}
+function onNativePlaybackError(e){D('Playback err','warn')}
+
+// Manual count function for volume buttons
+function manualCount(){if(!sessionPaused&&document.getElementById('counterScreen').classList.contains('active')){ADD(1)}}
+
+// =================== SOUNDS ===================
+function playSound(type,vol){try{if(!beepCtx)beepCtx=new(window.AudioContext||window.webkitAudioContext)();if(beepCtx.state==='suspended')beepCtx.resume();var now=beepCtx.currentTime,v=vol||0.5;
+  if(type==='chant'){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=440;g.gain.setValueAtTime(v*0.5,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);o.start(now);o.stop(now+0.2)}
+  else if(type==='mala'){var o1=beepCtx.createOscillator(),g1=beepCtx.createGain();o1.connect(g1);g1.connect(beepCtx.destination);o1.type='sine';o1.frequency.value=528;g1.gain.setValueAtTime(v*0.6,now);g1.gain.exponentialRampToValueAtTime(0.01,now+2);o1.start(now);o1.stop(now+2);var o2=beepCtx.createOscillator(),g2=beepCtx.createGain();o2.connect(g2);g2.connect(beepCtx.destination);o2.type='sine';o2.frequency.value=660;g2.gain.setValueAtTime(v*0.4,now+0.3);g2.gain.exponentialRampToValueAtTime(0.01,now+2);o2.start(now+0.3);o2.stop(now+2)}
+  else if(type==='alldone'){[440,554,660,880].forEach(function(f,i){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(v*0.5,now+i*0.4);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.4+1.5);o.start(now+i*0.4);o.stop(now+i*0.4+1.5)})}}catch(e){}}
+function speak(text){try{if(window.NativeApp&&typeof NativeApp.speak==='function'){NativeApp.speak(text);return}if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}}catch(e){}}
+function pauseDetectionForTTS(ms){ttsPauseUntil=Date.now()+ms}
+
+// =================== PARTICLES ===================
+function showParticles(){var c=document.getElementById('particles');c.style.display='block';c.width=window.innerWidth;c.height=window.innerHeight;var ctx=c.getContext('2d');var parts=[];for(var i=0;i<60;i++)parts.push({x:Math.random()*c.width,y:c.height+Math.random()*100,vx:(Math.random()-0.5)*3,vy:-2-Math.random()*4,r:2+Math.random()*4,a:1,c:'hsl('+(30+Math.random()*30)+',100%,'+(50+Math.random()*30)+'%)'});
+  function draw(){ctx.clearRect(0,0,c.width,c.height);var alive=false;parts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=0.03;p.a-=0.008;if(p.a>0){alive=true;ctx.globalAlpha=p.a;ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}});ctx.globalAlpha=1;if(alive)requestAnimationFrame(draw);else{c.style.display='none'}}draw()}
+function hideParticles(){document.getElementById('particles').style.display='none'}
+
+// =================== SHARE ===================
+function shareAchievement(){var text='📿 Completed '+G_mala+' mala'+(G_mala>1?'s':'')+' ('+G_totalC+' chants) in '+getElapsedStr()+' | Japa Counter App 🙏';
+  if(navigator.share){navigator.share({text:text}).catch(function(){})}
+  else if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){alert('Copied to clipboard!')}).catch(function(){prompt('Copy this:',text)})}
+  else{prompt('Share this:',text)}}
+
+// =================== OVERLAYS ===================
+var malaOvTimer=null,malaCountdownTimer=null;
+function showMalaOvAutoClose(){document.getElementById('malaOv').classList.add('active');var sec=4,cd=document.getElementById('malaCountdown');if(cd)cd.textContent=sec;if(malaCountdownTimer)clearInterval(malaCountdownTimer);malaCountdownTimer=setInterval(function(){sec--;if(cd)cd.textContent=sec;if(sec<=0){clearInterval(malaCountdownTimer);malaCountdownTimer=null}},1000);if(malaOvTimer)clearTimeout(malaOvTimer);malaOvTimer=setTimeout(function(){dismissMalaOv()},4000)}
+function dismissMalaOv(){if(malaOvTimer){clearTimeout(malaOvTimer);malaOvTimer=null}if(malaCountdownTimer){clearInterval(malaCountdownTimer);malaCountdownTimer=null}document.getElementById('malaOv').classList.remove('active')}
+function showInterstitialAd(){document.getElementById('interstitialAd').classList.add('active')}
+function closeInterstitialAd(){document.getElementById('interstitialAd').classList.remove('active')}
+
+// =================== TAP ANYWHERE ===================
+document.addEventListener('click',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(sessionPaused)return;var tag=e.target.tagName.toLowerCase();if(tag==='button'||tag==='input'||tag==='select'||tag==='label')return;if(e.target.closest('button')||e.target.closest('input')||e.target.closest('select')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle')||e.target.closest('.top-bar')||e.target.closest('.confirm-ov')||e.target.closest('.mode-tabs')||e.target.closest('.slider-row')||e.target.closest('.dbg-toggle'))return;if(curMode==='voice')return;tapCount()});
+document.addEventListener('keydown',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();tapCount()}});
+
+// =================== INIT ===================
+function init(){
+  loadSettings();showWelcome();
+  // Show streak
+  var streak=getStreak();if(streak>0){var b=document.getElementById('streakBadge');b.textContent='🔥 '+streak+' day streak!';b.style.display='inline-block'}
+  // Show quote
+  var q=QUOTES[Math.floor(Math.random()*QUOTES.length)];document.getElementById('quoteBox').innerHTML='"'+q.t+'"<div class="author">— '+q.a+'</div>';
+  // Check for saved session
+  var saved=loadSessionProgress();if(saved&&saved.G_totalC>0){document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=saved.G_mala;document.getElementById('rMalaT').textContent=saved.CFG.malas;document.getElementById('rChant').textContent=saved.G_chant;document.getElementById('rCPM').textContent=saved.CFG.cpm;
+    // Override resumeSession to use saved data
+    pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
+  setupLongPress();setTimeout(function(){refreshMicList()},1500);
+  D('v12 loaded','ok');
+}
+init();
+</script>
 </body>
 </html>
