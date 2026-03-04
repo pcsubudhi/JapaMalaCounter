@@ -1187,7 +1187,17 @@ function startGoogleSpeech(){
     return;
   }
   
-  var targetWord=CFG.target||'hare';
+  // Determine target word based on selected mantra
+  var targetWord = 'hare'; // default
+  if(CFG.mantra==='radhe_radhe'){
+    targetWord = 'radhe';
+  }else if(CFG.mantra==='custom'){
+    var customWord = document.getElementById('inCustomWord').value.trim();
+    targetWord = customWord || 'custom';
+  }else if(CFG.mantra==='hare_krishna'||CFG.mantra==='maha_mantra'){
+    targetWord = 'hare';
+  }
+  
   var lang='hi-IN'; // Hindi works best for Sanskrit mantras
   
   NativeApp.startSpeechRecognition(targetWord,lang);
