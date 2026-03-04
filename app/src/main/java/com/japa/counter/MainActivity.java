@@ -244,24 +244,33 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         String errorMsg = "Unknown";
                         switch(error) {
                             case SpeechRecognizer.ERROR_AUDIO: errorMsg = "Audio error"; break;
-                            case SpeechRecognizer.ERROR_CLIENT: errorMsg = "Client error"; break;
+                            case SpeechRecognizer.ERROR_CLIENT: errorMsg = "Restarting..."; break;
                             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: errorMsg = "No permission"; break;
-                            case SpeechRecognizer.ERROR_NETWORK: errorMsg = "Network error"; break;
-                            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: errorMsg = "Network timeout"; break;
-                            case SpeechRecognizer.ERROR_NO_MATCH: errorMsg = "No match - speak louder/clearer"; break;
-                            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: errorMsg = "Busy"; break;
-                            case SpeechRecognizer.ERROR_SERVER: errorMsg = "Server error"; break;
-                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: errorMsg = "No speech heard"; break;
+                            case SpeechRecognizer.ERROR_NETWORK: errorMsg = "Network error - retrying"; break;
+                            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: errorMsg = "Network timeout - retrying"; break;
+                            case SpeechRecognizer.ERROR_NO_MATCH: errorMsg = "No speech detected"; break;
+                            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: errorMsg = "Busy - retrying"; break;
+                            case SpeechRecognizer.ERROR_SERVER: errorMsg = "Server error - retrying"; break;
+                            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: errorMsg = "Silence - listening again"; break;
                         }
                         Log.d(TAG, "Speech error: " + error + " (" + errorMsg + ")");
-                        callJS("onSpeechError('" + errorMsg + "')");
+                        
+                        // Only show non-routine errors
+                        if (error != SpeechRecognizer.ERROR_NO_MATCH && 
+                            error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT &&
+                            error != SpeechRecognizer.ERROR_CLIENT) {
+                            callJS("onSpeechError('" + errorMsg + "')");
+                        }
+                        
                         isListening = false;
-                        // Auto-restart on most errors
-                        if (shouldContinueListening && error != SpeechRecognizer.ERROR_CLIENT 
-                            && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                        
+                        // Always restart except for permission errors
+                        if (shouldContinueListening && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                            int delay = (error == SpeechRecognizer.ERROR_NETWORK || 
+                                        error == SpeechRecognizer.ERROR_SERVER) ? 1000 : 300;
                             mainHandler.postDelayed(() -> {
                                 if (shouldContinueListening) restartListening();
-                            }, 500);
+                            }, delay);
                         }
                     }
 
