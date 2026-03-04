@@ -243,58 +243,55 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     public void onError(int error) {
                         String errorMsg = "";
                         boolean shouldRestart = true;
-                        boolean showError = false;
+                        boolean showError = true; // Show all errors for debugging
                         int delay = 300;
                         
                         switch(error) {
                             case SpeechRecognizer.ERROR_AUDIO: 
                                 errorMsg = "Audio error"; 
-                                showError = true;
                                 delay = 1000;
                                 break;
                             case SpeechRecognizer.ERROR_CLIENT: 
-                                // Normal restart - don't show
+                                errorMsg = "Restarting";
+                                showError = false; // This one is too common
                                 delay = 200;
                                 break;
                             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: 
                                 errorMsg = "No mic permission"; 
-                                showError = true;
                                 shouldRestart = false;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK: 
                                 errorMsg = "Network error"; 
-                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: 
                                 errorMsg = "Network timeout"; 
-                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NO_MATCH: 
-                                // Normal - no speech, just restart
+                                errorMsg = "No speech detected";
                                 delay = 100;
                                 break;
                             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: 
-                                // Busy, wait longer
+                                errorMsg = "Busy";
+                                showError = false;
                                 delay = 1000;
                                 break;
                             case SpeechRecognizer.ERROR_SERVER: 
                                 errorMsg = "Server error"; 
-                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: 
-                                // Normal silence timeout
+                                errorMsg = "Silence timeout";
                                 delay = 100;
                                 break;
                             default:
-                                // Unknown error code - just restart
+                                errorMsg = "Error " + error;
                                 delay = 500;
                                 break;
                         }
                         
-                        Log.d(TAG, "Speech error code: " + error);
+                        Log.d(TAG, "Speech error: " + error + " - " + errorMsg);
                         
                         if (showError && !errorMsg.isEmpty()) {
                             callJS("onSpeechError('" + errorMsg + "')");
