@@ -229,9 +229,10 @@
         </div>
       </div>
       <div id="customWordSection" style="display:none;margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px">
-        <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">Enter custom word (Google will try to recognize it):</p>
-        <input type="text" id="inCustomWord" placeholder="e.g., Govinda, Narayana, Om" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;margin-bottom:6px">
-        <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">Words per round:</p>
+        <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">Enter your mantra word:</p>
+        <input type="text" id="inCustomWord" placeholder="e.g., Radha, Govinda, Om" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;margin-bottom:8px">
+        <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">1 Chant = how many words?</p>
+        <p style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Example: "Radha" = 1 word, "Radha Radha" = 2 words</p>
         <input type="number" id="inCustomWPR" value="1" min="1" max="100" style="width:100%;padding:11px 14px;border-radius:10px;background:rgba(0,0,0,0.4);border:1px solid var(--card-border);color:var(--text);font-size:15px;margin-bottom:6px">
         <div style="display:flex;gap:6px">
           <button onclick="saveCustomMantra()" style="flex:1;padding:10px;border-radius:10px;background:var(--accent);color:var(--bg);font-size:14px;font-weight:700">💾 Save</button>
@@ -241,7 +242,7 @@
           <p style="font-size:12px;color:var(--accent);margin-bottom:4px;font-weight:600">Saved Custom Mantras:</p>
           <div id="savedMantrasList"></div>
         </div>
-        <p style="font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.4">💡 Tip: For best accuracy with custom words, use <b>Hybrid mode</b> and complete calibration (Steps 1 & 2 below).</p>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.4">💡 Use <b>Google mode</b> for recognition or <b>Audio mode</b> with calibration for instant counting.</p>
       </div>
     </div>
 
@@ -1125,9 +1126,9 @@ async function startListen(){
   
   D('Starting mode: '+curMode,'ok');
   
-  // IMPORTANT: For Google mode, we must NOT use WebView audio (mic conflict)
+  // GOOGLE MODE - Only Google Speech, no WebView audio
   if(curMode==='google'){
-    // Stop any WebView audio first
+    // Stop any WebView audio first (release mic)
     if(actx){
       try{
         if(stream)stream.getTracks().forEach(function(t){t.stop()});
@@ -1135,30 +1136,49 @@ async function startListen(){
       }catch(e){}
       actx=null;mic=null;analyser=null;stream=null;
     }
-    // Only start Google Speech
     startGoogleSpeech();
     document.getElementById('sLine').textContent='Listening (Google)...';
     return;
   }
   
-  // For Audio or Hybrid modes, initialize WebView audio
-  if(curMode==='voice'||curMode==='both'){
+  // AUDIO MODE - Only WebView audio, no Google
+  if(curMode==='voice'){
+    // Make sure Google is stopped
+    stopGoogleSpeech();
+    
     if(!(await initAudio())){
       D('Audio init failed','err');
       return;
     }
     startAudioDetection();
+    document.getElementById('sLine').textContent='Listening (Audio)...';
+    return;
   }
   
-  // Start Google Speech for 'both' mode (after audio init)
+  // HYBRID MODE - Use Google Speech primarily, Audio as backup
+  // IMPORTANT: Can't run both simultaneously (mic conflict)
+  // Solution: Run Google Speech, and use Audio only when Google fails
   if(curMode==='both'){
-    // Small delay to let audio settle
-    setTimeout(function(){
-      startGoogleSpeech();
-    },500);
+    // Stop any existing WebView audio
+    if(actx){
+      try{
+        if(stream)stream.getTracks().forEach(function(t){t.stop()});
+        actx.close();
+      }catch(e){}
+      actx=null;mic=null;analyser=null;stream=null;
+    }
+    
+    // Start Google Speech as primary
+    startGoogleSpeech();
+    
+    // For hybrid, we'll rely on Google + Tap as fallback
+    // Audio detection causes mic conflict, so we skip it
+    D('Hybrid: Google + Tap fallback','info');
+    document.getElementById('sLine').textContent='Listening (Hybrid)...';
+    return;
   }
   
-  document.getElementById('sLine').textContent='Listening ('+curMode+')...';
+  document.getElementById('sLine').textContent='Listening...';
 }
 
 function stopListen(){

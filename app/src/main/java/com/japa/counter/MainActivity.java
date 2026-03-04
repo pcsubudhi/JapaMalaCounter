@@ -241,61 +241,74 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
                     @Override
                     public void onError(int error) {
-                        String errorMsg = "";
                         boolean shouldRestart = true;
-                        boolean showError = true; // Show all errors for debugging
                         int delay = 300;
+                        String errorMsg = "";
+                        boolean showError = false;
                         
                         switch(error) {
                             case SpeechRecognizer.ERROR_AUDIO: 
                                 errorMsg = "Audio error"; 
+                                showError = true; // Show - this is important
                                 delay = 1000;
                                 break;
                             case SpeechRecognizer.ERROR_CLIENT: 
-                                errorMsg = "Restarting";
-                                showError = false; // This one is too common
                                 delay = 200;
                                 break;
                             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: 
                                 errorMsg = "No mic permission"; 
+                                showError = true; // Show - this is important
                                 shouldRestart = false;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK: 
                                 errorMsg = "Network error"; 
+                                showError = true; // Show - user needs to know
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: 
                                 errorMsg = "Network timeout"; 
+                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NO_MATCH: 
-                                errorMsg = "No speech detected";
+                                // Normal - no speech detected, just restart
                                 delay = 100;
                                 break;
                             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: 
-                                errorMsg = "Busy";
-                                showError = false;
-                                delay = 1000;
+                                // Error 11 - just wait and restart, don't show
+                                delay = 500;
                                 break;
                             case SpeechRecognizer.ERROR_SERVER: 
                                 errorMsg = "Server error"; 
+                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: 
-                                errorMsg = "Silence timeout";
-                                delay = 100;
+                                // Normal - silence timeout, just restart
+                                delay = 50;
                                 break;
                             default:
-                                errorMsg = "Error " + error;
-                                delay = 500;
+                                // Unknown error - just restart silently
+                                delay = 300;
                                 break;
                         }
                         
-                        Log.d(TAG, "Speech error: " + error + " - " + errorMsg);
+                        Log.d(TAG, "Speech error: " + error);
                         
                         if (showError && !errorMsg.isEmpty()) {
                             callJS("onSpeechError('" + errorMsg + "')");
                         }
+                        
+                        isListening = false;
+                        
+                        if (shouldContinueListening && shouldRestart) {
+                            mainHandler.postDelayed(() -> {
+                                if (shouldContinueListening) {
+                                    restartListening();
+                                }
+                            }, delay);
+                        }
+                    }
                         
                         isListening = false;
                         
@@ -336,17 +349,17 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-                speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
-                // Longer listening time
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 15000);
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000);
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000);
+                speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+                
+                // Very short timeouts for single-word mantras
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000); // Min 1 sec listen
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 500); // 0.5 sec silence = done
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300); // 0.3 sec = maybe done
 
-                // Try English India first - it often works better for "Hare Krishna"
+                // Language based on mantra
                 String lang = (language != null && !language.isEmpty()) ? language : "en-IN";
                 speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang);
-                // Also allow other languages as fallback
                 speechIntent.putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false);
 
                 shouldContinueListening = true;
