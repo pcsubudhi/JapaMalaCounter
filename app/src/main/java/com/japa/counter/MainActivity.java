@@ -309,17 +309,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                             }, delay);
                         }
                     }
-                        
-                        isListening = false;
-                        
-                        if (shouldContinueListening && shouldRestart) {
-                            mainHandler.postDelayed(() -> {
-                                if (shouldContinueListening) {
-                                    restartListening();
-                                }
-                            }, delay);
-                        }
-                    }
 
                     @Override
                     public void onResults(Bundle results) {
