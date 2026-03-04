@@ -146,54 +146,60 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
         } else {
             loadPage();
-            initVosk(); // Initialize Vosk model
+            // Delay Vosk init to ensure WebView is loaded
+            mainHandler.postDelayed(() -> initVosk(), 3000);
         }
     }
     
     // ========= VOSK INITIALIZATION =========
     private void initVosk() {
-        Log.d(TAG, "Starting Vosk initialization...");
-        callJS("D('Vosk: Starting init...','info')");
+        Log.d(TAG, "=== VOSK INIT STARTING ===");
+        Toast.makeText(this, "Vosk: Starting init...", Toast.LENGTH_SHORT).show();
         
         // Check if model folder exists in assets
         try {
             String[] assetFiles = getAssets().list("vosk-model-small-en-in");
             if (assetFiles == null || assetFiles.length == 0) {
-                Log.e(TAG, "Vosk model not found in assets!");
+                Log.e(TAG, "Vosk model NOT FOUND in assets!");
+                Toast.makeText(this, "Vosk: Model NOT FOUND!", Toast.LENGTH_LONG).show();
                 callJS("onVoskError('Model not found in assets')");
                 return;
             }
-            Log.d(TAG, "Vosk model found in assets, files: " + assetFiles.length);
-            callJS("D('Vosk: Model found ("+assetFiles.length+" items)','info')");
+            Log.d(TAG, "Vosk model found! Items: " + assetFiles.length);
+            Toast.makeText(this, "Vosk: Model found (" + assetFiles.length + " items)", Toast.LENGTH_SHORT).show();
+            callJS("D('Vosk: Model found ("+assetFiles.length+" items)','ok')");
         } catch (IOException e) {
             Log.e(TAG, "Error checking assets: " + e.getMessage());
-            callJS("onVoskError('Cannot read assets: " + e.getMessage() + "')");
+            Toast.makeText(this, "Vosk: Asset error - " + e.getMessage(), Toast.LENGTH_LONG).show();
+            callJS("onVoskError('Cannot read assets')");
             return;
         }
+        
+        Toast.makeText(this, "Vosk: Unpacking model (please wait)...", Toast.LENGTH_LONG).show();
+        callJS("D('Vosk: Unpacking model (30-60 sec)...','info')");
         
         // Load Vosk model from assets in background
         StorageService.unpack(this, "vosk-model-small-en-in", "model",
             (model) -> {
                 voskModel = model;
                 voskReady = true;
-                Log.d(TAG, "Vosk model loaded successfully!");
+                Log.d(TAG, "=== VOSK MODEL LOADED SUCCESSFULLY ===");
                 runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Vosk READY!", Toast.LENGTH_LONG).show();
                     callJS("onVoskReady()");
-                    Toast.makeText(MainActivity.this, "Vosk ready!", Toast.LENGTH_SHORT).show();
                 });
             },
             (exception) -> {
                 String errMsg = exception != null ? exception.getMessage() : "Unknown error";
-                Log.e(TAG, "Vosk model load failed: " + errMsg);
+                Log.e(TAG, "=== VOSK LOAD FAILED: " + errMsg + " ===");
                 if (exception != null) {
                     exception.printStackTrace();
                 }
                 runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Vosk FAILED: " + errMsg, Toast.LENGTH_LONG).show();
                     callJS("onVoskError('Load failed: " + errMsg + "')");
                 });
             });
-        
-        callJS("D('Vosk: Unpacking model...','info')");
     }
     
     // Vosk RecognitionListener callbacks
