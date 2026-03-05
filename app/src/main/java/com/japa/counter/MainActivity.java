@@ -863,16 +863,6 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         return totalWords;
     }
     
-    private int countOccurrences(String text, String pattern) {
-        int count = 0;
-        int idx = 0;
-        while ((idx = text.indexOf(pattern, idx)) != -1) {
-            count++;
-            idx += pattern.length();
-        }
-        return count;
-    }
-    
     // Process transcript - just send to JavaScript, let JS handle counting
     private void processTranscript(String text, boolean isFinal) {
         if (text == null || text.isEmpty()) return;
