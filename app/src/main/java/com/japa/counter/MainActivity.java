@@ -156,18 +156,18 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         Log.d(TAG, "=== VOSK INIT STARTING ===");
         Toast.makeText(this, "Vosk: Starting init...", Toast.LENGTH_SHORT).show();
         
-        // Check if model folder exists in assets
+        // Check if Hindi model folder exists in assets
         try {
             String[] assetFiles = getAssets().list("vosk-model-small-hi");
             if (assetFiles == null || assetFiles.length == 0) {
-                Log.e(TAG, "Vosk model NOT FOUND in assets!");
-                Toast.makeText(this, "Vosk: Model NOT FOUND!", Toast.LENGTH_LONG).show();
-                callJS("onVoskError('Model not found in assets')");
+                Log.e(TAG, "Vosk Hindi model NOT FOUND in assets!");
+                Toast.makeText(this, "Vosk: Hindi model NOT FOUND!", Toast.LENGTH_LONG).show();
+                callJS("onVoskError('Hindi model not found in assets')");
                 return;
             }
-            Log.d(TAG, "Vosk model found! Items: " + assetFiles.length);
-            Toast.makeText(this, "Vosk: Model found (" + assetFiles.length + " items)", Toast.LENGTH_SHORT).show();
-            callJS("D('Vosk: Model found ("+assetFiles.length+" items)','ok')");
+            Log.d(TAG, "Vosk Hindi model found! Items: " + assetFiles.length);
+            Toast.makeText(this, "Vosk: Hindi model found (" + assetFiles.length + " items)", Toast.LENGTH_SHORT).show();
+            callJS("D('Vosk: Hindi model found ("+assetFiles.length+" items)','ok')");
         } catch (IOException e) {
             Log.e(TAG, "Error checking assets: " + e.getMessage());
             Toast.makeText(this, "Vosk: Asset error - " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -175,17 +175,17 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             return;
         }
         
-        Toast.makeText(this, "Vosk: Unpacking model (please wait)...", Toast.LENGTH_LONG).show();
-        callJS("D('Vosk: Unpacking model (30-60 sec)...','info')");
+        Toast.makeText(this, "Vosk: Unpacking Hindi model (please wait)...", Toast.LENGTH_LONG).show();
+        callJS("D('Vosk: Unpacking Hindi model (30-60 sec)...','info')");
         
-        // Load Vosk model from assets in background
+        // Load Vosk Hindi model from assets in background
         StorageService.unpack(this, "vosk-model-small-hi", "model",
             (model) -> {
                 voskModel = model;
                 voskReady = true;
-                Log.d(TAG, "=== VOSK MODEL LOADED SUCCESSFULLY ===");
+                Log.d(TAG, "=== VOSK HINDI MODEL LOADED SUCCESSFULLY ===");
                 runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "Vosk READY!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, "Vosk Hindi READY!", Toast.LENGTH_LONG).show();
                     callJS("onVoskReady()");
                 });
             },
@@ -214,9 +214,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 Log.d(TAG, "=== VOSK HEARD: \"" + partial + "\" ===");
                 final String p = partial;
                 runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "🎙️ " + p, Toast.LENGTH_SHORT).show();
-                    callJS("D('🎙️ Vosk heard: " + escapeJS(p) + "','ok')");
+                    callJS("D('🎙️ Vosk heard: " + escapeJS(p) + "','info')");
                 });
+                // Count words from partial results immediately!
                 processVoskTranscript(partial, false);
             }
         } catch (JSONException e) {
@@ -235,10 +235,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 Log.d(TAG, "=== VOSK FINAL: \"" + text + "\" ===");
                 final String t = text;
                 runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "✅ " + t, Toast.LENGTH_SHORT).show();
                     callJS("D('✅ Vosk final: " + escapeJS(t) + "','ok')");
                 });
-                processVoskTranscript(text, true);
+                // Don't count final - it often "corrects" to wrong words
+                // Just reset the counter for next phrase
+                voskLastWordCount = 0;
             }
         } catch (JSONException e) {
             Log.e(TAG, "Vosk JSON error: " + e.getMessage());
@@ -276,17 +277,59 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         String target = voskTargetWord.toLowerCase();
         
         int count = 0;
-        int index = 0;
-        while ((index = lowerText.indexOf(target, index)) != -1) {
-            count++;
-            index += target.length();
+        
+        // Match based on target word - include Hindi variations
+        if (target.equals("radha") || target.equals("radhe") || target.equals("राधा") || target.equals("राधे")) {
+            // Count all Radha variations in Hindi
+            count += countOccurrences(text, "राधा");
+            count += countOccurrences(text, "राधे");
+            count += countOccurrences(text, "राध");
+            // Also check for similar sounding words that Vosk might recognize
+            count += countOccurrences(text, "राजा");  // Sometimes heard as राजा
+            count += countOccurrences(lowerText, "radha");
+            count += countOccurrences(lowerText, "radhe");
+        } else if (target.equals("hare") || target.equals("हरे")) {
+            // Count Hare variations
+            count += countOccurrences(text, "हरे");
+            count += countOccurrences(text, "हरि");
+            count += countOccurrences(text, "हर");
+            count += countOccurrences(lowerText, "hare");
+            count += countOccurrences(lowerText, "hari");
+        } else if (target.equals("krishna") || target.equals("कृष्ण")) {
+            // Count Krishna variations
+            count += countOccurrences(text, "कृष्ण");
+            count += countOccurrences(text, "कृष्णा");
+            count += countOccurrences(text, "कृष्");
+            count += countOccurrences(lowerText, "krishna");
+            count += countOccurrences(lowerText, "krsna");
+        } else if (target.equals("rama") || target.equals("ram") || target.equals("राम")) {
+            // Count Rama variations
+            count += countOccurrences(text, "राम");
+            count += countOccurrences(text, "रामा");
+            count += countOccurrences(lowerText, "rama");
+            count += countOccurrences(lowerText, "ram");
+        } else {
+            // Generic match for any other word
+            int index = 0;
+            while ((index = lowerText.indexOf(target, index)) != -1) {
+                count++;
+                index += target.length();
+            }
         }
+        
+        Log.d(TAG, "Vosk processTranscript: \"" + text + "\" -> count=" + count + " (last=" + voskLastWordCount + ")");
         
         // Only send new words to JS
         if (count > voskLastWordCount) {
             int newWords = count - voskLastWordCount;
-            Log.d(TAG, "Vosk: +" + newWords + " words (total: " + count + ")");
-            callJS("onVoskTranscript('" + escapeJS(text) + "', " + count + ", " + newWords + ", " + isFinal + ")");
+            Log.d(TAG, "Vosk: +" + newWords + " NEW words (total: " + count + ")");
+            final int nw = newWords;
+            final int c = count;
+            final String t = text;
+            runOnUiThread(() -> {
+                Toast.makeText(MainActivity.this, "✅ +" + nw + " राधा", Toast.LENGTH_SHORT).show();
+                callJS("onVoskTranscript('" + escapeJS(t) + "', " + c + ", " + nw + ", false)");
+            });
             voskLastWordCount = count;
         }
         
@@ -294,6 +337,16 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         if (isFinal) {
             voskLastWordCount = 0;
         }
+    }
+    
+    private int countOccurrences(String text, String word) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(word, index)) != -1) {
+            count++;
+            index += word.length();
+        }
+        return count;
     }
     
     private String escapeJS(String s) {
