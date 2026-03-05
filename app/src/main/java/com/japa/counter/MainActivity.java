@@ -314,13 +314,13 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     public void onResults(Bundle results) {
                         ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                         if (matches != null && !matches.isEmpty()) {
+                            Log.d(TAG, "FINAL: \"" + matches.get(0) + "\"");
                             processTranscript(matches.get(0), true);
                         }
                         isListening = false;
+                        // Restart IMMEDIATELY to minimize word loss
                         if (shouldContinueListening) {
-                            mainHandler.postDelayed(() -> {
-                                if (shouldContinueListening) restartListening();
-                            }, 50);
+                            restartListening();
                         }
                     }
 
@@ -328,7 +328,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     public void onPartialResults(Bundle partialResults) {
                         ArrayList<String> matches = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                         if (matches != null && !matches.isEmpty()) {
-                            processTranscript(matches.get(0), false);
+                            String transcript = matches.get(0);
+                            Log.d(TAG, "PARTIAL: \"" + transcript + "\"");
+                            processTranscript(transcript, false);
+                        } else {
+                            Log.d(TAG, "PARTIAL: empty or null");
                         }
                     }
 
@@ -340,10 +344,10 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 speechIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 speechIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
                 
-                // Very short timeouts for single-word mantras
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000); // Min 1 sec listen
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 500); // 0.5 sec silence = done
-                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300); // 0.3 sec = maybe done
+                // MAXIMUM timeouts to prevent premature finalization
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300000); // 5 minutes
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 30000); // 30 sec silence
+                speechIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 15000); // 15 sec
 
                 // Language based on mantra
                 String lang = (language != null && !language.isEmpty()) ? language : "en-IN";

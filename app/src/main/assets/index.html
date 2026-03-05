@@ -168,6 +168,7 @@
   .session-mantra{font-size:12px;font-weight:700;color:var(--accent)}
   .session-details{font-size:10px;color:var(--text-mid);display:flex;gap:4px}
   .session-details span{background:rgba(251,191,36,0.12);padding:2px 5px;border-radius:4px}
+  .session-mic{font-size:10px;color:var(--text-dim);margin-top:2px}
   /* History */
   .history-item{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:10px;margin-bottom:6px}
   .history-date{font-size:11px;color:var(--text-mid);margin-bottom:2px}
@@ -241,7 +242,7 @@
     <!-- Mantra Selection -->
     <div class="card step">
       <div class="step-header"><div class="step-num">🕉</div><div class="step-title">Select Mantra <span class="tip" onclick="toggleTip('tipMantra')">?</span></div></div>
-      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Audio mode with calibration.</div>
+      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Hybrid mode (Google + Audio calibration).</div>
       <div id="mantraList" style="margin-bottom:8px">
         <div class="mantra-item selected" data-id="maha_mantra" onclick="selectMantra('maha_mantra',this)">
           <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
@@ -261,7 +262,7 @@
         <div class="mantra-item" data-id="custom" onclick="selectMantra('custom',this)">
           <div class="mantra-name">✏️ Custom Word/Mantra</div>
           <div class="mantra-text" id="customMantraPreview">Add your own word or mantra</div>
-          <div class="mantra-info">Use Audio mode with calibration</div>
+          <div class="mantra-info">Use Hybrid mode for best results</div>
         </div>
       </div>
       <div id="customWordSection" style="display:none;margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px">
@@ -386,7 +387,7 @@
           <span id="sessionWPR">16 words</span>
         </div>
       </div>
-      <div id="sessionMicRow" style="font-size:10px;color:var(--text-dim);margin-top:3px">🎤 <span id="sessionMicName">Default</span></div>
+      <div class="session-mic" id="sessionMicRow">🎤 <span id="sessionMicName">Default</span></div>
     </div>
 
     <!-- Sound panel -->
@@ -448,7 +449,6 @@
     <div class="mode-tabs">
       <button class="mtab act" id="tabGoogle" onclick="setMode('google')">🗣️ Google</button>
       <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Audio</button>
-      
       <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap</button>
     </div>
 
@@ -460,7 +460,7 @@
       <div class="slider-row"><label>Gap</label><input type="range" id="cSlider" min="200" max="1500" value="250" step="50" oninput="document.getElementById('cVal').textContent=this.value+'ms'"><div class="val" id="cVal">250ms</div></div>
     </div>
     <div id="tapSec">
-      <button class="tap-area" id="tapBtn" onclick="tapCount()"><div style="font-size:24px">🙏</div><div style="font-size:15px;font-weight:600">Tap to Count (1 Tap = 1 Chant)</div></button>
+      <button class="tap-area" id="tapBtn" onclick="tapCount()"><div style="font-size:24px">🙏</div><div style="font-size:15px;font-weight:600" id="tapBtnText">Tap to Count</div></button>
     </div>
     <div class="dbg-toggle" onclick="document.getElementById('dbg').classList.toggle('show')">▼ debug</div>
     <div class="debug" id="dbg"></div>
@@ -561,15 +561,15 @@ function selectMantra(id,el){
   // Show/hide custom word section
   document.getElementById('customWordSection').style.display=(id==='custom')?'block':'none';
   
-  // ALWAYS show calibration steps (for Audio mode support on ANY mantra)
-  document.getElementById('calibrationStep1').style.display='block';
-  document.getElementById('calibrationStep2').style.display='block';
+  // Show/hide calibration steps
+  var showCalib=(id==='custom');
+  document.getElementById('calibrationStep1').style.display=showCalib?'block':'none';
+  document.getElementById('calibrationStep2').style.display=showCalib?'block':'none';
   
-  // For pre-defined mantras, allow starting without calibration (Google mode works)
-  // But don't auto-mark as calibrated - user must calibrate for Audio mode
+  // For pre-defined mantras, mark as ready
   if(id!=='custom'){
-    // Google mode will work without calibration
-    // Audio mode requires calibration
+    noiseReady=true;
+    wordReady=true;
   }
   
   checkReady();
@@ -1041,23 +1041,7 @@ function startNoiseRecalib(){
 }
 function stopNoiseRecalib(){if(noiseRecalibTimer){clearInterval(noiseRecalibTimer);noiseRecalibTimer=null}}
 
-function checkReady(){
-  var calibOk = noiseReady && wordReady;
-  var isPreDefined = (CFG.mantra !== 'custom');
-  
-  // Can start if: calibrated OR pre-defined mantra (Google/Tap work without calibration)
-  var canStart = calibOk || isPreDefined;
-  
-  document.getElementById('btnGo').disabled = !canStart;
-  
-  if(calibOk){
-    document.getElementById('btnGo').textContent = '🙏 Start Chanting (Audio Ready)';
-  } else if(isPreDefined){
-    document.getElementById('btnGo').textContent = '🙏 Start Chanting';
-  } else {
-    document.getElementById('btnGo').textContent = 'Calibrate for Audio Mode';
-  }
-}
+function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
 function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
@@ -1106,23 +1090,24 @@ function setMode(m){
   var tab=document.getElementById(tabId);
   if(tab)tab.classList.add('act');
   
-  // Show/hide sections based on mode
+  // Show/hide voice section based on mode
   document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';
   document.getElementById('tapSec').style.display=(m==='google')?'none':'block';
   
-  // Hide word stats in Tap mode (1 tap = 1 chant, no words)
-  document.getElementById('statWord').style.display=(m==='tap')?'none':'inline';
-  document.getElementById('statWords').style.display=(m==='tap')?'none':'inline';
-  
-  // Update hint text
+  // Tap mode: hide word stats, update hints
   if(m==='tap'){
+    document.getElementById('statWord').style.display='none';
+    document.getElementById('statWords').style.display='none';
     document.getElementById('volHint').textContent='1 Tap = 1 Chant | Long-press to undo';
+    document.getElementById('tapBtnText').textContent='Tap to Count (1 Tap = 1 Chant)';
+    document.getElementById('sessionMicRow').style.display='none';
   }else{
+    document.getElementById('statWord').style.display='inline';
+    document.getElementById('statWords').style.display='inline';
     document.getElementById('volHint').textContent='Volume buttons count | Tap anywhere | Long-press to undo';
+    document.getElementById('tapBtnText').textContent='Tap to Count';
+    document.getElementById('sessionMicRow').style.display='block';
   }
-  
-  // Hide mic row in Tap mode
-  document.getElementById('sessionMicRow').style.display=(m==='tap')?'none':'block';
   
   // Update session info bar
   if(sessionActive)updateSessionInfoBar();
@@ -1154,26 +1139,16 @@ function updateSessionInfoBar(){
   document.getElementById('sessionMantraName').textContent='📿 '+name;
   var modeIcons={google:'🗣️ Google',voice:'🎤 Audio',tap:'👆 Tap',both:'🔀 Hybrid'};
   document.getElementById('sessionModeTag').textContent=modeIcons[curMode]||curMode;
-  
-  // Show WPR only for Google/Audio modes, hide for Tap
   if(curMode==='tap'){
     document.getElementById('sessionWPR').textContent='1 tap = 1 chant';
   }else{
     document.getElementById('sessionWPR').textContent=CFG.wpr+' words';
   }
-  
-  // Show mic name (get from selected mic)
+  // Get mic name
   var micName='Default';
-  var micSelect=document.getElementById('micSelect');
-  if(micSelect&&micSelect.selectedIndex>=0){
-    micName=micSelect.options[micSelect.selectedIndex].text||'Default';
-  }
-  // Also check visual mic list
   var selectedMic=document.querySelector('.mic-item.selected .mic-name');
   if(selectedMic)micName=selectedMic.textContent;
   document.getElementById('sessionMicName').textContent=micName;
-  
-  // Hide mic row in Tap mode
   document.getElementById('sessionMicRow').style.display=(curMode==='tap')?'none':'block';
 }
 function endSession(){
@@ -1224,13 +1199,11 @@ function ADD(n){
     }else{doVibrate(VIB_PATTERNS[SND.chantVib])}}
   refreshUI();var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);drawMala();
 }
-
-// Tap mode: 1 tap = 1 complete chant (not word)
+// Tap mode: 1 tap = 1 complete chant
 function addOneChant(){
   if(sessionPaused)return;
   G_chant++;G_totalC++;
-  if(SND.chantVol>0)playSound('chant',SND.chantVol);
-  doVibrate(VIB_PATTERNS[SND.chantVib]);
+  if(SND.chantVol>0)playSound('chant',SND.chantVol);doVibrate(VIB_PATTERNS[SND.chantVib]);
   // Milestones
   if(G_chant>0&&G_chant<CFG.cpm&&CFG.cpm>=8){
     var q25=Math.floor(CFG.cpm/4),q50=Math.floor(CFG.cpm/2),q75=Math.floor(CFG.cpm*3/4);
@@ -1242,24 +1215,19 @@ function addOneChant(){
     document.getElementById('dChant').textContent=G_chant;document.getElementById('dProgress').style.width='100%';drawMala();
     G_chant=0;G_mala++;saveSessionProgress();
     if(G_mala>=CFG.malas){
-      setTimeout(function(){if(SND.doneVol>0)playSound('alldone',SND.doneVol);doVibrate(VIB_PATTERNS[SND.doneVib]);if(SND.voice)speak('Target '+CFG.malas+' Malas complete! Hare Krishna!');document.getElementById('doneCount').textContent=G_mala;document.getElementById('doneTotalC').textContent=G_totalC;document.getElementById('doneTime').textContent='Time: '+getElapsedStr();var sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';document.getElementById('doneSpeed').textContent='Speed: '+sp+' chants/min';document.getElementById('doneOv').classList.add('active');showParticles()},300);
+      setTimeout(function(){if(SND.doneVol>0)playSound('alldone',SND.doneVol);doVibrate(VIB_PATTERNS[SND.doneVib]);if(SND.voice)speak('Target '+CFG.malas+' Malas complete!');document.getElementById('doneCount').textContent=G_mala;document.getElementById('doneTotalC').textContent=G_totalC;document.getElementById('doneTime').textContent='Time: '+getElapsedStr();var sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';document.getElementById('doneSpeed').textContent='Speed: '+sp+' chants/min';document.getElementById('doneOv').classList.add('active');showParticles()},300);
     }else{
-      setTimeout(function(){if(SND.malaVol>0)playSound('mala',SND.malaVol);doVibrate(VIB_PATTERNS[SND.malaVib]);if(SND.voice)speak('Mala '+G_mala+' of '+CFG.malas+' complete');document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';document.getElementById('malaOvDone').textContent=G_mala;document.getElementById('malaOvTotal').textContent=CFG.malas;showMalaOvAutoClose()},300);
+      setTimeout(function(){if(SND.malaVol>0)playSound('mala',SND.malaVol);doVibrate(VIB_PATTERNS[SND.malaVib]);if(SND.voice)speak('Mala '+G_mala+' complete');document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';document.getElementById('malaOvDone').textContent=G_mala;document.getElementById('malaOvTotal').textContent=CFG.malas;showMalaOvAutoClose()},300);
     }
   }
-  refreshUI();
-  var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);
-  drawMala();
+  refreshUI();var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);drawMala();
 }
-
 function tapCount(){
   if(sessionPaused)return;
   if(curMode==='tap'){
-    // Tap mode: 1 tap = 1 complete chant
     D('TAP → +1 chant','ok');
     addOneChant();
   }else{
-    // Other modes: tap adds 1 word (fallback)
     D('TAP → +1 word','info');
     ADD(1);
   }
@@ -1865,12 +1833,10 @@ document.addEventListener('keydown',function(e){if(!document.getElementById('cou
 // =================== INIT ===================
 function init(){
   loadSettings();showWelcome();loadCustomMantrasFromStorage();
-  // ALWAYS show calibration steps (user can calibrate for Audio mode)
-  document.getElementById('calibrationStep1').style.display='block';
-  document.getElementById('calibrationStep2').style.display='block';
-  // Pre-defined mantras: Google mode works without calibration
-  // But noiseReady/wordReady stay false until user calibrates (for Audio mode)
-  noiseReady=false;wordReady=false;
+  // Hide calibration steps by default (Maha Mantra selected)
+  document.getElementById('calibrationStep1').style.display='none';
+  document.getElementById('calibrationStep2').style.display='none';
+  noiseReady=true;wordReady=true; // Pre-defined mantras don't need calibration
   // Show streak
   var streak=getStreak();if(streak>0){var b=document.getElementById('streakBadge');b.textContent='🔥 '+streak+' day streak!';b.style.display='inline-block'}
   // Show quote
@@ -1881,7 +1847,6 @@ function init(){
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
   setupLongPress();setTimeout(function(){refreshMicList()},1500);
   loadWeeklyStats();
-  checkReady();
   D('v28 loaded','ok');
 }
 // =================== HISTORY ===================
