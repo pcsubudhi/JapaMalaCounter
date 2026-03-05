@@ -186,24 +186,119 @@
   .weekly-stat-val{font-size:15px;font-weight:700;color:var(--text)}
   .weekly-stat-label{font-size:9px;color:var(--text-mid)}
   .btn-history{padding:8px 12px;border-radius:8px;background:var(--card);border:1px solid var(--card-border);color:var(--text-mid);font-size:12px;font-weight:600}
+  .btn-help{padding:6px 10px;border-radius:8px;background:var(--card);border:1px solid var(--accent);color:var(--accent);font-size:12px;font-weight:600}
+  /* Tutorial */
+  .tutorial-step{display:none;text-align:center;padding:10px 0}
+  .tutorial-step.active{display:block}
+  .tutorial-icon{font-size:50px;margin-bottom:10px}
+  .tutorial-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--accent);margin-bottom:10px}
+  .tutorial-text{font-size:14px;color:var(--text-mid);line-height:1.6;margin-bottom:15px}
+  .tutorial-text b{color:var(--text)}
+  .tutorial-highlight{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:10px;margin:10px 0;text-align:left}
+  .tutorial-highlight div{font-size:13px;color:var(--text);margin:6px 0}
+  .tutorial-dots{display:flex;justify-content:center;gap:8px;margin:15px 0}
+  .tutorial-dots span{width:10px;height:10px;border-radius:50%;background:var(--card-border);cursor:pointer;transition:all 0.2s}
+  .tutorial-dots span.active{background:var(--accent);transform:scale(1.2)}
+  .tutorial-nav{display:flex;gap:10px;margin-top:10px}
+  .tutorial-nav button{flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer}
+  .tutorial-nav .btn-back{background:var(--card-border);color:var(--text)}
+  .tutorial-nav .btn-next{background:var(--accent);color:var(--bg)}
+  .tutorial-nav .btn-start{background:var(--success);color:white}
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- WELCOME TUTORIAL -->
+  <!-- WELCOME TUTORIAL (Multi-step) -->
   <div id="welcomeOv" class="welcome-ov">
-    <div class="welcome-box">
-      <div style="font-size:50px">📿</div>
-      <h2>Welcome to Japa Counter</h2>
-      <div id="welcomeContent">
-        <div class="welcome-step">Step <b>1</b>: Capture your room's silence so we can filter background noise</div>
-        <div class="welcome-step">Step <b>2</b>: Teach the app one word from your mantra by saying it 5 times</div>
-        <div class="welcome-step">Step <b>3</b>: Configure your mantra settings and start chanting!</div>
-        <div class="welcome-step" style="color:var(--accent)">The app auto-counts your chanting using voice recognition 🎤</div>
+    <div class="welcome-box" style="max-width:340px">
+      
+      <!-- Step 1: Welcome -->
+      <div class="tutorial-step active" data-step="1">
+        <div class="tutorial-icon">📿</div>
+        <div class="tutorial-title">Welcome to Japa Counter!</div>
+        <div class="tutorial-text">
+          Your digital companion for<br><b>mantra chanting practice</b>.<br><br>
+          Track your daily chanting with<br>automatic voice recognition.
+        </div>
       </div>
-      <div class="welcome-dots"><span class="active"></span></div>
-      <button class="ov-btn" onclick="closeWelcome()" style="background:var(--accent);color:var(--bg)">Got it! Let's begin 🙏</button>
+      
+      <!-- Step 2: Select Mantra -->
+      <div class="tutorial-step" data-step="2">
+        <div class="tutorial-icon">🕉</div>
+        <div class="tutorial-title">Step 1: Select Mantra</div>
+        <div class="tutorial-text">
+          Choose from pre-defined mantras:
+        </div>
+        <div class="tutorial-highlight">
+          <div>🙏 <b>Hare Krishna Maha Mantra</b> (16 words)</div>
+          <div>🙏 <b>Hare Krishna Half</b> (8 words)</div>
+          <div>💕 <b>Radhe Radhe</b> (1 word)</div>
+          <div>✏️ <b>Custom</b> - Add your own!</div>
+        </div>
+      </div>
+      
+      <!-- Step 3: Calibration -->
+      <div class="tutorial-step" data-step="3">
+        <div class="tutorial-icon">🎤</div>
+        <div class="tutorial-title">Step 2: Calibrate (Optional)</div>
+        <div class="tutorial-text">
+          For <b>Audio mode</b> detection:
+        </div>
+        <div class="tutorial-highlight">
+          <div>1️⃣ Select your microphone</div>
+          <div>2️⃣ Capture room silence (10 sec)</div>
+          <div>3️⃣ Record your mantra word 5 times</div>
+        </div>
+        <div class="tutorial-text" style="font-size:12px;color:var(--accent)">
+          Skip this if using Google Speech mode
+        </div>
+      </div>
+      
+      <!-- Step 4: Detection Modes -->
+      <div class="tutorial-step" data-step="4">
+        <div class="tutorial-icon">🎯</div>
+        <div class="tutorial-title">Step 3: Choose Mode</div>
+        <div class="tutorial-highlight">
+          <div>🗣️ <b>Google</b> - Auto-detects Hindi words</div>
+          <div>🎤 <b>Audio</b> - Uses your calibration</div>
+          <div>👆 <b>Tap</b> - Manual counting (1 tap = 1 chant)</div>
+        </div>
+        <div class="tutorial-text" style="font-size:12px">
+          Switch modes anytime during chanting
+        </div>
+      </div>
+      
+      <!-- Step 5: Ready -->
+      <div class="tutorial-step" data-step="5">
+        <div class="tutorial-icon">🙏</div>
+        <div class="tutorial-title">Ready to Chant!</div>
+        <div class="tutorial-highlight">
+          <div>📊 <b>108 chants</b> = 1 Mala</div>
+          <div>🔥 Track your <b>daily streak</b></div>
+          <div>📜 View your <b>session history</b></div>
+          <div>🔔 Get <b>milestone alerts</b> (27, 54, 81)</div>
+        </div>
+        <div class="tutorial-text" style="color:var(--success)">
+          Hare Krishna! Let's begin 🙏
+        </div>
+      </div>
+      
+      <!-- Dots indicator -->
+      <div class="tutorial-dots" id="tutorialDots">
+        <span class="active" onclick="goToTutorialStep(1)"></span>
+        <span onclick="goToTutorialStep(2)"></span>
+        <span onclick="goToTutorialStep(3)"></span>
+        <span onclick="goToTutorialStep(4)"></span>
+        <span onclick="goToTutorialStep(5)"></span>
+      </div>
+      
+      <!-- Navigation buttons -->
+      <div class="tutorial-nav">
+        <button class="btn-back" id="tutorialBack" onclick="prevTutorialStep()" style="display:none">← Back</button>
+        <button class="btn-next" id="tutorialNext" onclick="nextTutorialStep()">Next →</button>
+        <button class="btn-start" id="tutorialStart" onclick="closeTutorial()" style="display:none">✓ Got it! Start</button>
+      </div>
     </div>
   </div>
 
@@ -227,7 +322,10 @@
       </div>
     </div>
 
-    <div style="text-align:right;margin-bottom:4px"><button class="btn-history" onclick="showHistory()">📜 History</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <button class="btn-help" onclick="showTutorial()">❓ Help</button>
+      <button class="btn-history" onclick="showHistory()">📜 History</button>
+    </div>
 
     <!-- Spiritual quote -->
     <div class="quote-box" id="quoteBox"></div>
@@ -726,9 +824,78 @@ function updateStreak(){
 }
 function getStreak(){try{var d=JSON.parse(localStorage.getItem('japa_streak')||'{}');var today=new Date().toISOString().slice(0,10);var yest=new Date(Date.now()-86400000).toISOString().slice(0,10);if(d.lastDate===today||d.lastDate===yest)return d.count||0;return 0}catch(e){return 0}}
 
-// =================== WELCOME ===================
-function showWelcome(){if(!localStorage.getItem('japa_welcomed')){document.getElementById('welcomeOv').classList.add('show')}}
-function closeWelcome(){document.getElementById('welcomeOv').classList.remove('show');localStorage.setItem('japa_welcomed','1')}
+// =================== TUTORIAL ===================
+var tutorialStep = 1;
+var totalTutorialSteps = 5;
+
+function showWelcome(){
+  if(!localStorage.getItem('japa_welcomed')){
+    showTutorial();
+  }
+}
+
+function showTutorial(){
+  tutorialStep = 1;
+  updateTutorialUI();
+  document.getElementById('welcomeOv').classList.add('show');
+}
+
+function closeTutorial(){
+  document.getElementById('welcomeOv').classList.remove('show');
+  localStorage.setItem('japa_welcomed','1');
+}
+
+function nextTutorialStep(){
+  if(tutorialStep < totalTutorialSteps){
+    tutorialStep++;
+    updateTutorialUI();
+  }
+}
+
+function prevTutorialStep(){
+  if(tutorialStep > 1){
+    tutorialStep--;
+    updateTutorialUI();
+  }
+}
+
+function goToTutorialStep(step){
+  tutorialStep = step;
+  updateTutorialUI();
+}
+
+function updateTutorialUI(){
+  // Update steps visibility
+  document.querySelectorAll('.tutorial-step').forEach(function(el){
+    el.classList.remove('active');
+    if(parseInt(el.getAttribute('data-step')) === tutorialStep){
+      el.classList.add('active');
+    }
+  });
+  
+  // Update dots
+  document.querySelectorAll('#tutorialDots span').forEach(function(dot, i){
+    dot.classList.toggle('active', i + 1 === tutorialStep);
+  });
+  
+  // Update buttons
+  var backBtn = document.getElementById('tutorialBack');
+  var nextBtn = document.getElementById('tutorialNext');
+  var startBtn = document.getElementById('tutorialStart');
+  
+  backBtn.style.display = tutorialStep > 1 ? 'block' : 'none';
+  
+  if(tutorialStep === totalTutorialSteps){
+    nextBtn.style.display = 'none';
+    startBtn.style.display = 'block';
+  } else {
+    nextBtn.style.display = 'block';
+    startBtn.style.display = 'none';
+  }
+}
+
+// Legacy function name for compatibility
+function closeWelcome(){ closeTutorial(); }
 
 // =================== MIC LIST ===================
 var detectedMics=[];
