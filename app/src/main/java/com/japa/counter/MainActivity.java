@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         
         // Check if model folder exists in assets
         try {
-            String[] assetFiles = getAssets().list("vosk-model-small-en-in");
+            String[] assetFiles = getAssets().list("vosk-model-small-hi");
             if (assetFiles == null || assetFiles.length == 0) {
                 Log.e(TAG, "Vosk model NOT FOUND in assets!");
                 Toast.makeText(this, "Vosk: Model NOT FOUND!", Toast.LENGTH_LONG).show();
@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         callJS("D('Vosk: Unpacking model (30-60 sec)...','info')");
         
         // Load Vosk model from assets in background
-        StorageService.unpack(this, "vosk-model-small-en-in", "model",
+        StorageService.unpack(this, "vosk-model-small-hi", "model",
             (model) -> {
                 voskModel = model;
                 voskReady = true;
