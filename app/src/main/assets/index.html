@@ -399,8 +399,8 @@
 
     <div class="mode-tabs">
       <button class="mtab act" id="tabGoogle" onclick="setMode('google')">🗣️ Google</button>
-      <button class="mtab" id="tabVosk" onclick="setMode('vosk')">🎙️ Vosk</button>
       <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Audio</button>
+      <button class="mtab" id="tabBoth" onclick="setMode('both')">🔀 Hybrid</button>
       <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap</button>
     </div>
 
@@ -1018,15 +1018,13 @@ var curMode='google';
 function setMode(m){
   curMode=m;
   document.querySelectorAll('.mtab').forEach(function(b){b.classList.remove('act')});
-  
-  // Handle tab highlighting
-  var tabMap = {google:'tabGoogle', vosk:'tabVosk', voice:'tabVoice', tap:'tabTap'};
-  var tab = document.getElementById(tabMap[m]);
+  var tabId='tab'+m.charAt(0).toUpperCase()+m.slice(1);
+  var tab=document.getElementById(tabId);
   if(tab)tab.classList.add('act');
   
   // Show/hide voice section based on mode
   document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';
-  document.getElementById('tapSec').style.display=(m==='google'||m==='vosk')?'none':'block';
+  document.getElementById('tapSec').style.display=(m==='google')?'none':'block';
   
   // Stop detection when switching modes
   if(detecting)stopListen();
@@ -1147,7 +1145,6 @@ async function startListen(){
   if(curMode==='voice'){
     // Make sure Google is stopped
     stopGoogleSpeech();
-    stopVosk();
     
     if(!(await initAudio())){
       D('Audio init failed','err');
@@ -1158,10 +1155,11 @@ async function startListen(){
     return;
   }
   
-  // VOSK MODE - Continuous offline recognition (best for single words)
-  if(curMode==='vosk'){
-    // Stop other listeners
-    stopGoogleSpeech();
+  // HYBRID MODE - Use Google Speech primarily, Audio as backup
+  // IMPORTANT: Can't run both simultaneously (mic conflict)
+  // Solution: Run Google Speech, and use Audio only when Google fails
+  if(curMode==='both'){
+    // Stop any existing WebView audio
     if(actx){
       try{
         if(stream)stream.getTracks().forEach(function(t){t.stop()});
@@ -1170,8 +1168,13 @@ async function startListen(){
       actx=null;mic=null;analyser=null;stream=null;
     }
     
-    startVosk();
-    document.getElementById('sLine').textContent='Listening (Vosk)...';
+    // Start Google Speech as primary
+    startGoogleSpeech();
+    
+    // For hybrid, we'll rely on Google + Tap as fallback
+    // Audio detection causes mic conflict, so we skip it
+    D('Hybrid: Google + Tap fallback','info');
+    document.getElementById('sLine').textContent='Listening (Hybrid)...';
     return;
   }
   
@@ -1185,9 +1188,6 @@ function stopListen(){
   if(googleSpeechActive){
     stopGoogleSpeech();
   }
-  
-  // Stop Vosk
-  stopVosk();
   
   // Stop Audio detection
   if(audioDetectActive){
@@ -1235,91 +1235,6 @@ function stopGoogleSpeech(){
   }
   googleSpeechActive=false;
 }
-
-// =====================================================
-// VOSK - Continuous Offline Speech Recognition
-// =====================================================
-var voskReady = false;
-var voskListening = false;
-
-function startVosk(){
-  if(typeof NativeApp==='undefined'||typeof NativeApp.startVoskRecognition!=='function'){
-    D('Vosk not available','warn');
-    document.getElementById('sLine').textContent='Vosk not available';
-    return;
-  }
-  
-  if(!voskReady){
-    D('Vosk model loading...','info');
-    document.getElementById('sLine').textContent='Loading Vosk model...';
-    return;
-  }
-  
-  // Determine target word based on selected mantra
-  var targetWord = 'radha';
-  if(CFG.mantra==='maha_mantra'||CFG.mantra==='hare_krishna'){
-    targetWord = 'hare';
-  }else if(CFG.mantra==='radhe_radhe'){
-    targetWord = 'radhe';
-  }else if(CFG.mantra==='custom'){
-    var customWord = document.getElementById('inCustomWord').value.trim();
-    targetWord = customWord || 'radha';
-  }
-  
-  NativeApp.startVoskRecognition(targetWord);
-  voskListening = true;
-  D('Vosk started for: '+targetWord,'ok');
-}
-
-function stopVosk(){
-  if(typeof NativeApp!=='undefined'&&typeof NativeApp.stopVoskRecognition==='function'){
-    NativeApp.stopVoskRecognition();
-  }
-  voskListening = false;
-}
-
-// Vosk callbacks from native Android
-function onVoskReady(){
-  voskReady = true;
-  D('🎙️ Vosk ready (offline)','ok');
-}
-
-function onVoskError(err){
-  D('⚠️ Vosk: '+err,'warn');
-  document.getElementById('sLine').textContent='Vosk: '+err;
-}
-
-function onVoskStarted(){
-  D('🎙️ Vosk listening...','ok');
-  document.getElementById('sLine').textContent='Listening (Vosk - offline)...';
-}
-
-function onVoskStopped(){
-  D('Vosk stopped','info');
-}
-
-function onVoskTranscript(text, totalWords, newWords, isFinal){
-  if(!detecting||sessionPaused)return;
-  
-  D('🎙️ "'+text.substring(0,30)+'" (+'+newWords+')','ok');
-  
-  // Add new words
-  for(var i=0;i<newWords;i++){
-    addOneWord();
-  }
-  
-  // Update status
-  document.getElementById('sLine').className='status-line hit';
-  document.getElementById('sLine').textContent='✓ '+totalWords+' words detected';
-  setTimeout(function(){
-    if(detecting&&curMode==='vosk'){
-      document.getElementById('sLine').className='status-line';
-      document.getElementById('sLine').textContent='Listening (Vosk)...';
-    }
-  },500);
-}
-
-// =====================================================
 
 // Called by native Android when Google detects a word
 var lastTranscriptForCount = '';
@@ -1408,37 +1323,36 @@ function onWordDetected(word){
   },200);
 }
 
-// Process transcript - count words from partial and final results
+// Process transcript - count words HERE instead of in Java
 function onTranscript(text,type){
+  // Always log transcript for debugging
+  D('📝 '+text.substring(0,50),'info');
+  
   if(!detecting||sessionPaused)return;
   
   // Count mantra words in this transcript
   var wordCount = countMantraWords(text);
   
-  // Log what we received
-  D('📝 "'+text.substring(0,30)+'" ('+wordCount+' words)','info');
-  
   // IMPORTANT: If new transcript has FEWER words than last count,
-  // it means Google restarted with a new phrase - reset counter
+  // it means Google restarted with a new phrase - reset!
   if(wordCount < lastTranscriptWordCount){
-    D('🔄 New phrase started','info');
+    D('🔄 New phrase, reset','info');
     lastTranscriptWordCount = 0;
   }
   
   // Only count NEW words (compared to last transcript)
   if(wordCount > lastTranscriptWordCount){
     var newWords = wordCount - lastTranscriptWordCount;
+    D('✅ +'+newWords+' words (total:'+wordCount+')','ok');
     
-    // Add the new words one by one
+    // Add the new words
     for(var i=0;i<newWords;i++){
       addOneWord();
     }
-    
-    D('✅ +'+newWords+' (total in phrase: '+wordCount+')','ok');
     lastTranscriptWordCount = wordCount;
   }
   
-  // Reset on final result for next phrase
+  // Reset on final result
   if(type==='final'){
     lastTranscriptWordCount = 0;
     lastTranscriptForCount = '';
