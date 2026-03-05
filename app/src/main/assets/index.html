@@ -162,6 +162,32 @@
   .mic-item.selected .mic-radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent)}
   .mic-item .mic-name{font-size:13px;color:var(--text);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mic-item .mic-type{font-size:11px;color:var(--text-mid);background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:10px;flex-shrink:0}
+  /* Session Info Bar on Counter Screen */
+  .session-info{background:rgba(0,0,0,0.3);border:1px solid var(--card-border);border-radius:10px;padding:8px 12px;margin-bottom:6px}
+  .session-info-row{display:flex;justify-content:space-between;align-items:center}
+  .session-mantra{font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+  .session-details{font-size:11px;color:var(--text-mid);display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .session-details span{background:rgba(251,191,36,0.12);padding:2px 6px;border-radius:5px}
+  .session-details .calib-yes{color:var(--success)}
+  .session-details .calib-no{color:var(--text-dim)}
+  /* History Screen */
+  .history-item{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:12px;margin-bottom:8px}
+  .history-date{font-size:11px;color:var(--text-mid);margin-bottom:3px}
+  .history-mantra{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .history-stats{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-mid)}
+  .history-stats b{color:var(--accent)}
+  .history-complete{border-color:var(--success)!important}
+  .history-complete .history-mantra{color:var(--success)}
+  .history-empty{text-align:center;color:var(--text-mid);padding:30px 20px;font-size:14px}
+  /* Weekly Stats on Home */
+  .weekly-stats{background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.03));border:1px solid rgba(251,191,36,0.25);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .weekly-stats-title{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;text-align:center}
+  .weekly-stats-row{display:flex;justify-content:space-around}
+  .weekly-stat{text-align:center}
+  .weekly-stat-val{font-size:16px;font-weight:700;color:var(--text)}
+  .weekly-stat-label{font-size:10px;color:var(--text-mid)}
+  .btn-history{padding:10px;border-radius:10px;background:var(--card);border:1.5px solid var(--card-border);color:var(--text-mid);font-size:13px;font-weight:600}
+  .btn-history:active{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -191,6 +217,20 @@
       <p>Calibrated voice recognition</p>
       <div id="streakBadge" class="streak-badge" style="display:none"></div>
     </div>
+
+    <!-- Weekly Stats -->
+    <div class="weekly-stats" id="weeklyStats" style="display:none">
+      <div class="weekly-stats-title">📊 This Week</div>
+      <div class="weekly-stats-row">
+        <div class="weekly-stat"><div class="weekly-stat-val" id="weekMalas">0</div><div class="weekly-stat-label">Malas</div></div>
+        <div class="weekly-stat"><div class="weekly-stat-val" id="weekChants">0</div><div class="weekly-stat-label">Chants</div></div>
+        <div class="weekly-stat"><div class="weekly-stat-val" id="weekTime">0m</div><div class="weekly-stat-label">Time</div></div>
+        <div class="weekly-stat"><div class="weekly-stat-val" id="weekSessions">0</div><div class="weekly-stat-label">Sessions</div></div>
+      </div>
+    </div>
+
+    <!-- History Button -->
+    <button class="btn-history" onclick="showHistory()">📜 View History</button>
 
     <!-- Spiritual quote -->
     <div class="quote-box" id="quoteBox"></div>
@@ -341,6 +381,18 @@
     <div id="batteryWarn" class="battery-warn">🔋 Low battery — plug in to avoid interruption</div>
     <div id="pauseBanner" class="pause-banner"><span>PAUSED</span> — tap Resume</div>
 
+    <!-- Session Info Bar -->
+    <div class="session-info" id="sessionInfo">
+      <div class="session-info-row">
+        <div class="session-mantra" id="sessionMantraName">📿 Hare Krishna Maha Mantra</div>
+        <div class="session-details">
+          <span id="sessionModeTag">🗣️ Google</span>
+          <span id="sessionWPR">16 words</span>
+          <span id="sessionCalibTag" class="calib-no">⚪ Not calibrated</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Sound panel -->
     <div id="sndPanel" class="snd-panel">
       <div class="snd-hint" id="sndHint">Tap "Sound" again to close this panel</div>
@@ -449,6 +501,22 @@
   <div id="confirmOv" class="confirm-ov"><div class="confirm-box"><h3 id="confirmTitle">Sure?</h3><p id="confirmMsg"></p><div class="confirm-btns"><button onclick="confirmCancel()" style="background:var(--card-border);color:var(--text)">Cancel</button><button onclick="confirmOk()" style="background:var(--danger);color:white">Yes</button></div></div></div>
   <div id="interstitialAd" class="ov"><div class="ov-bg"></div><div class="ov-box" style="background:var(--card);border:2px dashed var(--card-border)"><p style="color:var(--text-mid);font-size:12px;margin-bottom:16px">Advertisement</p><div style="height:200px;background:rgba(0,0,0,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px"><span style="color:var(--text-mid);font-size:13px">AdMob Interstitial</span></div><button class="ov-btn" onclick="closeInterstitialAd()" style="background:var(--accent);color:var(--bg)">Close Ad</button></div></div>
 
+  <!-- History Overlay -->
+  <div id="historyOv" class="ov">
+    <div class="ov-bg" onclick="closeHistory()"></div>
+    <div class="ov-box" style="background:var(--card);border:2px solid var(--accent);max-width:360px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--accent);font-size:18px">📜 Session History</h2>
+        <button onclick="closeHistory()" style="background:none;border:none;color:var(--text-mid);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div id="historyList" style="flex:1;overflow-y:auto;max-height:60vh"></div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button onclick="clearHistory()" style="flex:1;padding:10px;border-radius:8px;background:var(--card-border);color:var(--text-mid);font-size:13px;font-weight:600">🗑 Clear All</button>
+        <button onclick="closeHistory()" style="flex:1;padding:10px;border-radius:8px;background:var(--accent);color:var(--bg);font-size:13px;font-weight:700">Close</button>
+      </div>
+    </div>
+  </div>
+
   <canvas id="particles"></canvas>
   <div class="undo-toast" id="undoToast">↩ Undo 1 count</div>
 </div>
@@ -466,6 +534,10 @@ var sessionStartTime=0,sessionPausedTime=0,timerInterval=null,confirmCallback=nu
 var noiseRecalibTimer=null,dimMode=false;
 var SND={chantVol:0.3,chantVib:'short',mileVol:0.5,mileVib:'short',mile25:true,mile50:true,mile75:true,malaVol:0.7,malaVib:'medium',doneVol:1.0,doneVib:'celebration',voice:true};
 var VIB_PATTERNS={off:[],short:[50],medium:[150,50,150],long:[300,100,300,100,300],celebration:[400,150,400,150,400,150,600]};
+
+// Session History
+var sessionHistory = [];
+var currentSessionId = null;
 
 // Mantra definitions
 var MANTRAS={
@@ -496,15 +568,14 @@ function selectMantra(id,el){
   // Show/hide custom word section
   document.getElementById('customWordSection').style.display=(id==='custom')?'block':'none';
   
-  // Show/hide calibration steps
-  var showCalib=(id==='custom');
-  document.getElementById('calibrationStep1').style.display=showCalib?'block':'none';
-  document.getElementById('calibrationStep2').style.display=showCalib?'block':'none';
+  // Always show calibration steps (for Audio mode support on any mantra)
+  // But mark pre-defined mantras as ready for Google mode
+  document.getElementById('calibrationStep1').style.display='block';
+  document.getElementById('calibrationStep2').style.display='block';
   
-  // For pre-defined mantras, mark as ready
+  // For pre-defined mantras, allow start without calibration (for Google mode)
   if(id!=='custom'){
-    noiseReady=true;
-    wordReady=true;
+    // Don't auto-set noiseReady/wordReady - let user calibrate if they want Audio mode
   }
   
   checkReady();
@@ -976,7 +1047,24 @@ function startNoiseRecalib(){
 }
 function stopNoiseRecalib(){if(noiseRecalibTimer){clearInterval(noiseRecalibTimer);noiseRecalibTimer=null}}
 
-function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
+function checkReady(){
+  // Allow starting if:
+  // 1. Both calibrations done (for Audio mode), OR
+  // 2. Pre-defined mantra selected (can use Google mode without calibration)
+  var calibOk = noiseReady && wordReady;
+  var isPreDefined = CFG.mantra !== 'custom';
+  var ok = calibOk || isPreDefined;
+  
+  document.getElementById('btnGo').disabled = !ok;
+  
+  if(calibOk){
+    document.getElementById('btnGo').textContent = '🙏 Start Chanting (Audio Ready)';
+  } else if(isPreDefined){
+    document.getElementById('btnGo').textContent = '🙏 Start Chanting (Google Mode)';
+  } else {
+    document.getElementById('btnGo').textContent = 'Complete Steps 1 & 2 for Audio Mode';
+  }
+}
 function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
@@ -1029,6 +1117,9 @@ function setMode(m){
   // Stop detection when switching modes
   if(detecting)stopListen();
   
+  // Update session info bar if on counter screen
+  if(sessionActive) updateSessionInfoBar();
+  
   D('Mode: '+m,'info');
 }
 
@@ -1044,17 +1135,106 @@ function startSession(){
   document.getElementById('dbg').innerHTML='';refreshUI();drawMala();startTimer();startNoiseRecalib();checkBattery();
   document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');
   sessionActive=true;saveSettings();clearSessionProgress();
+  
+  // Update session info bar
+  updateSessionInfoBar();
+  
+  // Create new session for history
+  currentSessionId = Date.now();
+  
   // Auto-start listening
   if(document.getElementById('chkAutoListen').checked&&curMode!=='tap'){setTimeout(function(){if(!detecting)startListen()},500)}
   D('Session started','ok');
 }
+
+function updateSessionInfoBar(){
+  var m = MANTRAS[CFG.mantra];
+  var mantraName = m ? m.name : 'Custom';
+  if(CFG.mantra === 'custom'){
+    var customWord = document.getElementById('inCustomWord').value.trim();
+    mantraName = customWord ? 'Custom: ' + customWord : 'Custom';
+  }
+  
+  document.getElementById('sessionMantraName').textContent = '📿 ' + mantraName;
+  
+  // Mode tag
+  var modeIcons = {google:'🗣️ Google', voice:'🎤 Audio', tap:'👆 Tap'};
+  document.getElementById('sessionModeTag').textContent = modeIcons[curMode] || curMode;
+  
+  // WPR
+  document.getElementById('sessionWPR').textContent = CFG.wpr + ' word' + (CFG.wpr > 1 ? 's' : '');
+  
+  // Calibration status
+  var calibEl = document.getElementById('sessionCalibTag');
+  if(noiseReady && wordReady){
+    calibEl.textContent = '✅ Calibrated';
+    calibEl.className = 'calib-yes';
+  } else {
+    calibEl.textContent = '⚪ Not calibrated';
+    calibEl.className = 'calib-no';
+  }
+}
+
 function endSession(){
   stopListen();stopTimer();stopNoiseRecalib();sessionActive=false;
+  
+  // Save to history
+  saveSessionToHistory();
+  
   // Show summary if any chanting was done
   if(G_totalC>0){showSessionSummary();updateStreak()}
   else{document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active')}
   pausedSession=null;document.getElementById('resumeBanner').classList.remove('show');clearSessionProgress();saveSettings();
+  
+  // Refresh weekly stats
+  loadWeeklyStats();
 }
+
+function saveSessionToHistory(){
+  if(G_totalC === 0) return; // Don't save empty sessions
+  
+  var m = MANTRAS[CFG.mantra];
+  var mantraName = m ? m.name : 'Custom';
+  if(CFG.mantra === 'custom'){
+    var customWord = document.getElementById('inCustomWord').value.trim();
+    mantraName = customWord ? 'Custom: ' + customWord : 'Custom';
+  }
+  
+  var session = {
+    id: currentSessionId || Date.now(),
+    date: new Date().toISOString(),
+    mantra: mantraName,
+    mantraId: CFG.mantra,
+    mode: curMode,
+    wpr: CFG.wpr,
+    cpm: CFG.cpm,
+    targetMalas: CFG.malas,
+    malas: G_mala,
+    chants: G_totalC,
+    words: G_t,
+    duration: getElapsed(),
+    speed: getElapsed() > 10 ? (G_totalC / getElapsed() * 60).toFixed(1) : 0,
+    complete: G_mala >= CFG.malas
+  };
+  
+  // Load existing history
+  try {
+    sessionHistory = JSON.parse(localStorage.getItem('japaHistory') || '[]');
+  } catch(e) {
+    sessionHistory = [];
+  }
+  
+  // Add new session
+  sessionHistory.unshift(session);
+  
+  // Keep only last 100 sessions
+  if(sessionHistory.length > 100) sessionHistory = sessionHistory.slice(0, 100);
+  
+  // Save
+  localStorage.setItem('japaHistory', JSON.stringify(sessionHistory));
+  D('Session saved to history','ok');
+}
+
 function showSessionSummary(){
   var el=getElapsedStr(),sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';
   document.getElementById('summaryContent').innerHTML='<b>Time:</b> '+el+'<br><b>Malas:</b> '+G_mala+' / '+CFG.malas+'<br><b>Chants:</b> '+G_totalC+'<br><b>Words detected:</b> '+G_t+'<br><b>Speed:</b> '+sp+' chants/min';
@@ -1698,8 +1878,125 @@ function init(){
     // Override resumeSession to use saved data
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
   setupLongPress();setTimeout(function(){refreshMicList()},1500);
-  D('v15 loaded','ok');
+  
+  // Load weekly stats
+  loadWeeklyStats();
+  
+  D('v27 loaded','ok');
 }
+
+// =================== HISTORY FUNCTIONS ===================
+function showHistory(){
+  loadHistory();
+  renderHistory();
+  document.getElementById('historyOv').classList.add('active');
+}
+
+function closeHistory(){
+  document.getElementById('historyOv').classList.remove('active');
+}
+
+function loadHistory(){
+  try {
+    sessionHistory = JSON.parse(localStorage.getItem('japaHistory') || '[]');
+  } catch(e) {
+    sessionHistory = [];
+  }
+}
+
+function renderHistory(){
+  var container = document.getElementById('historyList');
+  
+  if(sessionHistory.length === 0){
+    container.innerHTML = '<div class="history-empty">📿 No sessions yet<br><br>Start chanting to see your history here!</div>';
+    return;
+  }
+  
+  var html = '';
+  sessionHistory.forEach(function(s){
+    var d = new Date(s.date);
+    var dateStr = formatHistoryDate(d);
+    var durationStr = formatDuration(s.duration);
+    var completeClass = s.complete ? 'history-complete' : '';
+    var completeIcon = s.complete ? '✅ ' : '';
+    
+    html += '<div class="history-item ' + completeClass + '">';
+    html += '<div class="history-date">' + dateStr + '</div>';
+    html += '<div class="history-mantra">' + completeIcon + s.mantra + '</div>';
+    html += '<div class="history-stats">';
+    html += '<span>Malas: <b>' + s.malas + '/' + s.targetMalas + '</b></span>';
+    html += '<span>Chants: <b>' + s.chants + '</b></span>';
+    html += '<span>Time: <b>' + durationStr + '</b></span>';
+    html += '<span>Speed: <b>' + s.speed + '/min</b></span>';
+    html += '</div></div>';
+  });
+  
+  container.innerHTML = html;
+}
+
+function formatHistoryDate(d){
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  var sessionDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  
+  var timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  
+  if(sessionDate.getTime() === today.getTime()) return 'Today ' + timeStr;
+  if(sessionDate.getTime() === yesterday.getTime()) return 'Yesterday ' + timeStr;
+  
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[d.getMonth()] + ' ' + d.getDate() + ' ' + timeStr;
+}
+
+function formatDuration(secs){
+  if(!secs || secs < 60) return Math.floor(secs || 0) + 's';
+  var mins = Math.floor(secs / 60);
+  if(mins < 60) return mins + 'm';
+  var hrs = Math.floor(mins / 60);
+  mins = mins % 60;
+  return hrs + 'h ' + mins + 'm';
+}
+
+function clearHistory(){
+  if(confirm('Delete all session history?')){
+    sessionHistory = [];
+    localStorage.setItem('japaHistory', '[]');
+    renderHistory();
+    loadWeeklyStats();
+  }
+}
+
+// =================== WEEKLY STATS ===================
+function loadWeeklyStats(){
+  loadHistory();
+  
+  var now = new Date();
+  var weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+  
+  var totalMalas = 0, totalChants = 0, totalTime = 0, totalSessions = 0;
+  
+  sessionHistory.forEach(function(s){
+    var d = new Date(s.date);
+    if(d >= weekAgo){
+      totalMalas += s.malas || 0;
+      totalChants += s.chants || 0;
+      totalTime += s.duration || 0;
+      totalSessions++;
+    }
+  });
+  
+  if(totalSessions > 0){
+    document.getElementById('weeklyStats').style.display = 'block';
+    document.getElementById('weekMalas').textContent = totalMalas;
+    document.getElementById('weekChants').textContent = totalChants;
+    document.getElementById('weekTime').textContent = formatDuration(totalTime);
+    document.getElementById('weekSessions').textContent = totalSessions;
+  } else {
+    document.getElementById('weeklyStats').style.display = 'none';
+  }
+}
+
 init();
 </script>
 </body>
