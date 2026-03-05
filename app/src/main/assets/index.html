@@ -205,7 +205,7 @@
     <!-- Mantra Selection -->
     <div class="card step">
       <div class="step-header"><div class="step-num">🕉</div><div class="step-title">Select Mantra <span class="tip" onclick="toggleTip('tipMantra')">?</span></div></div>
-      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Hybrid mode (Google + Audio calibration).</div>
+      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Audio mode with calibration.</div>
       <div id="mantraList" style="margin-bottom:8px">
         <div class="mantra-item selected" data-id="maha_mantra" onclick="selectMantra('maha_mantra',this)">
           <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
@@ -225,7 +225,7 @@
         <div class="mantra-item" data-id="custom" onclick="selectMantra('custom',this)">
           <div class="mantra-name">✏️ Custom Word/Mantra</div>
           <div class="mantra-text" id="customMantraPreview">Add your own word or mantra</div>
-          <div class="mantra-info">Use Hybrid mode for best results</div>
+          <div class="mantra-info">Use Audio mode with calibration</div>
         </div>
       </div>
       <div id="customWordSection" style="display:none;margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px">
@@ -400,7 +400,7 @@
     <div class="mode-tabs">
       <button class="mtab act" id="tabGoogle" onclick="setMode('google')">🗣️ Google</button>
       <button class="mtab" id="tabVoice" onclick="setMode('voice')">🎤 Audio</button>
-      <button class="mtab" id="tabBoth" onclick="setMode('both')">🔀 Hybrid</button>
+      
       <button class="mtab" id="tabTap" onclick="setMode('tap')">👆 Tap</button>
     </div>
 
@@ -1323,36 +1323,37 @@ function onWordDetected(word){
   },200);
 }
 
-// Process transcript - count words HERE instead of in Java
+// Process transcript - count words from partial and final results
 function onTranscript(text,type){
-  // Always log transcript for debugging
-  D('📝 '+text.substring(0,50),'info');
-  
   if(!detecting||sessionPaused)return;
   
   // Count mantra words in this transcript
   var wordCount = countMantraWords(text);
   
+  // Log what we received
+  D('📝 "'+text.substring(0,30)+'" ('+wordCount+' words)','info');
+  
   // IMPORTANT: If new transcript has FEWER words than last count,
-  // it means Google restarted with a new phrase - reset!
+  // it means Google restarted with a new phrase - reset counter
   if(wordCount < lastTranscriptWordCount){
-    D('🔄 New phrase, reset','info');
+    D('🔄 New phrase started','info');
     lastTranscriptWordCount = 0;
   }
   
   // Only count NEW words (compared to last transcript)
   if(wordCount > lastTranscriptWordCount){
     var newWords = wordCount - lastTranscriptWordCount;
-    D('✅ +'+newWords+' words (total:'+wordCount+')','ok');
     
-    // Add the new words
+    // Add the new words one by one
     for(var i=0;i<newWords;i++){
       addOneWord();
     }
+    
+    D('✅ +'+newWords+' (total in phrase: '+wordCount+')','ok');
     lastTranscriptWordCount = wordCount;
   }
   
-  // Reset on final result
+  // Reset on final result for next phrase
   if(type==='final'){
     lastTranscriptWordCount = 0;
     lastTranscriptForCount = '';
