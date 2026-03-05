@@ -561,15 +561,15 @@ function selectMantra(id,el){
   // Show/hide custom word section
   document.getElementById('customWordSection').style.display=(id==='custom')?'block':'none';
   
-  // Show/hide calibration steps
-  var showCalib=(id==='custom');
-  document.getElementById('calibrationStep1').style.display=showCalib?'block':'none';
-  document.getElementById('calibrationStep2').style.display=showCalib?'block':'none';
+  // ALWAYS show calibration steps (for Audio mode support on ANY mantra)
+  document.getElementById('calibrationStep1').style.display='block';
+  document.getElementById('calibrationStep2').style.display='block';
   
-  // For pre-defined mantras, mark as ready
+  // For pre-defined mantras, allow starting without calibration (Google mode works)
+  // But don't auto-mark as calibrated - user must calibrate for Audio mode
   if(id!=='custom'){
-    noiseReady=true;
-    wordReady=true;
+    // Google mode will work without calibration
+    // Audio mode requires calibration
   }
   
   checkReady();
@@ -1041,7 +1041,23 @@ function startNoiseRecalib(){
 }
 function stopNoiseRecalib(){if(noiseRecalibTimer){clearInterval(noiseRecalibTimer);noiseRecalibTimer=null}}
 
-function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
+function checkReady(){
+  var calibOk = noiseReady && wordReady;
+  var isPreDefined = (CFG.mantra !== 'custom');
+  
+  // Can start if: calibrated OR pre-defined mantra (Google/Tap work without calibration)
+  var canStart = calibOk || isPreDefined;
+  
+  document.getElementById('btnGo').disabled = !canStart;
+  
+  if(calibOk){
+    document.getElementById('btnGo').textContent = '🙏 Start Chanting (Audio Ready)';
+  } else if(isPreDefined){
+    document.getElementById('btnGo').textContent = '🙏 Start Chanting';
+  } else {
+    document.getElementById('btnGo').textContent = 'Calibrate for Audio Mode';
+  }
+}
 function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
@@ -1849,10 +1865,12 @@ document.addEventListener('keydown',function(e){if(!document.getElementById('cou
 // =================== INIT ===================
 function init(){
   loadSettings();showWelcome();loadCustomMantrasFromStorage();
-  // Hide calibration steps by default (Maha Mantra selected)
-  document.getElementById('calibrationStep1').style.display='none';
-  document.getElementById('calibrationStep2').style.display='none';
-  noiseReady=true;wordReady=true; // Pre-defined mantras don't need calibration
+  // ALWAYS show calibration steps (user can calibrate for Audio mode)
+  document.getElementById('calibrationStep1').style.display='block';
+  document.getElementById('calibrationStep2').style.display='block';
+  // Pre-defined mantras: Google mode works without calibration
+  // But noiseReady/wordReady stay false until user calibrates (for Audio mode)
+  noiseReady=false;wordReady=false;
   // Show streak
   var streak=getStreak();if(streak>0){var b=document.getElementById('streakBadge');b.textContent='🔥 '+streak+' day streak!';b.style.display='inline-block'}
   // Show quote
@@ -1863,7 +1881,8 @@ function init(){
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
   setupLongPress();setTimeout(function(){refreshMicList()},1500);
   loadWeeklyStats();
-  D('v27 loaded','ok');
+  checkReady();
+  D('v28 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
