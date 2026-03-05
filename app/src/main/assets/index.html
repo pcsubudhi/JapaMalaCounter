@@ -236,13 +236,17 @@
     <div id="resumeBanner" class="card resume-banner">
       <p style="color:var(--success);font-weight:600;margin-bottom:6px">Paused Session</p>
       <p style="color:var(--text-mid);font-size:12px;margin-bottom:8px">Mala <span id="rMala">0</span>/<span id="rMalaT">16</span> | Chant <span id="rChant">0</span>/<span id="rCPM">108</span></p>
-      <button onclick="resumeSession()" style="width:100%;padding:10px;border-radius:10px;background:var(--success);color:white;font-size:14px;font-weight:600">Resume Chanting</button>
+      <div style="display:flex;gap:6px">
+        <button onclick="resumeSession()" style="flex:2;padding:10px;border-radius:10px;background:var(--success);color:white;font-size:13px;font-weight:600">▶ Resume</button>
+        <button onclick="endPausedSession()" style="flex:1;padding:10px;border-radius:10px;background:var(--card-border);color:var(--text);font-size:13px;font-weight:600">⏹ End</button>
+        <button onclick="discardPausedSession()" style="flex:1;padding:10px;border-radius:10px;background:var(--danger);color:white;font-size:13px;font-weight:600">🔄 New</button>
+      </div>
     </div>
 
     <!-- Mantra Selection -->
     <div class="card step">
       <div class="step-header"><div class="step-num">🕉</div><div class="step-title">Select Mantra <span class="tip" onclick="toggleTip('tipMantra')">?</span></div></div>
-      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Hybrid mode (Google + Audio calibration).</div>
+      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Audio mode with calibration.</div>
       <div id="mantraList" style="margin-bottom:8px">
         <div class="mantra-item selected" data-id="maha_mantra" onclick="selectMantra('maha_mantra',this)">
           <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
@@ -262,7 +266,7 @@
         <div class="mantra-item" data-id="custom" onclick="selectMantra('custom',this)">
           <div class="mantra-name">✏️ Custom Word/Mantra</div>
           <div class="mantra-text" id="customMantraPreview">Add your own word or mantra</div>
-          <div class="mantra-info">Use Hybrid mode for best results</div>
+          <div class="mantra-info">Use Audio mode with calibration</div>
         </div>
       </div>
       <div id="customWordSection" style="display:none;margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px">
@@ -562,14 +566,15 @@ function selectMantra(id,el){
   document.getElementById('customWordSection').style.display=(id==='custom')?'block':'none';
   
   // Show/hide calibration steps
-  var showCalib=(id==='custom');
-  document.getElementById('calibrationStep1').style.display=showCalib?'block':'none';
-  document.getElementById('calibrationStep2').style.display=showCalib?'block':'none';
+  // ALWAYS show calibration steps (for Audio mode on ANY mantra)
+  document.getElementById('calibrationStep1').style.display='block';
+  document.getElementById('calibrationStep2').style.display='block';
   
-  // For pre-defined mantras, mark as ready
+  // For pre-defined mantras, allow starting without calibration (Google/Tap work)
+  // But user can still calibrate if they want Audio mode
   if(id!=='custom'){
-    noiseReady=true;
-    wordReady=true;
+    // Don't auto-mark as calibrated - keep noiseReady/wordReady as they are
+    // This lets user calibrate if they want, or just use Google mode
   }
   
   checkReady();
@@ -1041,7 +1046,21 @@ function startNoiseRecalib(){
 }
 function stopNoiseRecalib(){if(noiseRecalibTimer){clearInterval(noiseRecalibTimer);noiseRecalibTimer=null}}
 
-function checkReady(){var ok=noiseReady&&wordReady;document.getElementById('btnGo').disabled=!ok;if(ok)document.getElementById('btnGo').textContent='🙏 Start Chanting'}
+function checkReady(){
+  var calibOk = noiseReady && wordReady;
+  var isPreDefined = (CFG.mantra !== 'custom');
+  var canStart = calibOk || isPreDefined;
+  
+  document.getElementById('btnGo').disabled = !canStart;
+  
+  if(calibOk){
+    document.getElementById('btnGo').textContent = '🙏 Start Chanting (Audio Ready)';
+  } else if(isPreDefined){
+    document.getElementById('btnGo').textContent = '🙏 Start Chanting';
+  } else {
+    document.getElementById('btnGo').textContent = 'Calibrate for Audio Mode';
+  }
+}
 function pickWPR(v){document.getElementById('inWPR').value=v;document.querySelectorAll('.wpr-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickCPM(v){document.getElementById('inCPM').value=v;document.getElementById('inCPM').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
 function pickMalas(v){document.getElementById('inMalas').value=v;document.getElementById('inMalas').parentElement.querySelectorAll('.target-btn').forEach(function(x){x.classList.toggle('selected',parseInt(x.textContent)===v)})}
@@ -1077,7 +1096,36 @@ function togglePause(){sessionPaused?resumeFromPause():pauseSession()}
 function pauseSession(){sessionPaused=true;pauseStartTime=Date.now();if(detecting)stopListen();document.getElementById('pauseBanner').classList.add('show');document.getElementById('btnPause').textContent='Resume';document.getElementById('btnPause').style.background='var(--success)';document.getElementById('btnPause').style.color='white'}
 function resumeFromPause(){sessionPaused=false;sessionPausedTime+=(Date.now()-pauseStartTime);document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)'}
 function pauseAndGoBack(){pauseSession();pausedSession={G_m:G_m,G_w:G_w,G_t:G_t,G_chant:G_chant,G_mala:G_mala,G_totalC:G_totalC,CFG:JSON.parse(JSON.stringify(CFG)),startTime:sessionStartTime,pausedTime:sessionPausedTime+(Date.now()-pauseStartTime)};stopTimer();stopNoiseRecalib();document.getElementById('counterScreen').classList.remove('active');document.getElementById('setupScreen').classList.add('active');document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=G_mala;document.getElementById('rMalaT').textContent=CFG.malas;document.getElementById('rChant').textContent=G_chant;document.getElementById('rCPM').textContent=CFG.cpm;saveSettings();showInterstitialAd()}
-function resumeSession(){if(!pausedSession)return;G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;CFG=pausedSession.CFG;sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;sessionPaused=false;document.getElementById('resumeBanner').classList.remove('show');document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;refreshUI();drawMala();timerInterval=setInterval(function(){updateTimer();updateSpeed()},1000);updateTimer();startNoiseRecalib();pausedSession=null}
+function resumeSession(){if(!pausedSession)return;G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;CFG=pausedSession.CFG;sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;sessionPaused=false;document.getElementById('resumeBanner').classList.remove('show');document.getElementById('setupScreen').classList.remove('active');document.getElementById('counterScreen').classList.add('active');document.getElementById('pauseBanner').classList.remove('show');document.getElementById('btnPause').textContent='Pause';document.getElementById('btnPause').style.background='var(--card)';document.getElementById('btnPause').style.color='var(--accent)';document.getElementById('dMalaTarget').textContent=CFG.malas;document.getElementById('dCPM').textContent=CFG.cpm;document.getElementById('dWPR').textContent=CFG.wpr;refreshUI();drawMala();timerInterval=setInterval(function(){updateTimer();updateSpeed()},1000);updateTimer();startNoiseRecalib();updateSessionInfoBar();pausedSession=null}
+
+// End paused session - save to history and clear
+function endPausedSession(){
+  if(!pausedSession)return;
+  // Restore paused session data temporarily to save
+  G_m=pausedSession.G_m;G_w=pausedSession.G_w;G_t=pausedSession.G_t;
+  G_chant=pausedSession.G_chant;G_mala=pausedSession.G_mala;G_totalC=pausedSession.G_totalC;
+  CFG=pausedSession.CFG;
+  sessionStartTime=pausedSession.startTime;sessionPausedTime=pausedSession.pausedTime;
+  // Save to history
+  saveSessionToHistory();
+  updateStreak();
+  // Clear everything
+  pausedSession=null;
+  document.getElementById('resumeBanner').classList.remove('show');
+  clearSessionProgress();
+  loadWeeklyStats();
+  D('Paused session ended & saved','ok');
+}
+
+// Discard paused session - don't save, just clear
+function discardPausedSession(){
+  if(!pausedSession)return;
+  if(!confirm('Discard this session without saving?'))return;
+  pausedSession=null;
+  document.getElementById('resumeBanner').classList.remove('show');
+  clearSessionProgress();
+  D('Paused session discarded','warn');
+}
 
 var curMode='google';
 function setMode(m){
@@ -1833,10 +1881,12 @@ document.addEventListener('keydown',function(e){if(!document.getElementById('cou
 // =================== INIT ===================
 function init(){
   loadSettings();showWelcome();loadCustomMantrasFromStorage();
-  // Hide calibration steps by default (Maha Mantra selected)
-  document.getElementById('calibrationStep1').style.display='none';
-  document.getElementById('calibrationStep2').style.display='none';
-  noiseReady=true;wordReady=true; // Pre-defined mantras don't need calibration
+  // ALWAYS show calibration steps (user can calibrate for Audio mode)
+  document.getElementById('calibrationStep1').style.display='block';
+  document.getElementById('calibrationStep2').style.display='block';
+  // Don't auto-mark as calibrated - let user calibrate if they want Audio mode
+  // Google/Tap modes will work without calibration for pre-defined mantras
+  noiseReady=false;wordReady=false;
   // Show streak
   var streak=getStreak();if(streak>0){var b=document.getElementById('streakBadge');b.textContent='🔥 '+streak+' day streak!';b.style.display='inline-block'}
   // Show quote
@@ -1847,6 +1897,7 @@ function init(){
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
   setupLongPress();setTimeout(function(){refreshMicList()},1500);
   loadWeeklyStats();
+  checkReady();
   D('v28 loaded','ok');
 }
 // =================== HISTORY ===================
