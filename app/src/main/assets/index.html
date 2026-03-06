@@ -204,6 +204,24 @@
   .tutorial-nav .btn-back{background:var(--card-border);color:var(--text)}
   .tutorial-nav .btn-next{background:var(--accent);color:var(--bg)}
   .tutorial-nav .btn-start{background:var(--success);color:white}
+  /* Full Screen Tap Mode */
+  .tap-fullscreen{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;flex-direction:column;padding:20px;padding-top:env(safe-area-inset-top,20px)}
+  .tap-fullscreen.active{display:flex}
+  .tap-fs-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .tap-fs-exit{background:var(--card);border:1.5px solid var(--danger);color:var(--danger);padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700}
+  .tap-fs-timer{font-family:'Playfair Display',serif;font-size:18px;color:var(--accent)}
+  .tap-fs-main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+  .tap-fs-count{font-family:'Playfair Display',serif;font-size:120px;font-weight:700;color:var(--accent);line-height:1;text-shadow:0 0 40px rgba(251,191,36,0.4)}
+  .tap-fs-count.pop{animation:tapPop 0.15s ease-out}
+  @keyframes tapPop{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+  .tap-fs-of{font-size:24px;color:var(--text-mid);margin-bottom:20px}
+  .tap-fs-progress{width:100%;max-width:300px;height:8px;background:var(--card-border);border-radius:4px;overflow:hidden;margin-bottom:20px}
+  .tap-fs-progress-fill{height:100%;background:linear-gradient(90deg,#B45309,var(--accent));border-radius:4px;transition:width 0.3s}
+  .tap-fs-stats{font-size:16px;color:var(--text-mid);margin-bottom:30px}
+  .tap-fs-stats b{color:var(--success);font-size:18px}
+  .tap-fs-hint{font-size:20px;color:var(--accent);font-weight:600;margin-bottom:10px}
+  .tap-fs-subhint{font-size:14px;color:var(--text-dim)}
+  .tap-fs-mala{width:100%;max-width:200px;margin-bottom:15px}
 </style>
 </head>
 <body>
@@ -569,6 +587,24 @@
     </div>
     <div class="dbg-toggle" onclick="document.getElementById('dbg').classList.toggle('show')">▼ debug</div>
     <div class="debug" id="dbg"></div>
+  </div>
+
+  <!-- FULL SCREEN TAP MODE -->
+  <div id="tapFullscreen" class="tap-fullscreen" onclick="tapFullscreenCount(event)">
+    <div class="tap-fs-header">
+      <button class="tap-fs-exit" onclick="exitTapFullscreen(event)">✕ Exit Tap Mode</button>
+      <div class="tap-fs-timer" id="tapFsTimer">00:00:00</div>
+    </div>
+    <div class="tap-fs-main">
+      <div class="tap-fs-count" id="tapFsCount">0</div>
+      <div class="tap-fs-of">of <span id="tapFsCpm">108</span></div>
+      <div class="tap-fs-progress"><div class="tap-fs-progress-fill" id="tapFsProgress"></div></div>
+      <div class="tap-fs-stats">
+        Mala <b id="tapFsMala">0</b>/<span id="tapFsMalaTarget">16</span> • Chants: <b id="tapFsChants">0</b>
+      </div>
+      <div class="tap-fs-hint">🙏 TAP ANYWHERE TO COUNT</div>
+      <div class="tap-fs-subhint">Long-press to undo</div>
+    </div>
   </div>
 
   <!-- OVERLAYS -->
@@ -1253,7 +1289,7 @@ function checkBattery(){if(!navigator.getBattery)return;navigator.getBattery().t
 
 // =================== TIMER / SPEED ===================
 function startTimer(){sessionStartTime=Date.now();sessionPausedTime=0;timerInterval=setInterval(function(){updateTimer();updateSpeed()},1000);updateTimer()}
-function updateTimer(){if(sessionPaused)return;var e=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);document.getElementById('timerDisplay').textContent=pad(Math.floor(e/3600))+':'+pad(Math.floor((e%3600)/60))+':'+pad(e%60)}
+function updateTimer(){if(sessionPaused)return;var e=Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000);var timeStr=pad(Math.floor(e/3600))+':'+pad(Math.floor((e%3600)/60))+':'+pad(e%60);document.getElementById('timerDisplay').textContent=timeStr;if(tapFullscreenActive)document.getElementById('tapFsTimer').textContent=timeStr}
 function pad(n){return n<10?'0'+n:n}
 function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null}}
 function getElapsed(){return Math.floor((Date.now()-sessionStartTime-sessionPausedTime)/1000)}
@@ -1298,6 +1334,8 @@ function discardPausedSession(){
 }
 
 var curMode='google';
+var tapFullscreenActive=false;
+
 function setMode(m){
   // Stop any active detection first (exclusive modes)
   if(detecting)stopListen();
@@ -1312,13 +1350,13 @@ function setMode(m){
   document.getElementById('voiceSec').style.display=(m==='tap')?'none':'block';
   document.getElementById('tapSec').style.display=(m==='google')?'none':'block';
   
-  // Tap mode: hide word stats, update hints
+  // Tap mode: launch fullscreen tap
   if(m==='tap'){
     document.getElementById('statWord').style.display='none';
     document.getElementById('statWords').style.display='none';
-    document.getElementById('volHint').textContent='1 Tap = 1 Chant | Long-press to undo';
-    document.getElementById('tapBtnText').textContent='Tap to Count (1 Tap = 1 Chant)';
     document.getElementById('sessionMicRow').style.display='none';
+    // Launch fullscreen tap mode
+    enterTapFullscreen();
   }else{
     document.getElementById('statWord').style.display='inline';
     document.getElementById('statWords').style.display='inline';
@@ -1331,6 +1369,87 @@ function setMode(m){
   if(sessionActive)updateSessionInfoBar();
   
   D('Mode: '+m,'info');
+}
+
+// =================== FULLSCREEN TAP MODE ===================
+var tapFsLongPressTimer=null;
+
+function enterTapFullscreen(){
+  tapFullscreenActive=true;
+  updateTapFullscreenUI();
+  document.getElementById('tapFullscreen').classList.add('active');
+  D('Entered fullscreen tap mode','ok');
+}
+
+function exitTapFullscreen(e){
+  if(e)e.stopPropagation();
+  tapFullscreenActive=false;
+  document.getElementById('tapFullscreen').classList.remove('active');
+  // Switch back to Google mode
+  setMode('google');
+  D('Exited fullscreen tap mode','ok');
+}
+
+function updateTapFullscreenUI(){
+  document.getElementById('tapFsCount').textContent=G_chant;
+  document.getElementById('tapFsCpm').textContent=CFG.cpm;
+  document.getElementById('tapFsMala').textContent=G_mala;
+  document.getElementById('tapFsMalaTarget').textContent=CFG.malas;
+  document.getElementById('tapFsChants').textContent=G_totalC;
+  document.getElementById('tapFsProgress').style.width=(CFG.cpm>0?Math.min(G_chant/CFG.cpm,1)*100:0)+'%';
+  document.getElementById('tapFsTimer').textContent=document.getElementById('timerDisplay').textContent;
+}
+
+function tapFullscreenCount(e){
+  // Ignore if clicking exit button
+  if(e.target.closest('.tap-fs-exit'))return;
+  if(sessionPaused)return;
+  
+  // Add one chant
+  addOneChant();
+  
+  // Animate the count
+  var el=document.getElementById('tapFsCount');
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+  
+  // Update UI
+  updateTapFullscreenUI();
+}
+
+// Setup long-press for undo in fullscreen
+function setupTapFullscreenLongPress(){
+  var el=document.getElementById('tapFullscreen');
+  if(!el)return;
+  
+  el.addEventListener('touchstart',function(e){
+    if(e.target.closest('.tap-fs-exit'))return;
+    tapFsLongPressTimer=setTimeout(function(){
+      undoChant();
+      updateTapFullscreenUI();
+    },800);
+  },{passive:true});
+  
+  el.addEventListener('touchend',function(){
+    if(tapFsLongPressTimer){clearTimeout(tapFsLongPressTimer);tapFsLongPressTimer=null}
+  });
+  
+  el.addEventListener('touchmove',function(){
+    if(tapFsLongPressTimer){clearTimeout(tapFsLongPressTimer);tapFsLongPressTimer=null}
+  });
+}
+
+function undoChant(){
+  if(G_totalC<=0)return;
+  G_totalC--;
+  if(G_chant>0){G_chant--}
+  else if(G_mala>0){G_mala--;G_chant=CFG.cpm-1}
+  refreshUI();drawMala();
+  var toast=document.getElementById('undoToast');
+  toast.classList.remove('show');void toast.offsetWidth;toast.classList.add('show');
+  setTimeout(function(){toast.classList.remove('show')},2000);
+  D('Undo chant','warn');
 }
 
 // =================== SESSION ===================
@@ -2065,7 +2184,7 @@ function init(){
   var saved=loadSessionProgress();if(saved&&saved.G_totalC>0){document.getElementById('resumeBanner').classList.add('show');document.getElementById('rMala').textContent=saved.G_mala;document.getElementById('rMalaT').textContent=saved.CFG.malas;document.getElementById('rChant').textContent=saved.G_chant;document.getElementById('rCPM').textContent=saved.CFG.cpm;
     // Override resumeSession to use saved data
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
-  setupLongPress();setTimeout(function(){refreshMicList()},1500);
+  setupLongPress();setupTapFullscreenLongPress();setTimeout(function(){refreshMicList()},1500);
   loadWeeklyStats();
   checkReady();
   D('v28 loaded','ok');
