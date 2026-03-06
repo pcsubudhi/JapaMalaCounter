@@ -4,7 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1A0F0A">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Japa Counter">
+<meta name="theme-color" content="#140B07">
+<meta name="description" content="Digital companion for mantra chanting practice with voice recognition">
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+<!-- iOS Icons -->
+<link rel="apple-touch-icon" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png">
 <title>📿 Japa Mala Counter</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap');
@@ -978,35 +986,21 @@ function renderMicList(){
   });
   html+='<div id="btHint" style="text-align:center;font-size:12px;color:var(--accent);padding:4px 0"></div>';
   list.innerHTML=html;
-  // Get REAL device names from native Android API
-  getNativeDeviceNames();
+  // No native API in PWA - use Web API device info
+  D('Web Audio devices loaded: '+detectedMics.length,'ok');
 }
 function getNativeDeviceNames(){
+  // In PWA we use Web Audio API - no native device names available
+  // But we can still detect Bluetooth from device labels
   try{
-    if(!window.NativeApp||typeof NativeApp.getAudioDevices!=='function')return;
-    var json=NativeApp.getAudioDevices();
-    var devices=JSON.parse(json);
-    if(!devices||!devices.length)return;
     var hint=document.getElementById('btHint');
-    // Find Bluetooth devices with real names
-    var btDevices=devices.filter(function(d){return d.type==='Bluetooth'&&d.name});
-    if(btDevices.length>0){
-      // Get unique names
-      var names=[];btDevices.forEach(function(d){if(names.indexOf(d.name)<0)names.push(d.name)});
-      if(hint)hint.innerHTML='🔗 <b>'+names.join(', ')+'</b> connected via Bluetooth';
-    }
-    // Also check if any mic item says "Bluetooth headset" and we can improve its label
-    var micItems=document.querySelectorAll('.mic-item .mic-name');
-    micItems.forEach(function(el){
-      if(el.textContent.toLowerCase().indexOf('bluetooth')>=0&&btDevices.length>0){
-        var realName=btDevices[0].name;
-        if(realName&&realName!=='Bluetooth'&&realName.length>1){
-          el.textContent=realName+' (BT Mic)';
-        }
-      }
+    var btFound=detectedMics.some(function(d){
+      return d.label && d.label.toLowerCase().indexOf('bluetooth')>=0;
     });
-    D('Native devices: '+devices.length+', BT: '+btDevices.length,'ok');
-  }catch(e){D('Native dev err: '+e.message,'warn')}
+    if(btFound && hint){
+      hint.innerHTML='🔗 <b>Bluetooth device</b> detected';
+    }
+  }catch(e){}
 }
 function selectMic(id){
   selectedMicId=id;
@@ -1041,17 +1035,6 @@ async function testMic(){
     var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};
     var mid=document.getElementById('micSelect').value;
     if(mid)ac.deviceId={exact:mid};
-    // Activate BT SCO if bluetooth mic is selected
-    var isBtMic=false;
-    if(window.NativeApp&&typeof NativeApp.startBtSco==='function'){
-      var selEl=document.querySelector('.mic-item.selected .mic-name');
-      var selLabel=selEl?selEl.textContent.toLowerCase():'';
-      if(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0){
-        NativeApp.startBtSco();isBtMic=true;
-        label.textContent='🔗 Connecting BT mic...';
-        await new Promise(function(r){setTimeout(r,2000)});
-      }
-    }
     micTestStream=await navigator.mediaDevices.getUserMedia({audio:ac});
     micTestCtx=new(window.AudioContext||window.webkitAudioContext)();
     var src=micTestCtx.createMediaStreamSource(micTestStream);
@@ -1118,8 +1101,6 @@ function stopMicTest(){
   if(micTestAF)cancelAnimationFrame(micTestAF);
   if(micTestStream)micTestStream.getTracks().forEach(function(t){t.stop()});
   if(micTestCtx)try{micTestCtx.close()}catch(e){}
-  // Stop BT SCO if it was activated
-  if(window.NativeApp&&typeof NativeApp.stopBtSco==='function')try{NativeApp.stopBtSco()}catch(e){}
   micTestStream=null;micTestCtx=null;micTestAnalyser=null;
   var btn=document.getElementById('btnTestMic');
   btn.textContent='🎤 Test Mic';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';
@@ -1152,7 +1133,7 @@ function pcmToWavBase64(pcm,sampleRate){
 }
 function writeStr(view,offset,str){for(var i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i))}
 
-// Called from native when playback finishes
+// Called when playback finishes
 function onNativePlaybackDone(){
   var playBtn=document.getElementById('btnPlayTest');
   if(playBtn){playBtn.textContent='▶ Play Again'}
@@ -1161,17 +1142,8 @@ function onNativePlaybackDone(){
 function playTestRecording(){
   if(!micRecordedPCM||!micRecordedPCM.length){D('No recording','warn');return}
   var playBtn=document.getElementById('btnPlayTest');
-  playBtn.textContent='🔊 Playing via speaker...';
-  // Method 1: Native MediaPlayer via phone speaker (best for BT recordings)
-  if(window.NativeApp&&typeof NativeApp.playBase64Audio==='function'){
-    try{
-      var wavB64=pcmToWavBase64(micRecordedPCM,micRecordedSampleRate);
-      D('Playing WAV ('+wavB64.length+' chars) via native speaker','ok');
-      NativeApp.playBase64Audio(wavB64);
-    }catch(e){playBtn.textContent='❌ '+e.message;D('Native play err: '+e.message,'err')}
-    return;
-  }
-  // Method 2: Web Audio API fallback
+  playBtn.textContent='🔊 Playing...';
+  // Use Web Audio API for playback
   try{
     var pCtx=new(window.AudioContext||window.webkitAudioContext)();
     if(pCtx.state==='suspended')pCtx.resume();
@@ -1192,15 +1164,6 @@ async function initAudio(){
   if(actx){var nid=document.getElementById('micSelect').value;if(nid!==selectedMicId){if(stream)stream.getTracks().forEach(function(t){t.stop()});mic.disconnect();actx=null;mic=null;analyser=null;stream=null;selectedMicId=nid}else return true}
   try{var ac={echoCancellation:false,noiseSuppression:false,autoGainControl:true};var mid=document.getElementById('micSelect').value;
     if(mid){ac.deviceId={exact:mid}}
-    // Activate BT SCO if bluetooth mic selected for capture/counting
-    if(window.NativeApp&&typeof NativeApp.startBtSco==='function'){
-      var selEl=document.querySelector('.mic-item.selected .mic-name');
-      var selLabel=selEl?selEl.textContent.toLowerCase():'';
-      if(selLabel.indexOf('bluetooth')>=0||selLabel.indexOf('bt ')>=0||selLabel.indexOf('soundcore')>=0){
-        NativeApp.startBtSco();
-        await new Promise(function(r){setTimeout(r,2000)});
-      }
-    }
     stream=await navigator.mediaDevices.getUserMedia({audio:ac});actx=new(window.AudioContext||window.webkitAudioContext)();mic=actx.createMediaStreamSource(stream);analyser=actx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.4;mic.connect(analyser);selectedMicId=mid;
     var tr=stream.getAudioTracks();if(tr.length>0)document.getElementById('noiseStatus').textContent='Mic: '+(tr[0].label||'Active');
     return true;
@@ -1218,12 +1181,30 @@ function updateViz(v){var spec=getSpectrum();var bars=v.children;for(var i=0;i<b
 
 // =================== CALIBRATION ===================
 async function captureNoise(){
-  if(!(await initAudio()))return;var btn=document.getElementById('btnNoise');btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet for 10s...';
+  // iOS Safari requires user gesture to start AudioContext
+  if(actx && actx.state === 'suspended'){
+    await actx.resume();
+  }
+  if(!(await initAudio()))return;
+  // Resume again after init for iOS
+  if(actx && actx.state === 'suspended'){
+    await actx.resume();
+  }
+  var btn=document.getElementById('btnNoise');btn.className='btn-rec busy';btn.textContent='🔇 Stay quiet for 10s...';
   var viz=initViz('noiseViz');document.getElementById('noiseStatus').textContent='Capturing...';var specS=[],enS=[],fr=0,mx=600;
   function tick(){if(fr>=mx){noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;btn.className='btn-rec ok';btn.textContent='✅ Noise captured';document.getElementById('noiseStatus').textContent='Level: '+noiseEnergy.toFixed(1);document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';document.getElementById('btnWord').disabled=false;checkReady();return}updateViz(viz);specS.push(getSpectrum());enS.push(getEnergy());fr++;requestAnimationFrame(tick)}requestAnimationFrame(tick);
 }
 async function captureWord(){
-  if(!(await initAudio()))return;var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Say word 5 times...';
+  // iOS Safari requires user gesture to start AudioContext
+  if(actx && actx.state === 'suspended'){
+    await actx.resume();
+  }
+  if(!(await initAudio()))return;
+  // Resume again after init for iOS
+  if(actx && actx.state === 'suspended'){
+    await actx.resume();
+  }
+  var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Say word 5 times...';
   var viz=initViz('wordViz');wordSamples=[];document.getElementById('wordStatus').textContent='Speak now...';
   var inW=false,wBuf=[],silC=0,eTh=noiseEnergy+10,timeout=setTimeout(function(){finish()},12000);
   function finish(){clearTimeout(timeout);if(wordSamples.length>=2){var allS=wordSamples.map(function(s){return s.spectrum});wordFingerprint={spectrum:avgArrays(allS),centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length};avgWordDuration=wordFingerprint.avgDuration;wordReady=true;btn.className='btn-rec ok';btn.textContent='✅ '+wordSamples.length+' samples';document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓'}else{btn.className='btn-rec idle';btn.textContent='🎤 Record Word ×5 (retry)'}checkReady()}
@@ -1685,43 +1666,121 @@ function stopListen(){
   D('Stopped. Cooldown was: '+adaptiveCooldown.toFixed(0)+'ms','info');
 }
 
-// =================== GOOGLE SPEECH RECOGNITION ===================
+// =================== WEB SPEECH RECOGNITION (PWA) ===================
+var webSpeechRecognition = null;
+var webSpeechLang = 'hi-IN';
+
+function initWebSpeech(){
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
+    D('Speech Recognition not supported','warn');
+    return false;
+  }
+  
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  webSpeechRecognition = new SpeechRecognition();
+  webSpeechRecognition.continuous = true;
+  webSpeechRecognition.interimResults = true;
+  webSpeechRecognition.maxAlternatives = 1;
+  
+  webSpeechRecognition.onresult = function(event){
+    var transcript = '';
+    var isFinal = false;
+    
+    for(var i = event.resultIndex; i < event.results.length; i++){
+      transcript += event.results[i][0].transcript;
+      if(event.results[i].isFinal){
+        isFinal = true;
+      }
+    }
+    
+    if(transcript){
+      onTranscript(transcript.toLowerCase(), isFinal ? 'final' : 'partial');
+    }
+  };
+  
+  webSpeechRecognition.onerror = function(event){
+    D('Speech error: '+event.error,'warn');
+    if(event.error === 'no-speech' || event.error === 'aborted'){
+      // Auto-restart on common errors
+      if(detecting && googleSpeechActive){
+        setTimeout(function(){
+          if(detecting && googleSpeechActive){
+            restartGoogleSpeech();
+          }
+        }, 500);
+      }
+    }
+  };
+  
+  webSpeechRecognition.onend = function(){
+    D('Speech ended','info');
+    // Auto-restart if we should still be listening
+    if(detecting && googleSpeechActive){
+      setTimeout(function(){
+        if(detecting && googleSpeechActive){
+          restartGoogleSpeech();
+        }
+      }, 300);
+    }
+  };
+  
+  return true;
+}
+
 function startGoogleSpeech(){
-  if(typeof NativeApp==='undefined'||typeof NativeApp.startSpeechRecognition!=='function'){
-    D('Google Speech not available','warn');
-    return;
+  if(!webSpeechRecognition){
+    if(!initWebSpeech()){
+      D('Web Speech not available','warn');
+      document.getElementById('sLine').textContent = 'Speech not supported in this browser';
+      return;
+    }
   }
   
-  // Determine target word and language based on selected mantra
-  var targetWord = 'hare';
-  var lang = 'hi-IN'; // Default Hindi for Sanskrit mantras
-  
+  // Determine language based on selected mantra
   if(CFG.mantra==='radhe_radhe'){
-    targetWord = 'radhe';
-    lang = 'hi-IN'; // Hindi for Radhe
+    webSpeechLang = 'hi-IN';
   }else if(CFG.mantra==='custom'){
-    var customWord = document.getElementById('inCustomWord').value.trim();
-    targetWord = customWord || 'custom';
-    // Use English for custom words - better recognition
-    lang = 'en-IN';
-  }else if(CFG.mantra==='hare_krishna'||CFG.mantra==='maha_mantra'){
-    targetWord = 'hare';
-    lang = 'hi-IN';
+    webSpeechLang = 'en-IN';
+  }else{
+    webSpeechLang = 'hi-IN';
   }
   
-  NativeApp.startSpeechRecognition(targetWord, lang);
-  googleSpeechActive=true;
-  D('Google Speech: '+targetWord+' ('+lang+')','ok');
+  webSpeechRecognition.lang = webSpeechLang;
+  
+  try{
+    webSpeechRecognition.start();
+    googleSpeechActive = true;
+    D('Web Speech started ('+webSpeechLang+')','ok');
+  }catch(e){
+    D('Speech start error: '+e.message,'warn');
+  }
 }
 
 function stopGoogleSpeech(){
-  if(typeof NativeApp!=='undefined'&&typeof NativeApp.stopSpeechRecognition==='function'){
-    NativeApp.stopSpeechRecognition();
+  if(webSpeechRecognition){
+    try{
+      webSpeechRecognition.stop();
+    }catch(e){}
   }
-  googleSpeechActive=false;
+  googleSpeechActive = false;
 }
 
-// Called by native Android when Google detects a word
+function restartGoogleSpeech(){
+  if(!detecting || !googleSpeechActive)return;
+  try{
+    webSpeechRecognition.stop();
+  }catch(e){}
+  setTimeout(function(){
+    if(detecting && googleSpeechActive){
+      try{
+        webSpeechRecognition.start();
+        D('🗣️ Listening...','info');
+      }catch(e){}
+    }
+  }, 200);
+}
+
+// Called by Web Speech API with transcript
 var lastTranscriptForCount = '';
 var lastTranscriptWordCount = 0;
 
@@ -2054,7 +2113,7 @@ function startAudioDetection(){
       dSilCount=0;
     }else{
       dSilCount++;
-      if(dInWord&&dSilCount>3){
+      if(dInWord&&dSilCount>8){
         dInWord=false;
         var dur=dWordBuf.length;
         var peakE=Math.max.apply(null,dWordBuf.map(function(f){return f.energy}));
@@ -2063,14 +2122,18 @@ function startAudioDetection(){
         var minEnergy=wordFingerprint?wordFingerprint.minEnergy*0.25:8;
         if(peakE<minEnergy){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
-        var minDur=avgWordDuration?avgWordDuration*0.15:3;
-        var maxDur=avgWordDuration?avgWordDuration*5.0:40;
+        var minDur=avgWordDuration?avgWordDuration*0.3:5;
+        var maxDur=avgWordDuration?avgWordDuration*4.0:35;
         if(dur<minDur||dur>maxDur){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
         if(now<ttsPauseUntil){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
+        // Minimum cooldown to prevent double-counting (at least 300ms between counts)
+        var minCooldown=300;
+        if(now-lastDetectTime<minCooldown){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
+        
         // Cooldown check
-        var effectiveCooldown=Math.min(baseCooldownMs*0.6,adaptiveCooldown);
+        var effectiveCooldown=Math.max(minCooldown,Math.min(baseCooldownMs*0.6,adaptiveCooldown));
         if(now-lastDetectTime<effectiveCooldown){dWordBuf=[];detectAF=requestAnimationFrame(tick);return}
         
         // In hybrid mode, skip if Google just detected
@@ -2142,7 +2205,7 @@ function playSound(type,vol){try{if(!beepCtx)beepCtx=new(window.AudioContext||wi
   if(type==='chant'){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=440;g.gain.setValueAtTime(v*0.5,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);o.start(now);o.stop(now+0.2)}
   else if(type==='mala'){var o1=beepCtx.createOscillator(),g1=beepCtx.createGain();o1.connect(g1);g1.connect(beepCtx.destination);o1.type='sine';o1.frequency.value=528;g1.gain.setValueAtTime(v*0.6,now);g1.gain.exponentialRampToValueAtTime(0.01,now+2);o1.start(now);o1.stop(now+2);var o2=beepCtx.createOscillator(),g2=beepCtx.createGain();o2.connect(g2);g2.connect(beepCtx.destination);o2.type='sine';o2.frequency.value=660;g2.gain.setValueAtTime(v*0.4,now+0.3);g2.gain.exponentialRampToValueAtTime(0.01,now+2);o2.start(now+0.3);o2.stop(now+2)}
   else if(type==='alldone'){[440,554,660,880].forEach(function(f,i){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(v*0.5,now+i*0.4);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.4+1.5);o.start(now+i*0.4);o.stop(now+i*0.4+1.5)})}}catch(e){}}
-function speak(text){try{if(window.NativeApp&&typeof NativeApp.speak==='function'){NativeApp.speak(text);return}if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}}catch(e){}}
+function speak(text){try{if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}}catch(e){}}
 function pauseDetectionForTTS(ms){ttsPauseUntil=Date.now()+ms}
 
 // =================== PARTICLES ===================
@@ -2241,6 +2304,18 @@ function loadWeeklyStats(){
   if(ts>0){document.getElementById('weeklyStats').style.display='block';document.getElementById('weekMalas').textContent=tm;document.getElementById('weekChants').textContent=tc;document.getElementById('weekTime').textContent=formatDuration(tt);document.getElementById('weekSessions').textContent=ts}
   else{document.getElementById('weeklyStats').style.display='none'}
 }
+
+// Register Service Worker for PWA
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      console.log('ServiceWorker registered:', reg.scope);
+    }).catch(function(err){
+      console.log('ServiceWorker registration failed:', err);
+    });
+  });
+}
+
 init();
 </script>
 </body>
