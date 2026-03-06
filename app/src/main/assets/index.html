@@ -2164,7 +2164,17 @@ function showInterstitialAd(){document.getElementById('interstitialAd').classLis
 function closeInterstitialAd(){document.getElementById('interstitialAd').classList.remove('active')}
 
 // =================== TAP ANYWHERE ===================
-document.addEventListener('click',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(sessionPaused)return;var tag=e.target.tagName.toLowerCase();if(tag==='button'||tag==='input'||tag==='select'||tag==='label')return;if(e.target.closest('button')||e.target.closest('input')||e.target.closest('select')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle')||e.target.closest('.top-bar')||e.target.closest('.confirm-ov')||e.target.closest('.mode-tabs')||e.target.closest('.slider-row')||e.target.closest('.dbg-toggle'))return;if(curMode==='voice')return;tapCount()});
+document.addEventListener('click',function(e){
+  // Skip if fullscreen tap mode is active (has its own handler)
+  if(tapFullscreenActive)return;
+  if(!document.getElementById('counterScreen').classList.contains('active'))return;
+  if(sessionPaused)return;
+  var tag=e.target.tagName.toLowerCase();
+  if(tag==='button'||tag==='input'||tag==='select'||tag==='label')return;
+  if(e.target.closest('button')||e.target.closest('input')||e.target.closest('select')||e.target.closest('.debug')||e.target.closest('.snd-panel')||e.target.closest('.tip-box')||e.target.closest('.tip')||e.target.closest('.toggle')||e.target.closest('.top-bar')||e.target.closest('.confirm-ov')||e.target.closest('.mode-tabs')||e.target.closest('.slider-row')||e.target.closest('.dbg-toggle')||e.target.closest('.tap-fullscreen'))return;
+  if(curMode==='voice')return;
+  tapCount()
+});
 document.addEventListener('keydown',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();tapCount()}});
 
 // =================== INIT ===================
