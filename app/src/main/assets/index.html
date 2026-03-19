@@ -2201,6 +2201,17 @@ function onWordDetected(word){
 function onTranscript(text,type){
   if(!detecting||sessionPaused)return;
   
+  // Skip if same text as last transcript (Google sends duplicates)
+  if(text === lastTranscriptForCount && type !== 'final'){
+    return;
+  }
+  
+  // Cooldown to prevent double-counting from rapid transcript updates
+  var now = Date.now();
+  if(now - lastGoogleWordTime < 400 && type !== 'final'){
+    return; // Skip intermediate updates within 400ms
+  }
+  
   // Count mantra words in this transcript
   var wordCount = countMantraWords(text);
   
@@ -2218,11 +2229,16 @@ function onTranscript(text,type){
   if(wordCount > lastTranscriptWordCount){
     var newWords = wordCount - lastTranscriptWordCount;
     
+    // Limit to max 1 new word per update to prevent bursts
+    newWords = Math.min(newWords, 1);
+    
     // Add the new words one by one
     for(var i=0;i<newWords;i++){
       addOneWord();
     }
     
+    lastGoogleWordTime = now;
+    lastTranscriptForCount = text;
     D('✅ +'+newWords+' (total in phrase: '+wordCount+')','ok');
     lastTranscriptWordCount = wordCount;
   }
@@ -2240,89 +2256,109 @@ function countMantraWords(text){
   var count=0;
   var lowerText = text.toLowerCase();
   
-  // For Maha Mantra and Hare Krishna - count all standard words
+  // For Maha Mantra and Hare Krishna - count standard words
+  // IMPORTANT: Count EITHER Hindi OR English, not both (they may be duplicates)
   if(CFG.mantra==='maha_mantra'||CFG.mantra==='hare_krishna'){
-    // Count हरे (Hare)
+    var hindiCount = 0;
+    var engCount = 0;
+    
+    // Count Hindi
     var matches = text.match(/हरे/g);
-    if(matches)count+=matches.length;
+    if(matches) hindiCount += matches.length;
     
-    // Count कृष्णा or कृष्ण (Krishna)
     matches = text.match(/कृष्ण/g);
-    if(matches)count+=matches.length;
+    if(matches) hindiCount += matches.length;
     
-    // Count राम (Rama) - only for maha mantra
     if(CFG.mantra==='maha_mantra'){
       matches = text.match(/राम/g);
-      if(matches)count+=matches.length;
+      if(matches) hindiCount += matches.length;
     }
     
-    // Also count English
-    var eng = lowerText.match(/\b(hare|hari|harey|krishna|krsna|krishan)\b/g);
-    if(eng)count+=eng.length;
+    // Count English
+    var eng = lowerText.match(/\b(hare|hari|harey)\b/g);
+    if(eng) engCount += eng.length;
+    
+    eng = lowerText.match(/\b(krishna|krsna|krishan)\b/g);
+    if(eng) engCount += eng.length;
+    
     if(CFG.mantra==='maha_mantra'){
       eng = lowerText.match(/\b(rama|ram|raam)\b/g);
-      if(eng)count+=eng.length;
+      if(eng) engCount += eng.length;
     }
+    
+    // Use whichever is HIGHER (not both added together)
+    count = Math.max(hindiCount, engCount);
   }
   // For Radhe Radhe
   else if(CFG.mantra==='radhe_radhe'){
+    var hindiCount = 0;
+    var engCount = 0;
+    
     // Hindi variations
     var matches = text.match(/राधा|राधे|राध/g);
-    if(matches)count+=matches.length;
+    if(matches) hindiCount += matches.length;
     
     // English variations
-    var eng = lowerText.match(/\b(radha|radhe|radhey|rada|rādha|rādhā)\b/g);
-    if(eng)count+=eng.length;
+    var eng = lowerText.match(/\b(radha|radhe|radhey|rada)\b/g);
+    if(eng) engCount += eng.length;
+    
+    // Use whichever is HIGHER
+    count = Math.max(hindiCount, engCount);
   }
   // For custom - try to match custom word in multiple ways
   else if(CFG.mantra==='custom'){
     var customWord = document.getElementById('inCustomWord').value.trim();
     if(customWord){
       var customLower = customWord.toLowerCase();
+      var hindiCount = 0;
+      var engCount = 0;
       
       // For Radha specifically - use comprehensive matching
       if(customLower==='radha'||customLower==='radhe'||customLower==='राधा'||customLower==='राधे'){
-        // Hindi variations
         var matches = text.match(/राधा|राधे|राध/g);
-        if(matches)count+=matches.length;
-        // English variations
+        if(matches) hindiCount += matches.length;
         matches = lowerText.match(/\b(radha|radhe|radhey|rada)\b/g);
-        if(matches)count+=matches.length;
+        if(matches) engCount += matches.length;
+        count = Math.max(hindiCount, engCount);
       }
       // For Govinda
       else if(customLower==='govinda'||customLower==='गोविंद'||customLower==='govind'){
         var matches = text.match(/गोविं?द|गोविन्द/g);
-        if(matches)count+=matches.length;
+        if(matches) hindiCount += matches.length;
         matches = lowerText.match(/\b(govinda|govind|gobinda)\b/g);
-        if(matches)count+=matches.length;
+        if(matches) engCount += matches.length;
+        count = Math.max(hindiCount, engCount);
       }
       // For Narayana
       else if(customLower==='narayana'||customLower==='नारायण'||customLower==='narayan'){
         var matches = text.match(/नारायण/g);
-        if(matches)count+=matches.length;
+        if(matches) hindiCount += matches.length;
         matches = lowerText.match(/\b(narayana|narayan)\b/g);
-        if(matches)count+=matches.length;
+        if(matches) engCount += matches.length;
+        count = Math.max(hindiCount, engCount);
       }
       // For Shiva
       else if(customLower==='shiva'||customLower==='शिव'||customLower==='shiv'){
         var matches = text.match(/शिव|शंकर/g);
-        if(matches)count+=matches.length;
+        if(matches) hindiCount += matches.length;
         matches = lowerText.match(/\b(shiva|shiv|shankar)\b/g);
-        if(matches)count+=matches.length;
+        if(matches) engCount += matches.length;
+        count = Math.max(hindiCount, engCount);
       }
       // For Om
       else if(customLower==='om'||customLower==='ॐ'||customLower==='aum'){
         var matches = text.match(/ॐ|ओम/g);
-        if(matches)count+=matches.length;
+        if(matches) hindiCount += matches.length;
         matches = lowerText.match(/\b(om|aum|ohm)\b/g);
-        if(matches)count+=matches.length;
+        if(matches) engCount += matches.length;
+        count = Math.max(hindiCount, engCount);
       }
       // For any other custom word - just direct match
       else{
         var escapedWord = customWord.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
         var regex = new RegExp('\\b'+escapedWord+'\\b','gi');
         var matches = text.match(regex);
-        if(matches)count+=matches.length;
+        if(matches) count += matches.length;
       }
     }
   }
@@ -2481,11 +2517,13 @@ function startAudioDetection(){
           var centScore=Math.max(0,1-centDiff*1.5);
           score=sim*0.7+centScore*0.3;
         }else{
-          // No calibration - can't match, only detect energy pulses for pre-defined mantras
-          score=0.6; // Base score for energy detection only
+          // No calibration - REJECT in audio mode, require user to calibrate
+          document.getElementById('sLine').textContent='⚠️ Please calibrate first!';
+          dWordBuf=[];detectAF=requestAnimationFrame(tick);return;
         }
         
-        var matchTh=0.85-SENSITIVITY*0.5;
+        // Stricter threshold - require higher match score
+        var matchTh=0.70-SENSITIVITY*0.35; // Was 0.85-0.5, now 0.70-0.35 (stricter range: 0.35-0.70)
         
         var fill=document.getElementById('mFill');
         fill.style.width=Math.min(score*100,100)+'%';
@@ -3093,7 +3131,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v35 loaded','ok');
+  D('v37 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
