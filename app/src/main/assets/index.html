@@ -2206,10 +2206,14 @@ function onTranscript(text,type){
     return;
   }
   
+  // Update immediately to prevent duplicates
+  var previousTranscript = lastTranscriptForCount;
+  lastTranscriptForCount = text;
+  
   // Cooldown to prevent double-counting from rapid transcript updates
   var now = Date.now();
-  if(now - lastGoogleWordTime < 400 && type !== 'final'){
-    return; // Skip intermediate updates within 400ms
+  if(now - lastGoogleWordTime < 500 && type !== 'final'){
+    return; // Skip intermediate updates within 500ms
   }
   
   // Count mantra words in this transcript
@@ -2232,13 +2236,12 @@ function onTranscript(text,type){
     // Limit to max 1 new word per update to prevent bursts
     newWords = Math.min(newWords, 1);
     
-    // Add the new words one by one
+    // Add the new words
     for(var i=0;i<newWords;i++){
       addOneWord();
     }
     
     lastGoogleWordTime = now;
-    lastTranscriptForCount = text;
     D('✅ +'+newWords+' (total in phrase: '+wordCount+')','ok');
     lastTranscriptWordCount = wordCount;
   }
@@ -3131,7 +3134,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v37 loaded','ok');
+  D('v38 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
