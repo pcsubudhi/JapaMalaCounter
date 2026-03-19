@@ -563,17 +563,17 @@
         <div class="mantra-item selected" data-id="maha_mantra" onclick="selectMantra('maha_mantra',this)">
           <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
           <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे • हरे राम हरे राम राम राम हरे हरे</div>
-          <div class="mantra-info">16 words = 1 round</div>
+          <div class="mantra-info">8 "Hare" = 1 chant (counts only Hare)</div>
         </div>
         <div class="mantra-item" data-id="hare_krishna" onclick="selectMantra('hare_krishna',this)">
           <div class="mantra-name">🙏 Hare Krishna (Half)</div>
           <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे</div>
-          <div class="mantra-info">8 words = 1 round</div>
+          <div class="mantra-info">4 "Hare" = 1 chant (counts only Hare)</div>
         </div>
         <div class="mantra-item" data-id="radhe_radhe" onclick="selectMantra('radhe_radhe',this)">
           <div class="mantra-name">💕 Radhe Radhe</div>
           <div class="mantra-text">राधे राधे</div>
-          <div class="mantra-info">1 word = 1 count • Google: राधे/Radhe</div>
+          <div class="mantra-info">1 "Radhe" = 1 count</div>
         </div>
         <div class="mantra-item" data-id="custom" onclick="selectMantra('custom',this)">
           <div class="mantra-name">✏️ Custom Word/Mantra</div>
@@ -886,10 +886,10 @@ var SND={chantVol:0.3,chantVib:'short',mileVol:0.5,mileVib:'short',mile25:true,m
 var VIB_PATTERNS={off:[],short:[50],medium:[150,50,150],long:[300,100,300,100,300],celebration:[400,150,400,150,400,150,600]};
 var sessionHistory=[],currentSessionId=null;
 
-// Mantra definitions
+// Mantra definitions - WPR = Words Per Round (counts only "Hare" for Maha Mantra)
 var MANTRAS={
-  maha_mantra:{name:'Hare Krishna Maha Mantra',wpr:16,google:true,words:['हरे','कृष्ण','राम']},
-  hare_krishna:{name:'Hare Krishna (Half)',wpr:8,google:true,words:['हरे','कृष्ण']},
+  maha_mantra:{name:'Hare Krishna Maha Mantra',wpr:8,google:true,words:['हरे']},
+  hare_krishna:{name:'Hare Krishna (Half)',wpr:4,google:true,words:['हरे']},
   radhe_radhe:{name:'Radhe Radhe',wpr:1,google:true,words:['राध','radhe','radha']},
   custom:{name:'Custom',wpr:1,google:true,words:[]}
 };
@@ -2259,40 +2259,24 @@ function countMantraWords(text){
   var count=0;
   var lowerText = text.toLowerCase();
   
-  // For Maha Mantra and Hare Krishna - count standard words
-  // IMPORTANT: Count EITHER Hindi OR English, not both (they may be duplicates)
+  // For Maha Mantra and Hare Krishna - COUNT ONLY "HARE"
+  // Simple and accurate: 8 Hare = 1 complete chant
   if(CFG.mantra==='maha_mantra'||CFG.mantra==='hare_krishna'){
     var hindiCount = 0;
     var engCount = 0;
     
-    // Count Hindi
+    // Count Hindi "हरे" only
     var matches = text.match(/हरे/g);
     if(matches) hindiCount += matches.length;
     
-    matches = text.match(/कृष्ण/g);
-    if(matches) hindiCount += matches.length;
-    
-    if(CFG.mantra==='maha_mantra'){
-      matches = text.match(/राम/g);
-      if(matches) hindiCount += matches.length;
-    }
-    
-    // Count English
-    var eng = lowerText.match(/\b(hare|hari|harey)\b/g);
+    // Count English "hare/hari" only
+    var eng = lowerText.match(/\b(hare|hari|harey|harry|hurry)\b/g);
     if(eng) engCount += eng.length;
     
-    eng = lowerText.match(/\b(krishna|krsna|krishan)\b/g);
-    if(eng) engCount += eng.length;
-    
-    if(CFG.mantra==='maha_mantra'){
-      eng = lowerText.match(/\b(rama|ram|raam)\b/g);
-      if(eng) engCount += eng.length;
-    }
-    
-    // Use whichever is HIGHER (not both added together)
+    // Use whichever is HIGHER
     count = Math.max(hindiCount, engCount);
   }
-  // For Radhe Radhe
+  // For Radhe Radhe - count only Radhe
   else if(CFG.mantra==='radhe_radhe'){
     var hindiCount = 0;
     var engCount = 0;
@@ -3134,7 +3118,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v38 loaded','ok');
+  D('v39 loaded - Hare only counting','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
