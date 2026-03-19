@@ -2210,36 +2210,34 @@ function onWordDetected(word){
 }
 
 // Process transcript - count words from partial and final results
-// CRITICAL: These must be TRUE globals, not reset
-var G_hareCount = 0;
+// v44: Native Android Speech sends word counts directly
+// These functions receive data from Java
 
-function onTranscript(text,type){
-  if(!detecting||sessionPaused)return;
+// Called when Java detects new words
+function onNativeWordCount(count, text, totalHare){
+  if(!detecting || sessionPaused) return;
   
-  // Count only "Hare" words in this transcript
-  var hareInText = countMantraWords(text);
+  D('📝 "'+text+'" ('+totalHare+' Hare)','info');
   
-  // Log what we received
-  D('📝 "'+text.substring(0,30)+'" ('+hareInText+' Hare)','info');
-  
-  // SIMPLE LOGIC: Only add when hare count INCREASES
-  if(hareInText > G_hareCount){
+  // Add the words Java counted
+  for(var i = 0; i < count; i++){
     addOneWord();
-    G_hareCount = hareInText;
-    D('✅ +1 ('+G_hareCount+' Hare total in phrase)','ok');
   }
-  // If count dropped, it's a new phrase - reset
-  else if(hareInText < G_hareCount && hareInText > 0){
-    D('🔄 New phrase ('+hareInText+' Hare)','info');
-    G_hareCount = hareInText;
-    addOneWord();
-    D('✅ +1 ('+G_hareCount+' Hare total in phrase)','ok');
-  }
-  
-  // Reset on final
-  if(type==='final'){
-    G_hareCount = 0;
-  }
+  D('✅ +'+count+' words','ok');
+}
+
+// Called for transcript display only (no new words)
+function onNativeTranscript(text, hareCount){
+  if(!detecting || sessionPaused) return;
+  // Just log, don't count (Java already determined no new words)
+  D('📝 "'+text+'" ('+hareCount+' Hare)','info');
+}
+
+// Legacy function - still called by Web Speech API fallback
+function onTranscript(text, type){
+  if(!detecting || sessionPaused) return;
+  // For Web Speech, just log - counting is unreliable
+  D('📝 [Web] "'+text.substring(0,30)+'"','info');
 }
 
 // Count mantra words in Hindi text based on selected mantra
@@ -3107,7 +3105,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v42 loaded - global dedup fix','ok');
+  D('v44 loaded - Native Android Speech counting','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}

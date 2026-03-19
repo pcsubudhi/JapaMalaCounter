@@ -572,13 +572,90 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         return count;
     }
     
-    // Process transcript - just send to JavaScript, let JS handle counting
+    // v44: SMART COUNTING - all logic in Java, send only counts to JS
+    private String lastProcessedText = "";
+    private int lastHareCount = 0;
+    private long lastProcessTime = 0;
+    
+    // Process transcript - count in Java, send result to JavaScript
     private void processTranscript(String text, boolean isFinal) {
         if (text == null || text.isEmpty()) return;
         
-        // Send transcript to JS for processing
+        long now = System.currentTimeMillis();
+        
+        // STRICT DEDUP: Skip exact duplicates within 200ms
+        if (text.equals(lastProcessedText) && (now - lastProcessTime) < 200) {
+            Log.d(TAG, "SKIP duplicate: " + text.substring(0, Math.min(text.length(), 30)));
+            return;
+        }
+        
+        // Count HARE words in this transcript
+        int hareCount = countHareWords(text);
+        
+        Log.d(TAG, "TRANSCRIPT: \"" + text.substring(0, Math.min(text.length(), 40)) + "\" → " + hareCount + " Hare (prev: " + lastHareCount + ")");
+        
+        // Calculate NEW Hare words
+        int newWords = 0;
+        
+        if (hareCount > lastHareCount) {
+            // More Hare than before = new words
+            newWords = hareCount - lastHareCount;
+        } else if (hareCount > 0 && hareCount < lastHareCount) {
+            // Count dropped = new phrase started
+            newWords = hareCount;
+            Log.d(TAG, "NEW PHRASE detected");
+        }
+        // If hareCount == lastHareCount, no new words
+        
+        // Update tracking
+        lastProcessedText = text;
+        lastHareCount = hareCount;
+        lastProcessTime = now;
+        
+        // Send to JS: transcript for display, and word count
         String safeText = text.replace("'", "").replace("\\", "").replace("\n", " ");
-        callJS("onTranscript('" + safeText + "','" + (isFinal ? "final" : "partial") + "')");
+        
+        if (newWords > 0) {
+            Log.d(TAG, "ADDING " + newWords + " words");
+            // Call JS to add words
+            callJS("onNativeWordCount(" + newWords + ",'" + safeText.substring(0, Math.min(safeText.length(), 30)) + "'," + hareCount + ")");
+        } else {
+            // Just log transcript, no count
+            callJS("onNativeTranscript('" + safeText.substring(0, Math.min(safeText.length(), 30)) + "'," + hareCount + ")");
+        }
+        
+        // Reset on final result
+        if (isFinal) {
+            lastHareCount = 0;
+            lastProcessedText = "";
+        }
+    }
+    
+    // Count only HARE words (8 per complete Maha Mantra)
+    private int countHareWords(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        
+        int count = 0;
+        
+        // Count Hindi हरे
+        int idx = 0;
+        while ((idx = text.indexOf("हरे", idx)) != -1) {
+            count++;
+            idx += 2; // Move past this match
+        }
+        
+        // Count English variations
+        String lower = text.toLowerCase();
+        String[] words = lower.split("[\\s,]+");
+        for (String word : words) {
+            word = word.replaceAll("[^a-z]", "");
+            if (word.equals("hare") || word.equals("hari") || word.equals("harey") || 
+                word.equals("harry") || word.equals("hurry") || word.equals("hore")) {
+                count++;
+            }
+        }
+        
+        return count;
     }
 
     private boolean matchesTarget(String word) {
