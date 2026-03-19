@@ -243,61 +243,51 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     public void onError(int error) {
                         boolean shouldRestart = true;
                         int delay = 300;
-                        String errorMsg = "";
-                        boolean showError = false;
+                        String errorMsg = "Error " + error;
                         
                         switch(error) {
                             case SpeechRecognizer.ERROR_AUDIO: 
                                 errorMsg = "Audio error"; 
-                                showError = true; // Show - this is important
                                 delay = 1000;
                                 break;
                             case SpeechRecognizer.ERROR_CLIENT: 
+                                errorMsg = "Client error";
                                 delay = 200;
                                 break;
                             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: 
                                 errorMsg = "No mic permission"; 
-                                showError = true; // Show - this is important
                                 shouldRestart = false;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK: 
                                 errorMsg = "Network error"; 
-                                showError = true; // Show - user needs to know
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: 
                                 errorMsg = "Network timeout"; 
-                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NO_MATCH: 
-                                // Normal - no speech detected, just restart
+                                errorMsg = "No speech detected";
                                 delay = 100;
                                 break;
                             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: 
-                                // Error 11 - just wait and restart, don't show
+                                errorMsg = "Recognizer busy";
                                 delay = 500;
                                 break;
                             case SpeechRecognizer.ERROR_SERVER: 
                                 errorMsg = "Server error"; 
-                                showError = true;
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: 
-                                // Normal - silence timeout, just restart
+                                errorMsg = "Speech timeout";
                                 delay = 50;
                                 break;
-                            default:
-                                // Unknown error - just restart silently
-                                delay = 300;
-                                break;
                         }
                         
-                        Log.d(TAG, "Speech error: " + error);
+                        Log.d(TAG, "Speech error: " + error + " - " + errorMsg);
                         
-                        if (showError && !errorMsg.isEmpty()) {
-                            callJS("onSpeechError('" + errorMsg + "')");
-                        }
+                        // ALWAYS show error in JS debug
+                        callJS("onSpeechError('" + errorMsg + "')");
                         
                         isListening = false;
                         
@@ -358,6 +348,14 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 shouldContinueListening = true;
                 lastPartialResult = "";
                 totalWordsDetected = 0;
+                
+                // Reset v44 tracking
+                lastProcessedText = "";
+                lastHareCount = 0;
+                lastProcessTime = 0;
+                
+                Log.d(TAG, "Starting speech recognition...");
+                callJS("D('🎤 Starting speech recognition...','info')");
                 speechRecognizer.startListening(speechIntent);
             });
         }

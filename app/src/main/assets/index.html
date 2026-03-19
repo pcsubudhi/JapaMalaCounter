@@ -2390,6 +2390,19 @@ function addOneWord(){
     
     D('✅ Chant #'+G_chant+' complete!','ok');
     
+    // MILESTONE ANNOUNCEMENTS (27, 54, 81 for 108 chants)
+    if(G_chant>0 && G_chant<CFG.cpm && CFG.cpm>=8){
+      var q25=Math.floor(CFG.cpm/4), q50=Math.floor(CFG.cpm/2), q75=Math.floor(CFG.cpm*3/4);
+      var isMile = (SND.mile25 && G_chant===q25) || (SND.mile50 && G_chant===q50) || (SND.mile75 && G_chant===q75);
+      if(isMile){
+        D('🎯 Milestone: '+G_chant+' chants!','ok');
+        if(SND.mileVol>0) playSound('chant',SND.mileVol);
+        doVibrate(VIB_PATTERNS[SND.mileVib]);
+        if(SND.voice) speak(''+G_chant);
+      }
+    }
+    
+    // MALA COMPLETE
     if(G_chant>=CFG.cpm){
       G_chant=0;
       G_mala++;
@@ -3140,7 +3153,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v44b loaded - Native Android Speech enabled','ok');
+  D('v45 loaded - milestone announcements fixed','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
