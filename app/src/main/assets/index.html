@@ -2000,6 +2000,10 @@ function stopListen(){
 var webSpeechRecognition = null;
 var webSpeechLang = 'hi-IN';
 
+// GLOBAL deduplication variables - must persist across restarts
+var G_lastResultTime = 0;
+var G_lastResultText = '';
+
 function initWebSpeech(){
   if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
     D('Speech Recognition not supported','warn');
@@ -2024,6 +2028,14 @@ function initWebSpeech(){
     }
     
     if(transcript){
+      var now = Date.now();
+      // DEBOUNCE: Skip if same text within 500ms (using GLOBAL variables)
+      if(transcript === G_lastResultText && now - G_lastResultTime < 500){
+        return;
+      }
+      G_lastResultText = transcript;
+      G_lastResultTime = now;
+      
       onTranscript(transcript.toLowerCase(), isFinal ? 'final' : 'partial');
     }
   };
@@ -2198,70 +2210,35 @@ function onWordDetected(word){
 }
 
 // Process transcript - count words from partial and final results
-var lastProcessedText = '';
-var lastProcessedWordCount = 0;
-var lastProcessedTime = 0;
+// CRITICAL: These must be TRUE globals, not reset
+var G_hareCount = 0;
 
 function onTranscript(text,type){
   if(!detecting||sessionPaused)return;
   
-  var now = Date.now();
+  // Count only "Hare" words in this transcript
+  var hareInText = countMantraWords(text);
   
-  // Count mantra words in this transcript
-  var wordCount = countMantraWords(text);
+  // Log what we received
+  D('📝 "'+text.substring(0,30)+'" ('+hareInText+' Hare)','info');
   
-  // Log what we received (always log for debugging)
-  D('📝 "'+text.substring(0,30)+'" ('+wordCount+' Hare)','info');
-  
-  // DEDUPLICATION: Skip if we already processed this exact text recently
-  if(text === lastProcessedText && now - lastProcessedTime < 2000){
-    return;
-  }
-  
-  // DEDUPLICATION: Skip if word count hasn't increased
-  // (same phrase growing, we only count NEW words)
-  if(wordCount <= lastProcessedWordCount && wordCount > 0){
-    // Same or fewer words - don't count again
-    // But update the text tracker
-    lastProcessedText = text;
-    lastProcessedTime = now;
-    return;
-  }
-  
-  // If word count is 0, just track and return
-  if(wordCount === 0){
-    lastProcessedText = text;
-    lastProcessedTime = now;
-    return;
-  }
-  
-  // RESET: If new transcript has FEWER words, it's a new phrase
-  if(wordCount < lastProcessedWordCount){
-    D('🔄 New phrase started','info');
-    lastProcessedWordCount = 0;
-  }
-  
-  // Calculate NEW words only
-  var newWords = wordCount - lastProcessedWordCount;
-  
-  // Safety: limit to 1 word per update
-  if(newWords > 1) newWords = 1;
-  
-  // Add the word
-  if(newWords > 0){
+  // SIMPLE LOGIC: Only add when hare count INCREASES
+  if(hareInText > G_hareCount){
     addOneWord();
-    D('✅ +1 (total Hare in phrase: '+wordCount+')','ok');
+    G_hareCount = hareInText;
+    D('✅ +1 ('+G_hareCount+' Hare total in phrase)','ok');
+  }
+  // If count dropped, it's a new phrase - reset
+  else if(hareInText < G_hareCount && hareInText > 0){
+    D('🔄 New phrase ('+hareInText+' Hare)','info');
+    G_hareCount = hareInText;
+    addOneWord();
+    D('✅ +1 ('+G_hareCount+' Hare total in phrase)','ok');
   }
   
-  // Update trackers
-  lastProcessedText = text;
-  lastProcessedWordCount = wordCount;
-  lastProcessedTime = now;
-  
-  // Reset on final result for next phrase
+  // Reset on final
   if(type==='final'){
-    lastProcessedWordCount = 0;
-    lastProcessedText = '';
+    G_hareCount = 0;
   }
 }
 
@@ -3130,7 +3107,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v40 loaded - Hare only, robust dedup','ok');
+  D('v42 loaded - global dedup fix','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
