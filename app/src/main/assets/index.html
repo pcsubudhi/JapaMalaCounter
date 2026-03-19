@@ -2070,35 +2070,53 @@ function initWebSpeech(){
 }
 
 function startGoogleSpeech(){
-  if(!webSpeechRecognition){
-    if(!initWebSpeech()){
-      D('Web Speech not available','warn');
-      document.getElementById('sLine').textContent = 'Speech not supported in this browser';
-      return;
+  // v44: Use Native Android Speech Recognition
+  if(typeof NativeApp !== 'undefined' && NativeApp.startSpeechRecognition){
+    // Determine language based on selected mantra
+    var lang = 'hi-IN';
+    if(CFG.mantra === 'custom'){
+      lang = 'en-IN';
     }
-  }
-  
-  // Determine language based on selected mantra
-  if(CFG.mantra==='radhe_radhe'){
-    webSpeechLang = 'hi-IN';
-  }else if(CFG.mantra==='custom'){
-    webSpeechLang = 'en-IN';
-  }else{
-    webSpeechLang = 'hi-IN';
-  }
-  
-  webSpeechRecognition.lang = webSpeechLang;
-  
-  try{
-    webSpeechRecognition.start();
+    
+    // Determine target word
+    var targetWord = 'hare';
+    if(CFG.mantra === 'radhe_radhe'){
+      targetWord = 'radha';
+    }
+    
+    D('Starting Native Speech ('+lang+', target: '+targetWord+')','ok');
+    NativeApp.startSpeechRecognition(targetWord, lang);
     googleSpeechActive = true;
-    D('Web Speech started ('+webSpeechLang+')','ok');
-  }catch(e){
-    D('Speech start error: '+e.message,'warn');
+  } else {
+    // Fallback to Web Speech (for PWA/browser)
+    D('Native Speech not available, using Web Speech','warn');
+    if(!webSpeechRecognition){
+      if(!initWebSpeech()){
+        D('Web Speech not available','warn');
+        document.getElementById('sLine').textContent = 'Speech not supported';
+        return;
+      }
+    }
+    
+    webSpeechLang = (CFG.mantra === 'custom') ? 'en-IN' : 'hi-IN';
+    webSpeechRecognition.lang = webSpeechLang;
+    
+    try{
+      webSpeechRecognition.start();
+      googleSpeechActive = true;
+      D('Web Speech started ('+webSpeechLang+')','ok');
+    }catch(e){
+      D('Speech start error: '+e.message,'warn');
+    }
   }
 }
 
 function stopGoogleSpeech(){
+  // v44: Stop Native Speech
+  if(typeof NativeApp !== 'undefined' && NativeApp.stopSpeechRecognition){
+    NativeApp.stopSpeechRecognition();
+  }
+  // Also stop Web Speech if active
   if(webSpeechRecognition){
     try{
       webSpeechRecognition.stop();
@@ -2108,7 +2126,14 @@ function stopGoogleSpeech(){
 }
 
 function restartGoogleSpeech(){
-  if(!detecting || !googleSpeechActive)return;
+  // v44: Native handles its own restart, this is just for Web Speech fallback
+  if(!detecting || !googleSpeechActive) return;
+  if(typeof NativeApp !== 'undefined' && NativeApp.startSpeechRecognition){
+    // Native handles restart automatically, nothing to do
+    D('🗣️ Listening (Native)...','info');
+    return;
+  }
+  // Web Speech fallback
   try{
     webSpeechRecognition.stop();
   }catch(e){}
@@ -2212,6 +2237,16 @@ function onWordDetected(word){
 // Process transcript - count words from partial and final results
 // v44: Native Android Speech sends word counts directly
 // These functions receive data from Java
+
+// Called when Native Speech is ready
+function onSpeechReady(){
+  D('🎤 Native Speech ready','ok');
+}
+
+// Called on Native Speech error
+function onSpeechError(msg){
+  D('⚠️ Speech: '+msg,'warn');
+}
 
 // Called when Java detects new words
 function onNativeWordCount(count, text, totalHare){
@@ -3105,7 +3140,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v44 loaded - Native Android Speech counting','ok');
+  D('v44b loaded - Native Android Speech enabled','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
