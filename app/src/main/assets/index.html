@@ -230,6 +230,50 @@
   .tap-fs-hint{font-size:20px;color:var(--accent);font-weight:600;margin-bottom:10px}
   .tap-fs-subhint{font-size:14px;color:var(--text-dim)}
   .tap-fs-mala{width:100%;max-width:200px;margin-bottom:15px}
+  /* Quick Start */
+  .quick-start-card{background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid var(--accent);border-radius:16px;padding:16px;margin-bottom:10px;text-align:center}
+  .quick-start-btn{width:100%;padding:20px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#D97706);color:var(--bg);font-size:20px;font-weight:700;box-shadow:0 4px 25px rgba(251,191,36,0.4);letter-spacing:0.02em;margin-bottom:10px}
+  .quick-start-btn:active{transform:scale(0.98)}
+  .quick-start-info{font-size:12px;color:var(--text-mid)}
+  .quick-start-info b{color:var(--accent)}
+  /* Daily Progress */
+  .daily-progress{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:12px;margin-bottom:8px}
+  .daily-progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .daily-progress-title{font-size:13px;color:var(--text-mid)}
+  .daily-progress-title b{color:var(--accent);font-size:15px}
+  .daily-progress-time{font-size:11px;color:var(--text-dim)}
+  .daily-progress-bar{height:10px;background:var(--card-border);border-radius:5px;overflow:hidden;margin-bottom:6px}
+  .daily-progress-fill{height:100%;background:linear-gradient(90deg,#059669,var(--success));border-radius:5px;transition:width 0.3s}
+  .daily-progress-fill.complete{background:linear-gradient(90deg,var(--accent),#F59E0B)}
+  .daily-progress-sessions{font-size:11px;color:var(--text-dim)}
+  .daily-progress-sessions span{color:var(--text-mid)}
+  /* Settings Quick */
+  .settings-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--card-border)}
+  .settings-row:last-child{border-bottom:none}
+  .settings-label{font-size:13px;color:var(--text-mid)}
+  .settings-value{display:flex;align-items:center;gap:6px}
+  .settings-value input[type="number"]{width:60px;padding:6px 8px;text-align:center;font-size:14px}
+  .settings-value input[type="time"]{padding:6px 8px;font-size:13px;background:var(--card);border:1px solid var(--card-border);color:var(--text);border-radius:6px}
+  .expand-btn{background:none;border:none;color:var(--accent);font-size:12px;padding:8px 0}
+  /* Alarm & Reminders */
+  .alarm-card{background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #4f46e5;border-radius:12px;padding:12px;margin-bottom:8px}
+  .alarm-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .alarm-title{font-size:14px;color:#a5b4fc;font-weight:600}
+  .alarm-toggle{width:50px;height:26px;border-radius:13px;background:var(--card-border);position:relative;cursor:pointer;transition:background 0.3s}
+  .alarm-toggle.on{background:#4f46e5}
+  .alarm-toggle::after{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:white;top:2px;left:2px;transition:left 0.3s}
+  .alarm-toggle.on::after{left:26px}
+  .alarm-time{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .alarm-time input[type="time"]{flex:1;padding:10px;font-size:18px;background:rgba(0,0,0,0.3);border:1px solid #4f46e5;color:white;border-radius:8px;text-align:center}
+  .alarm-bhajan{font-size:12px;color:#a5b4fc}
+  .alarm-bhajan select{width:100%;padding:8px;margin-top:4px;background:rgba(0,0,0,0.3);border:1px solid #4f46e5;color:white;border-radius:6px;font-size:13px}
+  .reminder-card{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:12px;margin-bottom:8px}
+  .reminder-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)}
+  .reminder-row:last-child{border-bottom:none}
+  .reminder-label{font-size:13px;color:var(--text-mid)}
+  .reminder-label small{display:block;font-size:10px;color:var(--text-dim);margin-top:2px}
+  .reminder-value select{padding:6px 10px;background:var(--card);border:1px solid var(--card-border);color:var(--text);border-radius:6px;font-size:13px}
+  .next-reminder{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:var(--accent);text-align:center}
 </style>
 </head>
 <body>
@@ -333,8 +377,28 @@
     <div class="home-title">
       <div style="font-size:36px;margin-bottom:2px">📿</div>
       <h1>Japa Counter</h1>
-      <p>Calibrated voice recognition</p>
+      <p>Daily Sadhana Companion</p>
       <div id="streakBadge" class="streak-badge" style="display:none"></div>
+    </div>
+
+    <!-- QUICK START -->
+    <div class="quick-start-card">
+      <button class="quick-start-btn" onclick="quickStart()">⚡ START JAPA NOW</button>
+      <div class="quick-start-info">
+        <b id="qsMantra">Hare Krishna MM</b> • <b id="qsMode">Google</b> Mode • <b id="qsGoal">16</b> Malas
+      </div>
+    </div>
+
+    <!-- DAILY PROGRESS -->
+    <div class="daily-progress" id="dailyProgress">
+      <div class="daily-progress-header">
+        <div class="daily-progress-title">Today: <b id="dpMalas">0</b>/<span id="dpGoal">16</span> Malas</div>
+        <div class="daily-progress-time" id="dpTimeLeft">⏰ calculating...</div>
+      </div>
+      <div class="daily-progress-bar">
+        <div class="daily-progress-fill" id="dpFill" style="width:0%"></div>
+      </div>
+      <div class="daily-progress-sessions" id="dpSessions">No sessions yet today</div>
     </div>
 
     <!-- Weekly Stats -->
@@ -367,11 +431,135 @@
       </div>
     </div>
 
-    <!-- Mantra Selection -->
+    <!-- Daily Goal Settings (collapsible) -->
     <div class="card step">
-      <div class="step-header"><div class="step-num">🕉</div><div class="step-title">Select Mantra <span class="tip" onclick="toggleTip('tipMantra')">?</span></div></div>
-      <div id="tipMantra" class="tip-box">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Audio mode with calibration.</div>
-      <div id="mantraList" style="margin-bottom:8px">
+      <div class="step-header" onclick="toggleDailySettings()" style="cursor:pointer">
+        <div class="step-num">🎯</div>
+        <div class="step-title">Daily Goal Settings <span style="font-size:11px;color:var(--text-dim)" id="dailySettingsArrow">▼</span></div>
+      </div>
+      <div id="dailySettingsPanel" style="display:none;padding-top:8px">
+        <div class="settings-row">
+          <span class="settings-label">Daily Target</span>
+          <div class="settings-value">
+            <input type="number" id="inDailyGoal" value="16" min="1" max="64" onchange="saveDailySettings()"> Malas
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Complete By</span>
+          <div class="settings-value">
+            <input type="time" id="inDeadline" value="20:00" onchange="saveDailySettings()">
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Default Mode</span>
+          <div class="settings-value">
+            <select id="inDefaultMode" onchange="saveDailySettings()" style="padding:6px;background:var(--card);border:1px solid var(--card-border);color:var(--text);border-radius:6px">
+              <option value="google">🗣️ Google</option>
+              <option value="voice">🎤 Audio</option>
+              <option value="tap">👆 Tap</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Reminder Display -->
+    <div class="next-reminder" id="nextReminderDisplay" style="display:none">
+      🔔 Next reminder: <span id="nextReminderTime">--</span>
+    </div>
+
+    <!-- Wake-up Bhajan Alarm -->
+    <div class="alarm-card">
+      <div class="alarm-header">
+        <div class="alarm-title">🌅 Wake-up Bhajan Alarm</div>
+        <div class="alarm-toggle" id="alarmToggle" onclick="toggleAlarm()"></div>
+      </div>
+      <div class="alarm-time">
+        <input type="time" id="alarmTime" value="04:30" onchange="saveAlarmSettings()">
+      </div>
+      <div class="alarm-bhajan">
+        <span>🎵 Bhajan:</span>
+        <select id="alarmBhajan" onchange="saveAlarmSettings()">
+          <option value="hare_krishna">Hare Krishna Kirtan - Prabhupada</option>
+          <option value="govinda">Govinda Jaya Jaya</option>
+          <option value="radhe_shyam">Radhe Radhe Shyam</option>
+          <option value="mahamantra">Maha Mantra Melody</option>
+          <option value="morning_raga">Morning Raga</option>
+        </select>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#a5b4fc">
+        <span id="alarmStatus">Alarm is OFF</span>
+      </div>
+    </div>
+
+    <!-- Smart Reminders -->
+    <div class="reminder-card">
+      <div style="font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px">🔔 Smart Reminders</div>
+      
+      <div class="reminder-row">
+        <div class="reminder-label">
+          Morning Start
+          <small>Reminder to begin japa</small>
+        </div>
+        <div class="reminder-value">
+          <select id="reminderMorning" onchange="saveReminderSettings()">
+            <option value="">Off</option>
+            <option value="04:30">4:30 AM</option>
+            <option value="05:00" selected>5:00 AM</option>
+            <option value="05:30">5:30 AM</option>
+            <option value="06:00">6:00 AM</option>
+            <option value="06:30">6:30 AM</option>
+            <option value="07:00">7:00 AM</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="reminder-row">
+        <div class="reminder-label">
+          Progress Check
+          <small>Remind remaining malas</small>
+        </div>
+        <div class="reminder-value">
+          <select id="reminderInterval" onchange="saveReminderSettings()">
+            <option value="">Off</option>
+            <option value="1">Every 1 hour</option>
+            <option value="2">Every 2 hours</option>
+            <option value="3" selected>Every 3 hours</option>
+            <option value="4">Every 4 hours</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="reminder-row">
+        <div class="reminder-label">
+          Deadline Warning
+          <small>Alert before deadline</small>
+        </div>
+        <div class="reminder-value">
+          <select id="reminderDeadline" onchange="saveReminderSettings()">
+            <option value="">Off</option>
+            <option value="30">30 mins before</option>
+            <option value="60">1 hour before</option>
+            <option value="120" selected>2 hours before</option>
+            <option value="180">3 hours before</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--card-border)">
+        <button onclick="testReminder()" style="width:100%;padding:8px;border-radius:8px;background:var(--card-border);color:var(--text);font-size:12px;font-weight:600">🔔 Test Notification</button>
+      </div>
+    </div>
+
+    <!-- Mantra Selection (collapsible) -->
+    <div class="card step">
+      <div class="step-header" onclick="toggleMantraPanel()" style="cursor:pointer">
+        <div class="step-num">🕉</div>
+        <div class="step-title">Select Mantra <span style="font-size:11px;color:var(--text-dim)" id="mantraPanelArrow">▼</span></div>
+      </div>
+      <div id="mantraPanel" style="display:none;padding-top:8px">
+        <div id="tipMantra" class="tip-box" style="display:none">Choose your mantra. Google mode auto-detects Hindi words. For custom words, use Audio mode with calibration.</div>
+        <div id="mantraList" style="margin-bottom:8px">
         <div class="mantra-item selected" data-id="maha_mantra" onclick="selectMantra('maha_mantra',this)">
           <div class="mantra-name">🙏 Hare Krishna Maha Mantra</div>
           <div class="mantra-text">हरे कृष्णा हरे कृष्णा कृष्णा कृष्णा हरे हरे • हरे राम हरे राम राम राम हरे हरे</div>
@@ -409,7 +597,16 @@
         </div>
         <p style="font-size:11px;color:var(--text-dim);margin-top:8px;line-height:1.4">💡 Use <b>Google mode</b> for recognition or <b>Audio mode</b> with calibration for instant counting.</p>
       </div>
+      </div>
     </div>
+
+    <!-- Calibration (collapsible) -->
+    <div class="card step" id="calibrationCard">
+      <div class="step-header" onclick="toggleCalibrationPanel()" style="cursor:pointer">
+        <div class="step-num">🎤</div>
+        <div class="step-title">Audio Calibration <span style="font-size:11px;color:var(--text-dim)" id="calibrationArrow">▼</span></div>
+      </div>
+      <div id="calibrationPanel" style="display:none;padding-top:8px">
 
     <!-- Step 1 -->
     <div class="card step" id="calibrationStep1">
@@ -443,17 +640,24 @@
     </div>
 
     <!-- Step 2 -->
-    <div class="card step" id="calibrationStep2">
+    <div class="card step" id="calibrationStep2" style="border:none;padding:0;margin:0;background:none">
       <div class="step-header"><div class="step-num" id="s2n">2</div><div class="step-title">Teach Your Word <span class="tip" onclick="toggleTip('tip2')">?</span></div></div>
       <div id="tip2" class="tip-box">Say one word from your mantra 5 times with pauses. Same volume/distance as actual chanting.</div>
-      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" disabled>🎤 Record Word ×5</button>
+      <button id="btnWord" class="btn-rec idle" onclick="captureWord()" ontouchend="captureWord()">🎤 Record Word ×5</button>
       <div id="wordViz" class="viz" style="display:none"></div>
       <div id="wordStatus" style="font-size:12px;color:var(--text-mid);margin-top:2px;text-align:center"></div>
     </div>
+    
+      </div>
+    </div>
 
-    <!-- Step 3 -->
+    <!-- Advanced Settings (collapsible) -->
     <div class="card step">
-      <div class="step-header"><div class="step-num">3</div><div class="step-title">Settings</div></div>
+      <div class="step-header" onclick="toggleAdvancedSettings()" style="cursor:pointer">
+        <div class="step-num">⚙️</div>
+        <div class="step-title">Advanced Settings <span style="font-size:11px;color:var(--text-dim)" id="advancedArrow">▼</span></div>
+      </div>
+      <div id="advancedPanel" style="display:none;padding-top:8px">
       <p style="font-size:13px;color:var(--text-mid);margin-bottom:4px">Words per chant: <span class="tip" onclick="toggleTip('tip3')">?</span></p>
       <div id="tip3" class="tip-box">"Hare Krishna Hare Krishna Krishna Krishna Hare Hare" = 8 words. "Om Namah Shivaya" = 3.</div>
       <div class="wpr-row">
@@ -486,9 +690,10 @@
         <label>Auto-start listening when session begins <span class="tip" onclick="toggleTip('tipAL')">?</span></label>
       </div>
       <div id="tipAL" class="tip-box">If ON, voice detection starts automatically. Turn OFF if you want to start manually or use Tap-only mode.</div>
+      </div>
     </div>
 
-    <button id="btnGo" class="btn-primary" onclick="startSession()" disabled>Complete Steps 1 & 2 First</button>
+    <button id="btnGo" class="btn-primary" onclick="startSession()">🙏 Start Chanting</button>
     <div class="ad-banner" id="setupAdBanner"><span>Ad Space — AdMob Banner</span></div>
   </div>
 
@@ -1194,21 +1399,127 @@ async function captureNoise(){
   var viz=initViz('noiseViz');document.getElementById('noiseStatus').textContent='Capturing...';var specS=[],enS=[],fr=0,mx=600;
   function tick(){if(fr>=mx){noiseProfile=avgArrays(specS);noiseEnergy=enS.reduce(function(a,b){return a+b},0)/enS.length;noiseReady=true;btn.className='btn-rec ok';btn.textContent='✅ Noise captured';document.getElementById('noiseStatus').textContent='Level: '+noiseEnergy.toFixed(1);document.getElementById('s1n').classList.add('done');document.getElementById('s1n').textContent='✓';document.getElementById('btnWord').disabled=false;checkReady();return}updateViz(viz);specS.push(getSpectrum());enS.push(getEnergy());fr++;requestAnimationFrame(tick)}requestAnimationFrame(tick);
 }
+var capturingWord = false;
 async function captureWord(){
+  // Immediate feedback - this should show instantly
+  var btn=document.getElementById('btnWord');
+  var statusEl=document.getElementById('wordStatus');
+  
+  // Show we received the tap
+  statusEl.textContent='Button tapped! Starting...';
+  statusEl.style.color='var(--accent)';
+  btn.textContent='⏳ Starting...';
+  
+  // Prevent double execution
+  if(capturingWord){
+    statusEl.textContent='Already recording...';
+    return;
+  }
+  
+  // Check if noise was captured first
+  if(!noiseReady){
+    statusEl.textContent='⚠️ Please capture silence first (Step 1)';
+    statusEl.style.color='var(--danger)';
+    btn.textContent='🎤 Record Word ×5';
+    return;
+  }
+  
+  capturingWord = true;
+  
   // iOS Safari requires user gesture to start AudioContext
-  if(actx && actx.state === 'suspended'){
-    await actx.resume();
+  try{
+    if(actx && actx.state === 'suspended'){
+      statusEl.textContent='Resuming audio...';
+      await actx.resume();
+    }
+  }catch(e){
+    statusEl.textContent='Audio error: '+e.message;
+    capturingWord = false;
+    btn.textContent='🎤 Record Word ×5';
+    return;
   }
-  if(!(await initAudio()))return;
+  
+  statusEl.textContent='Initializing microphone...';
+  var audioOk = await initAudio();
+  if(!audioOk){
+    statusEl.textContent='⚠️ Microphone access denied';
+    capturingWord = false;
+    btn.textContent='🎤 Record Word ×5';
+    return;
+  }
+  
   // Resume again after init for iOS
-  if(actx && actx.state === 'suspended'){
-    await actx.resume();
+  try{
+    if(actx && actx.state === 'suspended'){
+      await actx.resume();
+    }
+  }catch(e){}
+  
+  btn.className='btn-rec busy';
+  btn.textContent='🔴 Say word 5 times...';
+  statusEl.style.color='var(--text-mid)';
+  
+  var viz=initViz('wordViz');
+  wordSamples=[];
+  statusEl.textContent='🎤 Speak now...';
+  
+  var inW=false,wBuf=[],silC=0,eTh=noiseEnergy+10;
+  var timeout=setTimeout(function(){finish()},15000);
+  
+  function finish(){
+    clearTimeout(timeout);
+    capturingWord = false;
+    if(wordSamples.length>=2){
+      var allS=wordSamples.map(function(s){return s.spectrum});
+      wordFingerprint={
+        spectrum:avgArrays(allS),
+        centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,
+        minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,
+        avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length
+      };
+      avgWordDuration=wordFingerprint.avgDuration;
+      wordReady=true;
+      btn.className='btn-rec ok';
+      btn.textContent='✅ '+wordSamples.length+' samples';
+      document.getElementById('s2n').classList.add('done');
+      document.getElementById('s2n').textContent='✓';
+      statusEl.textContent='Calibration complete!';
+      statusEl.style.color='var(--success)';
+    }else{
+      btn.className='btn-rec idle';
+      btn.textContent='🎤 Record Word ×5 (retry)';
+      statusEl.textContent='Only got '+wordSamples.length+' samples. Try speaking louder.';
+      statusEl.style.color='var(--danger)';
+    }
+    checkReady();
   }
-  var btn=document.getElementById('btnWord');btn.className='btn-rec busy';btn.textContent='🔴 Say word 5 times...';
-  var viz=initViz('wordViz');wordSamples=[];document.getElementById('wordStatus').textContent='Speak now...';
-  var inW=false,wBuf=[],silC=0,eTh=noiseEnergy+10,timeout=setTimeout(function(){finish()},12000);
-  function finish(){clearTimeout(timeout);if(wordSamples.length>=2){var allS=wordSamples.map(function(s){return s.spectrum});wordFingerprint={spectrum:avgArrays(allS),centroid:wordSamples.reduce(function(a,s){return a+s.centroid},0)/wordSamples.length,minEnergy:Math.min.apply(null,wordSamples.map(function(s){return s.peakEnergy}))*0.5,avgDuration:wordSamples.reduce(function(a,s){return a+s.duration},0)/wordSamples.length};avgWordDuration=wordFingerprint.avgDuration;wordReady=true;btn.className='btn-rec ok';btn.textContent='✅ '+wordSamples.length+' samples';document.getElementById('s2n').classList.add('done');document.getElementById('s2n').textContent='✓'}else{btn.className='btn-rec idle';btn.textContent='🎤 Record Word ×5 (retry)'}checkReady()}
-  function tick(){if(wordSamples.length>=5){finish();return}updateViz(viz);var energy=getEnergy(),spec=getSpectrum(),centroid=getCentroid();if(energy>eTh){if(!inW){inW=true;wBuf=[]}wBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});silC=0}else{silC++;if(inW&&silC>10){inW=false;if(wBuf.length>=4){var aS=avgArrays(wBuf.map(function(f){return f.spec}));var aC=wBuf.reduce(function(a,f){return a+f.centroid},0)/wBuf.length;var pE=Math.max.apply(null,wBuf.map(function(f){return f.energy}));wordSamples.push({spectrum:aS,centroid:aC,peakEnergy:pE,duration:wBuf.length});document.getElementById('wordStatus').textContent=wordSamples.length+'/5...'}wBuf=[]}}requestAnimationFrame(tick)}requestAnimationFrame(tick);
+  
+  function tick(){
+    if(wordSamples.length>=5){finish();return}
+    updateViz(viz);
+    var energy=getEnergy(),spec=getSpectrum(),centroid=getCentroid();
+    
+    if(energy>eTh){
+      if(!inW){inW=true;wBuf=[]}
+      wBuf.push({spec:denoiseSpectrum(spec),energy:energy,centroid:centroid});
+      silC=0;
+    }else{
+      silC++;
+      if(inW&&silC>10){
+        inW=false;
+        if(wBuf.length>=4){
+          var aS=avgArrays(wBuf.map(function(f){return f.spec}));
+          var aC=wBuf.reduce(function(a,f){return a+f.centroid},0)/wBuf.length;
+          var pE=Math.max.apply(null,wBuf.map(function(f){return f.energy}));
+          wordSamples.push({spectrum:aS,centroid:aC,peakEnergy:pE,duration:wBuf.length});
+          statusEl.textContent=wordSamples.length+'/5 captured ✓';
+        }
+        wBuf=[];
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 // =================== ADAPTIVE NOISE RECALIBRATION ===================
@@ -1482,11 +1793,30 @@ function saveSessionToHistory(){
   if(G_totalC===0)return;
   var m=MANTRAS[CFG.mantra];var name=m?m.name:'Custom';
   if(CFG.mantra==='custom'){var cw=document.getElementById('inCustomWord').value.trim();name=cw?'Custom: '+cw:'Custom'}
-  var session={id:currentSessionId||Date.now(),date:new Date().toISOString(),mantra:name,mode:curMode,wpr:CFG.wpr,targetMalas:CFG.malas,malas:G_mala,chants:G_totalC,words:G_t,duration:getElapsed(),speed:getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):0,complete:G_mala>=CFG.malas};
+  // Get session start time
+  var startTime = new Date(sessionStartTime);
+  var endTime = new Date();
+  var session={
+    id:currentSessionId||Date.now(),
+    date:new Date().toISOString(),
+    mantra:name,
+    mode:curMode,
+    wpr:CFG.wpr,
+    targetMalas:CFG.malas,
+    malas:G_mala,
+    chants:G_totalC,
+    words:G_t,
+    duration:getElapsed(),
+    speed:getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):0,
+    complete:G_mala>=CFG.malas,
+    startTime:startTime.toISOString(),
+    endTime:endTime.toISOString()
+  };
   try{sessionHistory=JSON.parse(localStorage.getItem('japaHistory')||'[]')}catch(e){sessionHistory=[]}
   sessionHistory.unshift(session);
   if(sessionHistory.length>100)sessionHistory=sessionHistory.slice(0,100);
   localStorage.setItem('japaHistory',JSON.stringify(sessionHistory));
+  updateDailyProgress();
   D('Session saved','ok');
 }
 function showSessionSummary(){
@@ -2241,13 +2571,511 @@ document.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){if(!document.getElementById('counterScreen').classList.contains('active'))return;if(e.key===' '||e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();tapCount()}});
 
 // =================== INIT ===================
+// =================== QUICK START & DAILY GOAL ===================
+var dailySettings = {
+  goal: 16,
+  deadline: '20:00',
+  defaultMode: 'google'
+};
+
+// =================== ALARM & REMINDERS ===================
+var alarmSettings = {
+  enabled: false,
+  time: '04:30',
+  bhajan: 'hare_krishna'
+};
+
+var reminderSettings = {
+  morning: '05:00',
+  interval: '3',
+  deadline: '120'
+};
+
+var alarmTimeout = null;
+var reminderIntervals = [];
+var notificationPermission = false;
+
+function loadAlarmSettings(){
+  try{
+    var saved = localStorage.getItem('japaAlarmSettings');
+    if(saved) alarmSettings = JSON.parse(saved);
+  }catch(e){}
+  document.getElementById('alarmTime').value = alarmSettings.time;
+  document.getElementById('alarmBhajan').value = alarmSettings.bhajan;
+  if(alarmSettings.enabled){
+    document.getElementById('alarmToggle').classList.add('on');
+  }
+  updateAlarmStatus();
+}
+
+function saveAlarmSettings(){
+  alarmSettings.time = document.getElementById('alarmTime').value;
+  alarmSettings.bhajan = document.getElementById('alarmBhajan').value;
+  localStorage.setItem('japaAlarmSettings', JSON.stringify(alarmSettings));
+  if(alarmSettings.enabled){
+    scheduleAlarm();
+  }
+  updateAlarmStatus();
+}
+
+function toggleAlarm(){
+  alarmSettings.enabled = !alarmSettings.enabled;
+  document.getElementById('alarmToggle').classList.toggle('on', alarmSettings.enabled);
+  localStorage.setItem('japaAlarmSettings', JSON.stringify(alarmSettings));
+  
+  if(alarmSettings.enabled){
+    requestNotificationPermission();
+    scheduleAlarm();
+  }else{
+    cancelAlarm();
+  }
+  updateAlarmStatus();
+}
+
+function updateAlarmStatus(){
+  var status = document.getElementById('alarmStatus');
+  if(alarmSettings.enabled){
+    status.textContent = '✅ Alarm set for ' + formatTime12(alarmSettings.time);
+    status.style.color = '#34D399';
+  }else{
+    status.textContent = 'Alarm is OFF';
+    status.style.color = '#a5b4fc';
+  }
+}
+
+function formatTime12(time24){
+  var parts = time24.split(':');
+  var hr = parseInt(parts[0]);
+  var min = parts[1];
+  var ampm = hr >= 12 ? 'PM' : 'AM';
+  hr = hr % 12 || 12;
+  return hr + ':' + min + ' ' + ampm;
+}
+
+function scheduleAlarm(){
+  cancelAlarm();
+  
+  var now = new Date();
+  var alarmParts = alarmSettings.time.split(':');
+  var alarmDate = new Date();
+  alarmDate.setHours(parseInt(alarmParts[0]), parseInt(alarmParts[1]), 0, 0);
+  
+  // If time has passed today, schedule for tomorrow
+  if(alarmDate <= now){
+    alarmDate.setDate(alarmDate.getDate() + 1);
+  }
+  
+  var msUntilAlarm = alarmDate - now;
+  
+  alarmTimeout = setTimeout(function(){
+    triggerAlarm();
+  }, msUntilAlarm);
+  
+  D('Alarm scheduled for ' + alarmDate.toLocaleString(), 'ok');
+}
+
+function cancelAlarm(){
+  if(alarmTimeout){
+    clearTimeout(alarmTimeout);
+    alarmTimeout = null;
+  }
+}
+
+function triggerAlarm(){
+  // Play bhajan
+  playBhajan(alarmSettings.bhajan);
+  
+  // Show notification
+  showNotification('🌅 Brahma Muhurta', 'Time for Japa! Hare Krishna 🙏', 'alarm');
+  
+  // Vibrate
+  if(navigator.vibrate){
+    navigator.vibrate([500, 200, 500, 200, 500]);
+  }
+  
+  // Reschedule for tomorrow
+  scheduleAlarm();
+}
+
+function playBhajan(bhajan){
+  // In PWA we use Web Audio or external audio
+  // For now, use speech synthesis as placeholder
+  var bhajanTexts = {
+    'hare_krishna': 'Hare Krishna Hare Krishna, Krishna Krishna Hare Hare, Hare Rama Hare Rama, Rama Rama Hare Hare',
+    'govinda': 'Govinda Jaya Jaya, Gopala Jaya Jaya, Radha Ramana Hari, Govinda Jaya Jaya',
+    'radhe_shyam': 'Radhe Radhe Radhe Shyam, Radhe Radhe Radhe Shyam',
+    'mahamantra': 'Hare Krishna Hare Krishna Krishna Krishna Hare Hare',
+    'morning_raga': 'Om Namo Bhagavate Vasudevaya'
+  };
+  
+  if('speechSynthesis' in window){
+    var text = bhajanTexts[bhajan] || bhajanTexts['hare_krishna'];
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.8;
+    utterance.pitch = 1;
+    utterance.lang = 'hi-IN';
+    speechSynthesis.speak(utterance);
+  }
+  
+  D('Playing bhajan: ' + bhajan, 'ok');
+}
+
+// Reminder Functions
+function loadReminderSettings(){
+  try{
+    var saved = localStorage.getItem('japaReminderSettings');
+    if(saved) reminderSettings = JSON.parse(saved);
+  }catch(e){}
+  document.getElementById('reminderMorning').value = reminderSettings.morning || '';
+  document.getElementById('reminderInterval').value = reminderSettings.interval || '';
+  document.getElementById('reminderDeadline').value = reminderSettings.deadline || '';
+  scheduleReminders();
+}
+
+function saveReminderSettings(){
+  reminderSettings.morning = document.getElementById('reminderMorning').value;
+  reminderSettings.interval = document.getElementById('reminderInterval').value;
+  reminderSettings.deadline = document.getElementById('reminderDeadline').value;
+  localStorage.setItem('japaReminderSettings', JSON.stringify(reminderSettings));
+  scheduleReminders();
+}
+
+function scheduleReminders(){
+  // Clear existing
+  reminderIntervals.forEach(function(id){ clearInterval(id); clearTimeout(id); });
+  reminderIntervals = [];
+  
+  var now = new Date();
+  
+  // Morning reminder
+  if(reminderSettings.morning){
+    var parts = reminderSettings.morning.split(':');
+    var morningTime = new Date();
+    morningTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+    
+    if(morningTime > now){
+      var msUntil = morningTime - now;
+      var id = setTimeout(function(){
+        showNotification('🙏 Time for Japa', 'Good morning! Start your daily ' + dailySettings.goal + ' rounds.', 'morning');
+      }, msUntil);
+      reminderIntervals.push(id);
+    }
+  }
+  
+  // Progress interval reminders
+  if(reminderSettings.interval){
+    var intervalHours = parseInt(reminderSettings.interval);
+    var intervalMs = intervalHours * 60 * 60 * 1000;
+    
+    var id = setInterval(function(){
+      checkProgressReminder();
+    }, intervalMs);
+    reminderIntervals.push(id);
+  }
+  
+  // Deadline warning
+  if(reminderSettings.deadline && dailySettings.deadline){
+    var deadlineParts = dailySettings.deadline.split(':');
+    var deadlineTime = new Date();
+    deadlineTime.setHours(parseInt(deadlineParts[0]), parseInt(deadlineParts[1]), 0, 0);
+    
+    var warningMins = parseInt(reminderSettings.deadline);
+    var warningTime = new Date(deadlineTime - warningMins * 60 * 1000);
+    
+    if(warningTime > now){
+      var msUntil = warningTime - now;
+      var id = setTimeout(function(){
+        checkDeadlineReminder();
+      }, msUntil);
+      reminderIntervals.push(id);
+    }
+  }
+  
+  updateNextReminderDisplay();
+}
+
+function checkProgressReminder(){
+  loadHistory();
+  var today = new Date().toDateString();
+  var todayMalas = 0;
+  
+  sessionHistory.forEach(function(s){
+    if(new Date(s.date).toDateString() === today){
+      todayMalas += s.malas || 0;
+    }
+  });
+  
+  var remaining = dailySettings.goal - todayMalas;
+  
+  if(remaining > 0){
+    showNotification('📿 Japa Progress', 'Completed: ' + todayMalas + '/' + dailySettings.goal + ' Malas. ' + remaining + ' remaining!', 'progress');
+  }
+}
+
+function checkDeadlineReminder(){
+  loadHistory();
+  var today = new Date().toDateString();
+  var todayMalas = 0;
+  
+  sessionHistory.forEach(function(s){
+    if(new Date(s.date).toDateString() === today){
+      todayMalas += s.malas || 0;
+    }
+  });
+  
+  var remaining = dailySettings.goal - todayMalas;
+  
+  if(remaining > 0){
+    var mins = parseInt(reminderSettings.deadline);
+    var timeStr = mins >= 60 ? (mins/60) + ' hour(s)' : mins + ' mins';
+    showNotification('⚠️ Deadline Approaching', remaining + ' Malas remaining! Only ' + timeStr + ' left.', 'deadline');
+  }
+}
+
+function updateNextReminderDisplay(){
+  var display = document.getElementById('nextReminderDisplay');
+  var timeSpan = document.getElementById('nextReminderTime');
+  
+  var nextTime = null;
+  var now = new Date();
+  
+  // Check morning reminder
+  if(reminderSettings.morning){
+    var parts = reminderSettings.morning.split(':');
+    var morningTime = new Date();
+    morningTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+    if(morningTime > now && (!nextTime || morningTime < nextTime)){
+      nextTime = morningTime;
+    }
+  }
+  
+  if(nextTime){
+    display.style.display = 'block';
+    timeSpan.textContent = formatTime12(nextTime.getHours().toString().padStart(2,'0') + ':' + nextTime.getMinutes().toString().padStart(2,'0'));
+  }else if(reminderSettings.interval){
+    display.style.display = 'block';
+    timeSpan.textContent = 'Every ' + reminderSettings.interval + ' hour(s)';
+  }else{
+    display.style.display = 'none';
+  }
+}
+
+// Notification Functions
+function requestNotificationPermission(){
+  if('Notification' in window){
+    if(Notification.permission === 'granted'){
+      notificationPermission = true;
+    }else if(Notification.permission !== 'denied'){
+      Notification.requestPermission().then(function(permission){
+        notificationPermission = (permission === 'granted');
+        if(notificationPermission){
+          D('Notification permission granted', 'ok');
+        }
+      });
+    }
+  }
+}
+
+function showNotification(title, body, type){
+  // Try browser notification
+  if('Notification' in window && Notification.permission === 'granted'){
+    var notification = new Notification(title, {
+      body: body,
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-72.png',
+      tag: 'japa-' + type,
+      requireInteraction: type === 'alarm'
+    });
+    
+    notification.onclick = function(){
+      window.focus();
+      notification.close();
+    };
+    
+    // Auto close after 10 seconds (except alarm)
+    if(type !== 'alarm'){
+      setTimeout(function(){ notification.close(); }, 10000);
+    }
+  }
+  
+  // Also show in-app alert as fallback
+  D('🔔 ' + title + ': ' + body, 'ok');
+}
+
+function testReminder(){
+  requestNotificationPermission();
+  setTimeout(function(){
+    showNotification('🔔 Test Reminder', 'Reminders are working! Hare Krishna 🙏', 'test');
+    if(navigator.vibrate){
+      navigator.vibrate([200, 100, 200]);
+    }
+  }, 500);
+}
+
+function loadDailySettings(){
+  try{
+    var saved = localStorage.getItem('japaDailySettings');
+    if(saved) dailySettings = JSON.parse(saved);
+  }catch(e){}
+  // Update UI
+  document.getElementById('inDailyGoal').value = dailySettings.goal;
+  document.getElementById('inDeadline').value = dailySettings.deadline;
+  document.getElementById('inDefaultMode').value = dailySettings.defaultMode;
+  document.getElementById('inMalas').value = dailySettings.goal;
+  // Update quick start info
+  updateQuickStartInfo();
+}
+
+function saveDailySettings(){
+  dailySettings.goal = parseInt(document.getElementById('inDailyGoal').value) || 16;
+  dailySettings.deadline = document.getElementById('inDeadline').value || '20:00';
+  dailySettings.defaultMode = document.getElementById('inDefaultMode').value || 'google';
+  localStorage.setItem('japaDailySettings', JSON.stringify(dailySettings));
+  // Sync with malas input
+  document.getElementById('inMalas').value = dailySettings.goal;
+  pickMalas(dailySettings.goal);
+  updateQuickStartInfo();
+  updateDailyProgress();
+}
+
+function updateQuickStartInfo(){
+  var mantraName = 'Hare Krishna MM';
+  var m = MANTRAS[CFG.mantra];
+  if(m) mantraName = m.name.substring(0,18);
+  document.getElementById('qsMantra').textContent = mantraName;
+  document.getElementById('qsMode').textContent = dailySettings.defaultMode.charAt(0).toUpperCase() + dailySettings.defaultMode.slice(1);
+  document.getElementById('qsGoal').textContent = dailySettings.goal;
+}
+
+function quickStart(){
+  // Set mode to default
+  CFG.malas = dailySettings.goal;
+  document.getElementById('inMalas').value = dailySettings.goal;
+  
+  // Start session directly
+  startSession();
+  
+  // Set the mode after session starts
+  setTimeout(function(){
+    setMode(dailySettings.defaultMode);
+  }, 500);
+}
+
+function updateDailyProgress(){
+  loadHistory();
+  var today = new Date().toDateString();
+  var todayMalas = 0;
+  var todaySessions = [];
+  
+  sessionHistory.forEach(function(s){
+    var d = new Date(s.date);
+    if(d.toDateString() === today){
+      todayMalas += s.malas || 0;
+      todaySessions.push(s);
+    }
+  });
+  
+  var goal = dailySettings.goal;
+  var pct = Math.min((todayMalas / goal) * 100, 100);
+  
+  document.getElementById('dpMalas').textContent = todayMalas;
+  document.getElementById('dpGoal').textContent = goal;
+  document.getElementById('dpFill').style.width = pct + '%';
+  
+  if(todayMalas >= goal){
+    document.getElementById('dpFill').classList.add('complete');
+    document.getElementById('dpTimeLeft').textContent = '🎉 Goal Complete!';
+    document.getElementById('dpTimeLeft').style.color = 'var(--success)';
+  }else{
+    document.getElementById('dpFill').classList.remove('complete');
+    updateTimeLeft();
+  }
+  
+  // Sessions summary
+  if(todaySessions.length === 0){
+    document.getElementById('dpSessions').innerHTML = 'No sessions yet today';
+  }else{
+    var sessText = todaySessions.length + ' session' + (todaySessions.length>1?'s':'') + ' today';
+    var times = todaySessions.map(function(s){
+      var d = new Date(s.date);
+      return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    }).join(', ');
+    document.getElementById('dpSessions').innerHTML = '<span>' + sessText + '</span> • ' + times;
+  }
+}
+
+function updateTimeLeft(){
+  var now = new Date();
+  var deadline = dailySettings.deadline.split(':');
+  var deadlineDate = new Date();
+  deadlineDate.setHours(parseInt(deadline[0]), parseInt(deadline[1]), 0, 0);
+  
+  if(now > deadlineDate){
+    document.getElementById('dpTimeLeft').textContent = '⚠️ Past deadline';
+    document.getElementById('dpTimeLeft').style.color = 'var(--danger)';
+  }else{
+    var diff = deadlineDate - now;
+    var hrs = Math.floor(diff / 3600000);
+    var mins = Math.floor((diff % 3600000) / 60000);
+    var timeStr = hrs > 0 ? hrs + 'h ' + mins + 'm left' : mins + 'm left';
+    document.getElementById('dpTimeLeft').textContent = '⏰ ' + timeStr;
+    document.getElementById('dpTimeLeft').style.color = hrs < 2 ? 'var(--accent)' : 'var(--text-dim)';
+  }
+}
+
+// =================== TOGGLE PANELS ===================
+function toggleDailySettings(){
+  var panel = document.getElementById('dailySettingsPanel');
+  var arrow = document.getElementById('dailySettingsArrow');
+  if(panel.style.display === 'none'){
+    panel.style.display = 'block';
+    arrow.textContent = '▲';
+  }else{
+    panel.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
+function toggleMantraPanel(){
+  var panel = document.getElementById('mantraPanel');
+  var arrow = document.getElementById('mantraPanelArrow');
+  if(panel.style.display === 'none'){
+    panel.style.display = 'block';
+    arrow.textContent = '▲';
+  }else{
+    panel.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
+function toggleCalibrationPanel(){
+  var panel = document.getElementById('calibrationPanel');
+  var arrow = document.getElementById('calibrationArrow');
+  if(panel.style.display === 'none'){
+    panel.style.display = 'block';
+    arrow.textContent = '▲';
+  }else{
+    panel.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
+function toggleAdvancedSettings(){
+  var panel = document.getElementById('advancedPanel');
+  var arrow = document.getElementById('advancedArrow');
+  if(panel.style.display === 'none'){
+    panel.style.display = 'block';
+    arrow.textContent = '▲';
+  }else{
+    panel.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
+// =================== INIT ===================
 function init(){
-  loadSettings();showWelcome();loadCustomMantrasFromStorage();
-  // ALWAYS show calibration steps (user can calibrate for Audio mode)
-  document.getElementById('calibrationStep1').style.display='block';
-  document.getElementById('calibrationStep2').style.display='block';
+  loadSettings();loadDailySettings();loadAlarmSettings();loadReminderSettings();showWelcome();loadCustomMantrasFromStorage();
   // Don't auto-mark as calibrated - let user calibrate if they want Audio mode
-  // Google/Tap modes will work without calibration for pre-defined mantras
   noiseReady=false;wordReady=false;
   // Show streak
   var streak=getStreak();if(streak>0){var b=document.getElementById('streakBadge');b.textContent='🔥 '+streak+' day streak!';b.style.display='inline-block'}
@@ -2259,8 +3087,13 @@ function init(){
     pausedSession=saved;pausedSession.startTime=Date.now();pausedSession.pausedTime=0}
   setupLongPress();setupTapFullscreenLongPress();setTimeout(function(){refreshMicList()},1500);
   loadWeeklyStats();
+  updateDailyProgress();
   checkReady();
-  D('v28 loaded','ok');
+  // Request notification permission on load
+  requestNotificationPermission();
+  // Update time left every minute
+  setInterval(updateTimeLeft, 60000);
+  D('v35 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
@@ -2273,14 +3106,24 @@ function renderHistory(){
   sessionHistory.forEach(function(s){
     var d=new Date(s.date);var ds=formatHistoryDate(d);var dur=formatDuration(s.duration);
     var cc=s.complete?'history-complete':'';var ci=s.complete?'✅ ':'';
+    
+    // Format session time range
+    var timeRange = '';
+    if(s.startTime && s.endTime){
+      var st = new Date(s.startTime);
+      var et = new Date(s.endTime);
+      timeRange = st.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' → ' + et.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    }
+    
     h+='<div class="history-item '+cc+'">';
     h+='<div class="history-date">'+ds+'</div>';
+    if(timeRange) h+='<div style="font-size:11px;color:var(--accent);margin-bottom:2px">⏰ '+timeRange+'</div>';
     h+='<div class="history-mantra">'+ci+s.mantra+'</div>';
     h+='<div class="history-stats">';
     h+='<span>Malas: <b>'+s.malas+'/'+s.targetMalas+'</b></span>';
     h+='<span>Chants: <b>'+s.chants+'</b></span>';
     h+='<span>Time: <b>'+dur+'</b></span>';
-    h+='<span>Speed: <b>'+s.speed+'/min</b></span>';
+    h+='<span>Mode: <b>'+s.mode+'</b></span>';
     h+='</div></div>';
   });
   c.innerHTML=h;
