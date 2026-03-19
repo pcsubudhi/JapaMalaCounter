@@ -2198,58 +2198,70 @@ function onWordDetected(word){
 }
 
 // Process transcript - count words from partial and final results
+var lastProcessedText = '';
+var lastProcessedWordCount = 0;
+var lastProcessedTime = 0;
+
 function onTranscript(text,type){
   if(!detecting||sessionPaused)return;
   
-  // Skip if same text as last transcript (Google sends duplicates)
-  if(text === lastTranscriptForCount && type !== 'final'){
-    return;
-  }
-  
-  // Update immediately to prevent duplicates
-  var previousTranscript = lastTranscriptForCount;
-  lastTranscriptForCount = text;
-  
-  // Cooldown to prevent double-counting from rapid transcript updates
   var now = Date.now();
-  if(now - lastGoogleWordTime < 500 && type !== 'final'){
-    return; // Skip intermediate updates within 500ms
-  }
   
   // Count mantra words in this transcript
   var wordCount = countMantraWords(text);
   
-  // Log what we received
-  D('📝 "'+text.substring(0,30)+'" ('+wordCount+' words)','info');
+  // Log what we received (always log for debugging)
+  D('📝 "'+text.substring(0,30)+'" ('+wordCount+' Hare)','info');
   
-  // IMPORTANT: If new transcript has FEWER words than last count,
-  // it means Google restarted with a new phrase - reset counter
-  if(wordCount < lastTranscriptWordCount){
+  // DEDUPLICATION: Skip if we already processed this exact text recently
+  if(text === lastProcessedText && now - lastProcessedTime < 2000){
+    return;
+  }
+  
+  // DEDUPLICATION: Skip if word count hasn't increased
+  // (same phrase growing, we only count NEW words)
+  if(wordCount <= lastProcessedWordCount && wordCount > 0){
+    // Same or fewer words - don't count again
+    // But update the text tracker
+    lastProcessedText = text;
+    lastProcessedTime = now;
+    return;
+  }
+  
+  // If word count is 0, just track and return
+  if(wordCount === 0){
+    lastProcessedText = text;
+    lastProcessedTime = now;
+    return;
+  }
+  
+  // RESET: If new transcript has FEWER words, it's a new phrase
+  if(wordCount < lastProcessedWordCount){
     D('🔄 New phrase started','info');
-    lastTranscriptWordCount = 0;
+    lastProcessedWordCount = 0;
   }
   
-  // Only count NEW words (compared to last transcript)
-  if(wordCount > lastTranscriptWordCount){
-    var newWords = wordCount - lastTranscriptWordCount;
-    
-    // Limit to max 1 new word per update to prevent bursts
-    newWords = Math.min(newWords, 1);
-    
-    // Add the new words
-    for(var i=0;i<newWords;i++){
-      addOneWord();
-    }
-    
-    lastGoogleWordTime = now;
-    D('✅ +'+newWords+' (total in phrase: '+wordCount+')','ok');
-    lastTranscriptWordCount = wordCount;
+  // Calculate NEW words only
+  var newWords = wordCount - lastProcessedWordCount;
+  
+  // Safety: limit to 1 word per update
+  if(newWords > 1) newWords = 1;
+  
+  // Add the word
+  if(newWords > 0){
+    addOneWord();
+    D('✅ +1 (total Hare in phrase: '+wordCount+')','ok');
   }
+  
+  // Update trackers
+  lastProcessedText = text;
+  lastProcessedWordCount = wordCount;
+  lastProcessedTime = now;
   
   // Reset on final result for next phrase
   if(type==='final'){
-    lastTranscriptWordCount = 0;
-    lastTranscriptForCount = '';
+    lastProcessedWordCount = 0;
+    lastProcessedText = '';
   }
 }
 
@@ -3118,7 +3130,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v39 loaded - Hare only counting','ok');
+  D('v40 loaded - Hare only, robust dedup','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
