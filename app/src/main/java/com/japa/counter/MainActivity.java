@@ -241,9 +241,12 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
                     @Override
                     public void onError(int error) {
-                        boolean shouldRestart = true;
+                        isListening = false;
+                        
                         int delay = 300;
-                        String errorMsg = "Error " + error;
+                        boolean shouldRestart = shouldContinueListening;
+                        String errorMsg = "";
+                        boolean showInDebug = true;
                         
                         switch(error) {
                             case SpeechRecognizer.ERROR_AUDIO: 
@@ -252,48 +255,56 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                                 break;
                             case SpeechRecognizer.ERROR_CLIENT: 
                                 errorMsg = "Client error";
-                                delay = 200;
+                                delay = 300;
+                                showInDebug = false; // Don't spam
                                 break;
                             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: 
                                 errorMsg = "No mic permission"; 
                                 shouldRestart = false;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK: 
-                                errorMsg = "Network error"; 
-                                delay = 2000;
+                                errorMsg = "Network error - check internet"; 
+                                delay = 3000;
                                 break;
                             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: 
                                 errorMsg = "Network timeout"; 
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_NO_MATCH: 
-                                errorMsg = "No speech detected";
+                                // ERROR 7 - Normal, just silence - restart quickly
                                 delay = 100;
+                                showInDebug = false;
                                 break;
                             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: 
-                                errorMsg = "Recognizer busy";
-                                delay = 500;
+                                // ERROR 11 - Already running, wait longer!
+                                errorMsg = "Recognizer busy, waiting...";
+                                delay = 1000; // Wait 1 second
+                                showInDebug = false;
                                 break;
                             case SpeechRecognizer.ERROR_SERVER: 
-                                errorMsg = "Server error"; 
+                                errorMsg = "Google server error"; 
                                 delay = 2000;
                                 break;
                             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: 
-                                errorMsg = "Speech timeout";
-                                delay = 50;
+                                // ERROR 6 - Silence too long - restart quickly
+                                delay = 100;
+                                showInDebug = false;
+                                break;
+                            default:
+                                errorMsg = "Error " + error;
+                                delay = 500;
                                 break;
                         }
                         
                         Log.d(TAG, "Speech error: " + error + " - " + errorMsg);
                         
-                        // ALWAYS show error in JS debug
-                        callJS("onSpeechError('" + errorMsg + "')");
+                        if (showInDebug && !errorMsg.isEmpty()) {
+                            callJS("D('⚠️ " + errorMsg + "','warn')");
+                        }
                         
-                        isListening = false;
-                        
-                        if (shouldContinueListening && shouldRestart) {
+                        if (shouldRestart) {
                             mainHandler.postDelayed(() -> {
-                                if (shouldContinueListening) {
+                                if (shouldContinueListening && !isListening) {
                                     restartListening();
                                 }
                             }, delay);
@@ -307,10 +318,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                             Log.d(TAG, "FINAL: \"" + matches.get(0) + "\"");
                             processTranscript(matches.get(0), true);
                         }
-                        isListening = false;
-                        // Restart IMMEDIATELY to minimize word loss
+                        isListening = false; // Mark as not listening
+                        
+                        // Restart with small delay
                         if (shouldContinueListening) {
-                            restartListening();
+                            mainHandler.postDelayed(() -> restartListening(), 100);
                         }
                     }
 
@@ -469,29 +481,39 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     // =====================================================
 
     private void restartListening() {
-        if (speechRecognizer != null && speechIntent != null && shouldContinueListening) {
-            try {
-                // Cancel any pending recognition first
-                speechRecognizer.cancel();
-                lastPartialResult = "";
-                
-                // Small delay then restart
-                mainHandler.postDelayed(() -> {
-                    if (shouldContinueListening && speechRecognizer != null) {
-                        try {
-                            speechRecognizer.startListening(speechIntent);
-                            Log.d(TAG, "Speech recognition restarted");
-                        } catch (Exception e) {
-                            Log.e(TAG, "Start error: " + e.getMessage());
-                            // Try recreating the recognizer
-                            recreateSpeechRecognizer();
-                        }
+        if (speechRecognizer == null || speechIntent == null || !shouldContinueListening) {
+            return;
+        }
+        
+        // Prevent double-start
+        if (isListening) {
+            Log.d(TAG, "Already listening, skip restart");
+            return;
+        }
+        
+        try {
+            // Cancel first, then wait before starting
+            speechRecognizer.cancel();
+            lastPartialResult = "";
+            
+            // Longer delay to ensure previous session is fully stopped
+            mainHandler.postDelayed(() -> {
+                if (shouldContinueListening && speechRecognizer != null && !isListening) {
+                    try {
+                        isListening = true; // Set BEFORE starting
+                        speechRecognizer.startListening(speechIntent);
+                        Log.d(TAG, "Speech recognition restarted");
+                    } catch (Exception e) {
+                        Log.e(TAG, "Start error: " + e.getMessage());
+                        isListening = false;
+                        // Try recreating after delay
+                        mainHandler.postDelayed(() -> recreateSpeechRecognizer(), 500);
                     }
-                }, 50);
-            } catch (Exception e) {
-                Log.e(TAG, "Restart error: " + e.getMessage());
-                recreateSpeechRecognizer();
-            }
+                }
+            }, 150); // 150ms delay between stop and start
+        } catch (Exception e) {
+            Log.e(TAG, "Restart error: " + e.getMessage());
+            isListening = false;
         }
     }
     
