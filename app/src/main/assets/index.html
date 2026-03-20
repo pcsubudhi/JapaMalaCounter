@@ -2398,6 +2398,8 @@ function addOneWord(){
         D('🎯 Milestone: '+G_chant+' chants!','ok');
         if(SND.mileVol>0) playSound('chant',SND.mileVol);
         doVibrate(VIB_PATTERNS[SND.mileVib]);
+        // Pause speech recognition before TTS
+        pauseDetectionForTTS(2000);
         if(SND.voice) speak(''+G_chant);
       }
     }
@@ -2412,9 +2414,14 @@ function addOneWord(){
         setTimeout(function(){
           if(SND.doneVol>0)playSound('alldone',SND.doneVol);
           doVibrate(VIB_PATTERNS[SND.doneVib]);
-          if(SND.voice)speak('Target '+CFG.malas+' Malas complete!');
+          // Pause speech recognition before TTS
+          pauseDetectionForTTS(8000);
+          if(SND.voice)speak('Target '+CFG.malas+' Malas complete! Hare Krishna!');
           document.getElementById('doneCount').textContent=G_mala;
           document.getElementById('doneTotalC').textContent=G_totalC;
+          document.getElementById('doneTime').textContent='Time: '+getElapsedStr();
+          var sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';
+          document.getElementById('doneSpeed').textContent='Speed: '+sp+' chants/min';
           document.getElementById('doneOv').classList.add('active');
           showParticles();
         },300);
@@ -2422,8 +2429,12 @@ function addOneWord(){
         setTimeout(function(){
           if(SND.malaVol>0)playSound('mala',SND.malaVol);
           doVibrate(VIB_PATTERNS[SND.malaVib]);
-          if(SND.voice)speak('Mala '+G_mala+' complete');
+          // Pause speech recognition before TTS
+          pauseDetectionForTTS(6000);
+          if(SND.voice)speak('Mala '+G_mala+' of '+CFG.malas+' complete');
           document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
+          document.getElementById('malaOvDone').textContent=G_mala;
+          document.getElementById('malaOvTotal').textContent=CFG.malas;
           showMalaOvAutoClose();
         },300);
       }
@@ -2595,7 +2606,7 @@ function playSound(type,vol){try{if(!beepCtx)beepCtx=new(window.AudioContext||wi
   if(type==='chant'){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=440;g.gain.setValueAtTime(v*0.5,now);g.gain.exponentialRampToValueAtTime(0.01,now+0.2);o.start(now);o.stop(now+0.2)}
   else if(type==='mala'){var o1=beepCtx.createOscillator(),g1=beepCtx.createGain();o1.connect(g1);g1.connect(beepCtx.destination);o1.type='sine';o1.frequency.value=528;g1.gain.setValueAtTime(v*0.6,now);g1.gain.exponentialRampToValueAtTime(0.01,now+2);o1.start(now);o1.stop(now+2);var o2=beepCtx.createOscillator(),g2=beepCtx.createGain();o2.connect(g2);g2.connect(beepCtx.destination);o2.type='sine';o2.frequency.value=660;g2.gain.setValueAtTime(v*0.4,now+0.3);g2.gain.exponentialRampToValueAtTime(0.01,now+2);o2.start(now+0.3);o2.stop(now+2)}
   else if(type==='alldone'){[440,554,660,880].forEach(function(f,i){var o=beepCtx.createOscillator(),g=beepCtx.createGain();o.connect(g);g.connect(beepCtx.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(v*0.5,now+i*0.4);g.gain.exponentialRampToValueAtTime(0.01,now+i*0.4+1.5);o.start(now+i*0.4);o.stop(now+i*0.4+1.5)})}}catch(e){}}
-function speak(text){try{if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}}catch(e){}}
+function speak(text){try{if(window.NativeApp&&typeof NativeApp.speak==='function'){NativeApp.speak(text);return}if('speechSynthesis' in window){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(text);u.rate=0.9;u.pitch=1;u.volume=1;u.lang='en-IN';speechSynthesis.speak(u)}}catch(e){}}
 function pauseDetectionForTTS(ms){ttsPauseUntil=Date.now()+ms}
 
 // =================== PARTICLES ===================
@@ -3153,7 +3164,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v46 loaded - stable speech + milestones','ok');
+  D('v47 loaded - NativeApp.speak restored','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
