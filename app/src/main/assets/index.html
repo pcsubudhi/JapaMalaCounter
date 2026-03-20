@@ -1865,7 +1865,7 @@ function addOneChant(){
     if(G_mala>=CFG.malas){
       setTimeout(function(){if(SND.doneVol>0)playSound('alldone',SND.doneVol);doVibrate(VIB_PATTERNS[SND.doneVib]);if(SND.voice)speak('Target '+CFG.malas+' Malas complete!');document.getElementById('doneCount').textContent=G_mala;document.getElementById('doneTotalC').textContent=G_totalC;document.getElementById('doneTime').textContent='Time: '+getElapsedStr();var sp=getElapsed()>10?(G_totalC/getElapsed()*60).toFixed(1):'--';document.getElementById('doneSpeed').textContent='Speed: '+sp+' chants/min';document.getElementById('doneOv').classList.add('active');showParticles()},300);
     }else{
-      setTimeout(function(){if(SND.malaVol>0)playSound('mala',SND.malaVol);doVibrate(VIB_PATTERNS[SND.malaVib]);if(SND.voice)speak('Mala '+G_mala+' complete');document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';document.getElementById('malaOvDone').textContent=G_mala;document.getElementById('malaOvTotal').textContent=CFG.malas;showMalaOvAutoClose()},300);
+      setTimeout(function(){if(SND.malaVol>0)playSound('mala',SND.malaVol);doVibrate(VIB_PATTERNS[SND.malaVib]);if(SND.voice)speak('Mala '+G_mala+' of '+CFG.malas+' complete');document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';document.getElementById('malaOvDone').textContent=G_mala;document.getElementById('malaOvTotal').textContent=CFG.malas;showMalaOvAutoClose()},300);
     }
   }
   refreshUI();var el=document.getElementById('dChant');el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},250);drawMala();
@@ -2211,7 +2211,7 @@ function onWordDetected(word){
         setTimeout(function(){
           if(SND.malaVol>0)playSound('mala',SND.malaVol);
           doVibrate(VIB_PATTERNS[SND.malaVib]);
-          if(SND.voice)speak('Mala '+G_mala+' complete');
+          if(SND.voice)speak('Mala '+G_mala+' of '+CFG.malas+' complete');
           document.getElementById('malaOvTitle').textContent='Mala '+G_mala+' Complete!';
           document.getElementById('malaOvDone').textContent=G_mala;
           document.getElementById('malaOvTotal').textContent=CFG.malas;
@@ -3164,7 +3164,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v47 loaded - NativeApp.speak restored','ok');
+  D('v48 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
