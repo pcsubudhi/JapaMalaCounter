@@ -126,6 +126,15 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
 
         webView.addJavascriptInterface(new JapaBridge(), "NativeApp");
 
+        // Request notification permission for Android 13+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, "android.permission.POST_NOTIFICATIONS")
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{"android.permission.POST_NOTIFICATIONS"}, 1002);
+            }
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
