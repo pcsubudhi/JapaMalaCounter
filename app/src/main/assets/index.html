@@ -2770,6 +2770,21 @@ function formatTime12(time24){
 function scheduleAlarm(){
   cancelAlarm();
   
+  // Use Native Android AlarmManager if available (works when app closed/screen locked)
+  if(window.NativeApp && typeof NativeApp.scheduleNativeAlarm === 'function'){
+    var audioPath = '';
+    var audioSource = alarmSettings.source || 'tts';
+    
+    if(audioSource === 'file' && alarmSettings.filePath){
+      audioPath = alarmSettings.filePath;
+    }
+    
+    NativeApp.scheduleNativeAlarm(alarmSettings.time, audioPath, audioSource);
+    D('Native alarm scheduled for ' + alarmSettings.time, 'ok');
+    return;
+  }
+  
+  // Fallback to JavaScript setTimeout (only works when app is open)
   var now = new Date();
   var alarmParts = alarmSettings.time.split(':');
   var alarmDate = new Date();
@@ -2786,10 +2801,16 @@ function scheduleAlarm(){
     triggerAlarm();
   }, msUntilAlarm);
   
-  D('Alarm scheduled for ' + alarmDate.toLocaleString(), 'ok');
+  D('JS Alarm scheduled for ' + alarmDate.toLocaleString() + ' (app must stay open)', 'warn');
 }
 
 function cancelAlarm(){
+  // Cancel native alarm
+  if(window.NativeApp && typeof NativeApp.cancelNativeAlarm === 'function'){
+    NativeApp.cancelNativeAlarm();
+  }
+  
+  // Cancel JS timeout
   if(alarmTimeout){
     clearTimeout(alarmTimeout);
     alarmTimeout = null;
@@ -2877,6 +2898,10 @@ function stopBhajan(){
   // Stop native audio
   if(window.NativeApp && typeof NativeApp.stopAudio === 'function'){
     NativeApp.stopAudio();
+  }
+  // Stop native alarm service
+  if(window.NativeApp && typeof NativeApp.stopNativeAlarm === 'function'){
+    NativeApp.stopNativeAlarm();
   }
   D('Bhajan stopped', 'info');
 }
@@ -3296,7 +3321,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v50 loaded','ok');
+  D('v51 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}

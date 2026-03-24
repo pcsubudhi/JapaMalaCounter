@@ -265,6 +265,30 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             });
         }
 
+        @JavascriptInterface
+        public void scheduleNativeAlarm(String time, String audioPath, String audioSource) {
+            mainHandler.post(() -> {
+                AlarmScheduler.scheduleAlarm(MainActivity.this, time, audioPath, audioSource);
+                Log.d(TAG, "Native alarm scheduled for " + time);
+            });
+        }
+
+        @JavascriptInterface
+        public void cancelNativeAlarm() {
+            mainHandler.post(() -> {
+                AlarmScheduler.cancelAlarm(MainActivity.this);
+                Log.d(TAG, "Native alarm cancelled");
+            });
+        }
+
+        @JavascriptInterface
+        public void stopNativeAlarm() {
+            mainHandler.post(() -> {
+                AlarmScheduler.stopAlarmService(MainActivity.this);
+                Log.d(TAG, "Native alarm stopped");
+            });
+        }
+
         // =====================================================
         // GOOGLE SPEECH RECOGNITION
         // =====================================================
