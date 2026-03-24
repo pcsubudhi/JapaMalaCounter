@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -20,6 +21,7 @@ public class AlarmService extends Service {
     private static final String TAG = "JapaAlarmService";
     private static final String CHANNEL_ID = "japa_alarm_channel";
     private static final int NOTIFICATION_ID = 1001;
+    public static final String ACTION_STOP = "com.japa.counter.STOP_ALARM";
     
     private MediaPlayer mediaPlayer;
     private PowerManager.WakeLock wakeLock;
@@ -37,12 +39,19 @@ public class AlarmService extends Service {
     
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "AlarmService started");
+        Log.d(TAG, "AlarmService onStartCommand");
+        
+        // Check if this is a stop action
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            Log.d(TAG, "Stop action received - stopping service");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         
         String audioPath = intent != null ? intent.getStringExtra("audioPath") : null;
         String audioSource = intent != null ? intent.getStringExtra("audioSource") : "tts";
         
-        // Start foreground immediately
+        // Start foreground immediately with full-screen notification
         startForeground(NOTIFICATION_ID, createNotification());
         
         // Play the audio
@@ -59,7 +68,7 @@ public class AlarmService extends Service {
             
             mediaPlayer = new MediaPlayer();
             
-            // Set audio attributes for alarm
+            // Set audio attributes for alarm (plays even in silent mode)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 mediaPlayer.setAudioAttributes(
                     new AudioAttributes.Builder()
@@ -74,10 +83,7 @@ public class AlarmService extends Service {
                 mediaPlayer.setDataSource(this, Uri.parse(audioPath));
                 Log.d(TAG, "Playing from: " + audioPath);
             } else {
-                // Play default alarm sound or use TTS
-                // For now, use a simple tone
-                Log.d(TAG, "No audio path, using default");
-                // We'll handle TTS separately if needed
+                Log.d(TAG, "No audio path provided");
                 stopSelf();
                 return;
             }
@@ -101,7 +107,7 @@ public class AlarmService extends Service {
     }
     
     private Notification createNotification() {
-        // Intent to open app
+        // Intent to open app when notification tapped
         Intent openIntent = new Intent(this, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent openPendingIntent = PendingIntent.getActivity(
@@ -109,22 +115,34 @@ public class AlarmService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
         
-        // Intent to stop alarm
+        // Intent to stop alarm - send to service directly
         Intent stopIntent = new Intent(this, AlarmService.class);
-        stopIntent.setAction("STOP_ALARM");
+        stopIntent.setAction(ACTION_STOP);
         PendingIntent stopPendingIntent = PendingIntent.getService(
             this, 1, stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        
+        // Full screen intent for lock screen
+        Intent fullScreenIntent = new Intent(this, MainActivity.class);
+        fullScreenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
+            this, 2, fullScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
         
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("🙏 Japa Time!")
-            .setContentText("Hare Krishna! Time for your morning japa.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentText("Hare Krishna! Tap STOP to silence.")
+            .setStyle(new NotificationCompat.BigTextStyle()
+                .bigText("Hare Krishna! Time for your morning japa.\n\nTap STOP ALARM button below to silence."))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(openPendingIntent)
-            .addAction(android.R.drawable.ic_media_pause, "Stop", stopPendingIntent)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .addAction(android.R.drawable.ic_delete, "⏹ STOP ALARM", stopPendingIntent)
             .setOngoing(true)
             .setAutoCancel(false);
         
@@ -142,6 +160,8 @@ public class AlarmService extends Service {
             channel.setSound(null, null); // We handle sound ourselves
             channel.enableVibration(true);
             channel.setVibrationPattern(new long[]{0, 500, 200, 500});
+            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            channel.setBypassDnd(true); // Bypass Do Not Disturb
             
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
@@ -158,10 +178,14 @@ public class AlarmService extends Service {
         Log.d(TAG, "AlarmService stopped");
         
         if (mediaPlayer != null) {
-            if (mediaPlayer.isPlaying()) {
-                mediaPlayer.stop();
+            try {
+                if (mediaPlayer.isPlaying()) {
+                    mediaPlayer.stop();
+                }
+                mediaPlayer.release();
+            } catch (Exception e) {
+                Log.e(TAG, "Error releasing media player: " + e.getMessage());
             }
-            mediaPlayer.release();
             mediaPlayer = null;
         }
         
@@ -169,13 +193,12 @@ public class AlarmService extends Service {
             wakeLock.release();
         }
         
+        // Cancel notification
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.cancel(NOTIFICATION_ID);
+        }
+        
         super.onDestroy();
-    }
-    
-    // Handle stop action from notification
-    @Override
-    public void onTaskRemoved(Intent rootIntent) {
-        stopSelf();
-        super.onTaskRemoved(rootIntent);
     }
 }
