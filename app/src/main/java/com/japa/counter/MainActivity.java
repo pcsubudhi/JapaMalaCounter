@@ -60,8 +60,11 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     private boolean ttsReady = false;
     private LocalServer localServer;
     private MediaPlayer mediaPlayer;
+    private MediaPlayer alarmMediaPlayer; // For bhajan alarm
     private AudioManager audioManager;
     private Handler mainHandler;
+    
+    private static final int PICK_AUDIO_FILE = 1001;
 
     // Google Speech Recognition
     private SpeechRecognizer speechRecognizer;
@@ -205,6 +208,60 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             if (ttsReady && tts != null) {
                 tts.speak(text, TextToSpeech.QUEUE_ADD, null, "japa");
             }
+        }
+
+        @JavascriptInterface
+        public void playAudioFile(String filePath) {
+            mainHandler.post(() -> {
+                try {
+                    stopAudioInternal();
+                    alarmMediaPlayer = new MediaPlayer();
+                    alarmMediaPlayer.setDataSource(filePath);
+                    alarmMediaPlayer.setLooping(true); // Loop until stopped
+                    alarmMediaPlayer.prepare();
+                    alarmMediaPlayer.start();
+                    Log.d(TAG, "Playing audio: " + filePath);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error playing audio: " + e.getMessage());
+                    callJS("D('Error playing audio: " + e.getMessage() + "','warn')");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void playYouTubeAudio(String url) {
+            // YouTube audio requires external library or intent
+            // For now, open YouTube app/browser
+            mainHandler.post(() -> {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    Log.d(TAG, "Opening YouTube: " + url);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error opening YouTube: " + e.getMessage());
+                    callJS("alert('Could not open YouTube. Please install YouTube app.')");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopAudio() {
+            mainHandler.post(() -> stopAudioInternal());
+        }
+
+        @JavascriptInterface
+        public void selectAudioFile() {
+            mainHandler.post(() -> {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("audio/*");
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "Select Bhajan MP3"), PICK_AUDIO_FILE);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error selecting file: " + e.getMessage());
+                }
+            });
         }
 
         // =====================================================
@@ -755,6 +812,59 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
             speechRecognizer.stopListening();
         }
     }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == PICK_AUDIO_FILE && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                try {
+                    // Get persistent permission
+                    getContentResolver().takePersistableUriPermission(uri, 
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    
+                    String filePath = uri.toString();
+                    String fileName = "Selected Audio";
+                    
+                    // Try to get display name
+                    try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                            if (nameIndex >= 0) {
+                                fileName = cursor.getString(nameIndex);
+                            }
+                        }
+                    }
+                    
+                    final String fName = fileName;
+                    final String fPath = filePath;
+                    
+                    // Call JavaScript callback
+                    mainHandler.post(() -> {
+                        callJS("onBhajanFileSelected('" + fPath.replace("'", "\\'") + "','" + fName.replace("'", "\\'") + "')");
+                    });
+                    
+                    Log.d(TAG, "Audio file selected: " + fileName);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error getting file: " + e.getMessage());
+                }
+            }
+        }
+    }
+    
+    private void stopAudioInternal() {
+        if (alarmMediaPlayer != null) {
+            try {
+                if (alarmMediaPlayer.isPlaying()) {
+                    alarmMediaPlayer.stop();
+                }
+                alarmMediaPlayer.release();
+            } catch (Exception e) {}
+            alarmMediaPlayer = null;
+        }
+    }
 
     @Override
     protected void onDestroy() {
@@ -762,6 +872,7 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         if (speechRecognizer != null) { speechRecognizer.destroy(); }
         if (tts != null) { tts.stop(); tts.shutdown(); }
         if (mediaPlayer != null) { mediaPlayer.release(); }
+        stopAudioInternal();
         try {
             audioManager.setBluetoothScoOn(false);
             audioManager.stopBluetoothSco();

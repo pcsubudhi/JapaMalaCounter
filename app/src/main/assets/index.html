@@ -478,14 +478,38 @@
         <input type="time" id="alarmTime" value="04:30" onchange="saveAlarmSettings()">
       </div>
       <div class="alarm-bhajan">
-        <span>🎵 Bhajan:</span>
-        <select id="alarmBhajan" onchange="saveAlarmSettings()">
-          <option value="hare_krishna">Hare Krishna Kirtan - Prabhupada</option>
-          <option value="govinda">Govinda Jaya Jaya</option>
-          <option value="radhe_shyam">Radhe Radhe Shyam</option>
-          <option value="mahamantra">Maha Mantra Melody</option>
-          <option value="morning_raga">Morning Raga</option>
+        <span>🎵 Bhajan Source:</span>
+        <select id="bhajanSource" onchange="toggleBhajanSource()" style="margin-top:4px">
+          <option value="youtube">YouTube Link</option>
+          <option value="file">From Phone Storage</option>
+          <option value="tts">Text-to-Speech (Default)</option>
         </select>
+        
+        <div id="ytSection" style="margin-top:8px">
+          <input type="text" id="ytLink" placeholder="Paste YouTube URL here..." 
+            style="width:100%;padding:8px;background:rgba(0,0,0,0.3);border:1px solid #4f46e5;color:white;border-radius:6px;font-size:12px"
+            onchange="saveAlarmSettings()">
+        </div>
+        
+        <div id="fileSection" style="margin-top:8px;display:none">
+          <button onclick="selectBhajanFile()" style="width:100%;padding:10px;background:rgba(79,70,229,0.3);border:1px dashed #4f46e5;color:#a5b4fc;border-radius:6px;font-size:12px;cursor:pointer">
+            📁 Select MP3 from Phone
+          </button>
+          <div id="selectedFileName" style="margin-top:4px;font-size:11px;color:#a5b4fc"></div>
+        </div>
+        
+        <div id="ttsSection" style="margin-top:8px;display:none">
+          <select id="ttsBhajan" onchange="saveAlarmSettings()" style="width:100%;padding:8px;background:rgba(0,0,0,0.3);border:1px solid #4f46e5;color:white;border-radius:6px">
+            <option value="hare_krishna">Hare Krishna Maha Mantra</option>
+            <option value="govinda">Govinda Jaya Jaya</option>
+            <option value="radhe_shyam">Radhe Radhe Shyam</option>
+          </select>
+        </div>
+        
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button onclick="testBhajan()" style="flex:1;padding:8px;background:#4f46e5;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer">🔊 Test</button>
+          <button onclick="stopBhajan()" style="flex:1;padding:8px;background:#dc2626;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer">⏹ Stop</button>
+        </div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:#a5b4fc">
         <span id="alarmStatus">Alarm is OFF</span>
@@ -2653,7 +2677,10 @@ var dailySettings = {
 var alarmSettings = {
   enabled: false,
   time: '04:30',
-  bhajan: 'hare_krishna'
+  source: 'tts',
+  ytLink: '',
+  filePath: '',
+  ttsBhajan: 'hare_krishna'
 };
 
 var reminderSettings = {
@@ -2671,17 +2698,34 @@ function loadAlarmSettings(){
     var saved = localStorage.getItem('japaAlarmSettings');
     if(saved) alarmSettings = JSON.parse(saved);
   }catch(e){}
-  document.getElementById('alarmTime').value = alarmSettings.time;
-  document.getElementById('alarmBhajan').value = alarmSettings.bhajan;
+  
+  document.getElementById('alarmTime').value = alarmSettings.time || '04:30';
+  document.getElementById('bhajanSource').value = alarmSettings.source || 'tts';
+  document.getElementById('ytLink').value = alarmSettings.ytLink || '';
+  document.getElementById('ttsBhajan').value = alarmSettings.ttsBhajan || 'hare_krishna';
+  
+  if(alarmSettings.filePath){
+    var fileName = alarmSettings.filePath.split('/').pop();
+    document.getElementById('selectedFileName').textContent = '✓ ' + fileName;
+  }
+  
   if(alarmSettings.enabled){
     document.getElementById('alarmToggle').classList.add('on');
   }
+  
+  toggleBhajanSource();
   updateAlarmStatus();
 }
 
 function saveAlarmSettings(){
   alarmSettings.time = document.getElementById('alarmTime').value;
-  alarmSettings.bhajan = document.getElementById('alarmBhajan').value;
+  alarmSettings.source = document.getElementById('bhajanSource').value;
+  alarmSettings.ytLink = document.getElementById('ytLink').value.trim();
+  alarmSettings.ttsBhajan = document.getElementById('ttsBhajan').value;
+  
+  var savedFilePath = localStorage.getItem('japaBhajanFilePath');
+  if(savedFilePath) alarmSettings.filePath = savedFilePath;
+  
   localStorage.setItem('japaAlarmSettings', JSON.stringify(alarmSettings));
   if(alarmSettings.enabled){
     scheduleAlarm();
@@ -2753,8 +2797,16 @@ function cancelAlarm(){
 }
 
 function triggerAlarm(){
-  // Play bhajan
-  playBhajan(alarmSettings.bhajan);
+  // Play bhajan based on selected source
+  var source = alarmSettings.source || 'tts';
+  
+  if(source === 'youtube' && alarmSettings.ytLink){
+    playYouTubeBhajan(alarmSettings.ytLink);
+  } else if(source === 'file' && alarmSettings.filePath){
+    playFileBhajan(alarmSettings.filePath);
+  } else {
+    playBhajan(alarmSettings.ttsBhajan || 'hare_krishna');
+  }
   
   // Show notification
   showNotification('🌅 Brahma Muhurta', 'Time for Japa! Hare Krishna 🙏', 'alarm');
@@ -2792,6 +2844,83 @@ function playBhajan(bhajan){
   }
   
   D('Playing bhajan: ' + bhajan, 'ok');
+}
+
+function testBhajan(){
+  var source = document.getElementById('bhajanSource').value;
+  
+  if(source === 'youtube'){
+    var ytLink = document.getElementById('ytLink').value.trim();
+    if(!ytLink){
+      alert('Please paste a YouTube link first');
+      return;
+    }
+    playYouTubeBhajan(ytLink);
+  } else if(source === 'file'){
+    var filePath = localStorage.getItem('japaBhajanFilePath');
+    if(!filePath){
+      alert('Please select an MP3 file first');
+      return;
+    }
+    playFileBhajan(filePath);
+  } else {
+    var bhajan = document.getElementById('ttsBhajan').value;
+    playBhajan(bhajan);
+  }
+}
+
+function stopBhajan(){
+  // Stop TTS
+  if('speechSynthesis' in window){
+    speechSynthesis.cancel();
+  }
+  // Stop native audio
+  if(window.NativeApp && typeof NativeApp.stopAudio === 'function'){
+    NativeApp.stopAudio();
+  }
+  D('Bhajan stopped', 'info');
+}
+
+function playYouTubeBhajan(url){
+  // Extract video ID and play via native
+  if(window.NativeApp && typeof NativeApp.playYouTubeAudio === 'function'){
+    NativeApp.playYouTubeAudio(url);
+    D('Playing YouTube: ' + url, 'ok');
+  } else {
+    alert('YouTube playback requires the Android app');
+  }
+}
+
+function playFileBhajan(filePath){
+  if(window.NativeApp && typeof NativeApp.playAudioFile === 'function'){
+    NativeApp.playAudioFile(filePath);
+    D('Playing file: ' + filePath, 'ok');
+  } else {
+    alert('File playback requires the Android app');
+  }
+}
+
+function selectBhajanFile(){
+  if(window.NativeApp && typeof NativeApp.selectAudioFile === 'function'){
+    NativeApp.selectAudioFile();
+  } else {
+    alert('File selection requires the Android app');
+  }
+}
+
+// Called from Java when file is selected
+function onBhajanFileSelected(filePath, fileName){
+  localStorage.setItem('japaBhajanFilePath', filePath);
+  document.getElementById('selectedFileName').textContent = '✓ ' + fileName;
+  saveAlarmSettings();
+}
+
+function toggleBhajanSource(){
+  var source = document.getElementById('bhajanSource').value;
+  document.getElementById('ytSection').style.display = (source === 'youtube') ? 'block' : 'none';
+  document.getElementById('fileSection').style.display = (source === 'file') ? 'block' : 'none';
+  document.getElementById('ttsSection').style.display = (source === 'tts') ? 'block' : 'none';
+  saveAlarmSettings();
 }
 
 // Reminder Functions
@@ -3167,7 +3296,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v49 loaded','ok');
+  D('v50 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
