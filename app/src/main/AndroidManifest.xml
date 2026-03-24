@@ -42,6 +42,17 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback"/>
 
+        <!-- Full-screen Alarm Activity (shows on lock screen) -->
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:showWhenLocked="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"/>
+
         <!-- Alarm Receiver -->
         <receiver
             android:name=".AlarmReceiver"

@@ -56,6 +56,12 @@ public class AlarmService extends Service {
         // Start foreground immediately
         startForeground(NOTIFICATION_ID, createNotification());
         
+        // Launch full-screen alarm activity (shows on lock screen)
+        Intent alarmActivityIntent = new Intent(this, AlarmActivity.class);
+        alarmActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        alarmActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(alarmActivityIntent);
+        
         // Play the audio
         playAudio(audioPath, audioSource);
         
