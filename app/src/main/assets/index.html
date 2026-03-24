@@ -2769,8 +2769,7 @@ function triggerAlarm(){
 }
 
 function playBhajan(bhajan){
-  // In PWA we use Web Audio or external audio
-  // For now, use speech synthesis as placeholder
+  // Bhajan texts for TTS
   var bhajanTexts = {
     'hare_krishna': 'Hare Krishna Hare Krishna, Krishna Krishna Hare Hare, Hare Rama Hare Rama, Rama Rama Hare Hare',
     'govinda': 'Govinda Jaya Jaya, Gopala Jaya Jaya, Radha Ramana Hari, Govinda Jaya Jaya',
@@ -2779,8 +2778,12 @@ function playBhajan(bhajan){
     'morning_raga': 'Om Namo Bhagavate Vasudevaya'
   };
   
-  if('speechSynthesis' in window){
-    var text = bhajanTexts[bhajan] || bhajanTexts['hare_krishna'];
+  var text = bhajanTexts[bhajan] || bhajanTexts['hare_krishna'];
+  
+  // Use NativeApp.speak for Android, fallback to speechSynthesis for PWA
+  if(window.NativeApp && typeof NativeApp.speak === 'function'){
+    NativeApp.speak(text);
+  } else if('speechSynthesis' in window){
     var utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.8;
     utterance.pitch = 1;
@@ -3164,7 +3167,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v48 loaded','ok');
+  D('v49 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
