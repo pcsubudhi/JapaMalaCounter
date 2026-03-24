@@ -254,13 +254,16 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         @JavascriptInterface
         public void selectAudioFile() {
             mainHandler.post(() -> {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.setType("audio/*");
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 try {
-                    startActivityForResult(Intent.createChooser(intent, "Select Bhajan MP3"), PICK_AUDIO_FILE);
+                    startActivityForResult(intent, PICK_AUDIO_FILE);
                 } catch (Exception e) {
                     Log.e(TAG, "Error selecting file: " + e.getMessage());
+                    callJS("D('Error opening file picker: " + e.getMessage() + "','warn')");
                 }
             });
         }
@@ -842,16 +845,26 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         
-        if (requestCode == PICK_AUDIO_FILE && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            if (uri != null) {
-                try {
-                    // Get persistent permission
-                    getContentResolver().takePersistableUriPermission(uri, 
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    
+        Log.d(TAG, "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
+        
+        if (requestCode == PICK_AUDIO_FILE) {
+            if (resultCode == RESULT_OK && data != null) {
+                Uri uri = data.getData();
+                Log.d(TAG, "URI received: " + (uri != null ? uri.toString() : "null"));
+                
+                if (uri != null) {
                     String filePath = uri.toString();
                     String fileName = "Selected Audio";
+                    
+                    try {
+                        // Try to get persistent permission
+                        final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                        getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                        Log.d(TAG, "Persistent permission granted");
+                    } catch (SecurityException e) {
+                        Log.w(TAG, "Could not get persistent permission: " + e.getMessage());
+                        // Continue anyway - it might still work for this session
+                    }
                     
                     // Try to get display name
                     try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
@@ -861,20 +874,27 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                                 fileName = cursor.getString(nameIndex);
                             }
                         }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not get file name: " + e.getMessage());
                     }
                     
                     final String fName = fileName;
                     final String fPath = filePath;
                     
+                    Log.d(TAG, "Calling JS with file: " + fName + " at " + fPath);
+                    
                     // Call JavaScript callback
                     mainHandler.post(() -> {
-                        callJS("onBhajanFileSelected('" + fPath.replace("'", "\\'") + "','" + fName.replace("'", "\\'") + "')");
+                        String js = "onBhajanFileSelected('" + fPath.replace("'", "\\'") + "','" + fName.replace("'", "\\'") + "')";
+                        Log.d(TAG, "Executing JS: " + js);
+                        callJS(js);
                     });
-                    
-                    Log.d(TAG, "Audio file selected: " + fileName);
-                } catch (Exception e) {
-                    Log.e(TAG, "Error getting file: " + e.getMessage());
                 }
+            } else {
+                Log.d(TAG, "File selection cancelled or failed");
+                mainHandler.post(() -> {
+                    callJS("D('File selection cancelled','info')");
+                });
             }
         }
     }

@@ -2935,8 +2935,11 @@ function selectBhajanFile(){
 
 // Called from Java when file is selected
 function onBhajanFileSelected(filePath, fileName){
+  console.log('onBhajanFileSelected called:', filePath, fileName);
+  D('File selected: ' + fileName, 'ok');
   localStorage.setItem('japaBhajanFilePath', filePath);
   document.getElementById('selectedFileName').textContent = '✓ ' + fileName;
+  alarmSettings.filePath = filePath;
   saveAlarmSettings();
 }
 
@@ -3321,7 +3324,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v51 loaded','ok');
+  D('v52 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}
