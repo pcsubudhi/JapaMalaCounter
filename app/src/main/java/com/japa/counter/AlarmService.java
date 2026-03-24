@@ -116,15 +116,15 @@ public class AlarmService extends Service {
     }
     
     private Notification createNotification() {
-        // Intent to open app
-        Intent openIntent = new Intent(this, MainActivity.class);
-        openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent openPendingIntent = PendingIntent.getActivity(
-            this, 0, openIntent, 
+        // Intent to open AlarmActivity (full screen on lock screen)
+        Intent fullScreenIntent = new Intent(this, AlarmActivity.class);
+        fullScreenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
+            this, 0, fullScreenIntent, 
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
         
-        // Intent to stop alarm - FIXED: use ACTION_STOP constant
+        // Intent to stop alarm
         Intent stopIntent = new Intent(this, AlarmService.class);
         stopIntent.setAction(ACTION_STOP);
         PendingIntent stopPendingIntent = PendingIntent.getService(
@@ -135,11 +135,12 @@ public class AlarmService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("🙏 Japa Time!")
-            .setContentText("Hare Krishna! Time for your morning japa.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentText("Hare Krishna! Tap to open alarm screen.")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setContentIntent(openPendingIntent)
+            .setContentIntent(fullScreenPendingIntent)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(android.R.drawable.ic_delete, "STOP", stopPendingIntent)
             .setOngoing(true)
             .setAutoCancel(false);
@@ -154,13 +155,19 @@ public class AlarmService extends Service {
                 "Japa Alarm",
                 NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Wake-up bhajan alarm");
+            channel.setDescription("Wake-up bhajan alarm - shows on lock screen");
             channel.setSound(null, null); // We handle sound ourselves
             channel.enableVibration(true);
-            channel.setVibrationPattern(new long[]{0, 500, 200, 500});
+            channel.setVibrationPattern(new long[]{0, 500, 200, 500, 200, 500});
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            channel.setBypassDnd(true);
+            channel.enableLights(true);
+            channel.setLightColor(0xFFFF6B00);
+            channel.setShowBadge(true);
             
             NotificationManager manager = getSystemService(NotificationManager.class);
+            // Delete old channel and recreate with new settings
+            manager.deleteNotificationChannel(CHANNEL_ID);
             manager.createNotificationChannel(channel);
         }
     }
