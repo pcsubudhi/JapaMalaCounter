@@ -217,27 +217,16 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                 try {
                     stopAudioInternal();
                     alarmMediaPlayer = new MediaPlayer();
-                    
-                    // Parse as URI for content:// paths
-                    Uri uri = Uri.parse(filePath);
-                    alarmMediaPlayer.setDataSource(MainActivity.this, uri);
-                    
-                    alarmMediaPlayer.setLooping(true); // Loop until stopped
+                    alarmMediaPlayer.setDataSource(MainActivity.this, Uri.parse(filePath));
+                    alarmMediaPlayer.setLooping(true);
                     alarmMediaPlayer.setOnPreparedListener(mp -> {
                         mp.start();
-                        Log.d(TAG, "Audio started playing");
-                        callJS("D('🔊 Playing audio...','ok')");
-                    });
-                    alarmMediaPlayer.setOnErrorListener((mp, what, extra) -> {
-                        Log.e(TAG, "MediaPlayer error: " + what + ", " + extra);
-                        callJS("D('Audio error: " + what + "','warn')");
-                        return true;
+                        Log.d(TAG, "Audio started");
                     });
                     alarmMediaPlayer.prepareAsync();
-                    Log.d(TAG, "Preparing audio: " + filePath);
+                    Log.d(TAG, "Playing audio: " + filePath);
                 } catch (Exception e) {
                     Log.e(TAG, "Error playing audio: " + e.getMessage());
-                    callJS("D('Error: " + e.getMessage().replace("'", "") + "','warn')");
                 }
             });
         }
