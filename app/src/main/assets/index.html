@@ -2779,8 +2779,13 @@ function scheduleAlarm(){
       audioPath = alarmSettings.filePath;
     }
     
+    // Check if exact alarm permission is granted
+    if(typeof NativeApp.canScheduleExactAlarms === 'function' && !NativeApp.canScheduleExactAlarms()){
+      D('⚠️ Exact alarm permission needed - opening settings...', 'warn');
+      alert('Please enable "Alarms & reminders" permission for reliable alarms.\n\nTap OK to open settings.');
+    }
+    
     NativeApp.scheduleNativeAlarm(alarmSettings.time, audioPath, audioSource);
-    D('Native alarm scheduled for ' + alarmSettings.time, 'ok');
     return;
   }
   
@@ -3324,7 +3329,7 @@ function init(){
   requestNotificationPermission();
   // Update time left every minute
   setInterval(updateTimeLeft, 60000);
-  D('v60 loaded','ok');
+  D('v62 loaded','ok');
 }
 // =================== HISTORY ===================
 function showHistory(){loadHistory();renderHistory();document.getElementById('historyOv').classList.add('active')}

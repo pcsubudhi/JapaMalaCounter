@@ -134,6 +134,9 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                         new String[]{"android.permission.POST_NOTIFICATIONS"}, 1002);
             }
         }
+        
+        // Request to disable battery optimization for reliable alarms
+        requestBatteryOptimizationExemption();
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -141,6 +144,23 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
                     new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
         } else {
             loadPage();
+        }
+    }
+    
+    private void requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            String packageName = getPackageName();
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                try {
+                    Intent intent = new Intent();
+                    intent.setAction(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(android.net.Uri.parse("package:" + packageName));
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Log.e(TAG, "Could not request battery optimization exemption: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -282,8 +302,26 @@ public class MainActivity extends AppCompatActivity implements TextToSpeech.OnIn
         @JavascriptInterface
         public void scheduleNativeAlarm(String time, String audioPath, String audioSource) {
             mainHandler.post(() -> {
+                // Check exact alarm permission first
+                if (!AlarmScheduler.canScheduleAlarms(MainActivity.this)) {
+                    callJS("D('⚠️ Exact alarm permission needed!','warn')");
+                    AlarmScheduler.openExactAlarmSettings(MainActivity.this);
+                }
                 AlarmScheduler.scheduleAlarm(MainActivity.this, time, audioPath, audioSource);
                 Log.d(TAG, "Native alarm scheduled for " + time);
+                callJS("D('✅ Alarm scheduled for " + time + "','ok')");
+            });
+        }
+        
+        @JavascriptInterface
+        public boolean canScheduleExactAlarms() {
+            return AlarmScheduler.canScheduleAlarms(MainActivity.this);
+        }
+        
+        @JavascriptInterface
+        public void openAlarmPermissionSettings() {
+            mainHandler.post(() -> {
+                AlarmScheduler.openExactAlarmSettings(MainActivity.this);
             });
         }
 
